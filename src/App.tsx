@@ -37,7 +37,7 @@ export function App() {
       <nav className="sidebar">
         <div className="brand">
           <svg width="22" height="22" viewBox="0 0 1024 1024" aria-hidden>
-            <path d="M190 780 C 330 780, 400 700, 470 560 S 640 250, 834 244" fill="none" stroke="#a259ff" strokeWidth="110" strokeLinecap="round" />
+            <path d="M190 780 C 330 780, 400 700, 470 560 S 640 250, 834 244" fill="none" stroke="#e10600" strokeWidth="120" strokeLinecap="round" />
           </svg>
           Apex Companion
         </div>

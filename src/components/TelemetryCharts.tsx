@@ -3,11 +3,11 @@ import uPlot from "uplot";
 import { decimate } from "../lib/format";
 import type { Comparison } from "../lib/types";
 
-const REF = "#c3c9cf";
-const CMP = "#f4c20d";
-const GRID = { stroke: "#33383e", width: 1 };
+const REF = "#c9c9d4";
+const CMP = "#e10600";
+const GRID = { stroke: "#2c2c3a", width: 1 };
 const FONT = "12px 'Archivo Variable', system-ui, sans-serif";
-const AXIS = { stroke: "#9aa1a9", grid: GRID, ticks: { stroke: "#3a4047" }, font: FONT };
+const AXIS = { stroke: "#a6a6b5", grid: GRID, ticks: { stroke: "#383848" }, font: FONT };
 
 interface ChartSpec {
   key: string;
@@ -53,7 +53,7 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers }: {
             ctx.save();
             ctx.fillStyle = "#9aa1a9";
             ctx.strokeStyle = "rgba(154,161,169,0.22)";
-            ctx.font = `600 ${11 * devicePixelRatio}px "Archivo Variable", system-ui, sans-serif`;
+            ctx.font = `italic 800 ${11 * devicePixelRatio}px "Archivo Variable", system-ui, sans-serif`;
             for (const m of markers) {
               const px = u.valToPos(m.at, "x", true);
               ctx.beginPath();
@@ -95,7 +95,7 @@ export function TelemetryCharts({ cmp, onCursor, simple = false }: { cmp: Compar
     const r = cmp.ref_trace;
     const c = cmp.cmp_trace;
     const specs: ChartSpec[] = [
-      { key: "delta", title: "Écart de temps (s), au-dessus de zéro : temps perdu", height: 120, series: [{ label: "Delta", color: "#e6e8ea", data: d(cmp.delta_s)!, fill: "rgba(244,194,13,0.12)" }] },
+      { key: "delta", title: "Écart de temps (s), au-dessus de zéro : temps perdu", height: 120, series: [{ label: "Delta", color: "#ffffff", data: d(cmp.delta_s)!, fill: "rgba(255,212,0,0.12)" }] },
       { key: "speed", title: "Vitesse (km/h)", height: 170, series: [{ label: "Réf.", color: REF, data: d(r.speed_kmh)! }, { label: "Tour", color: CMP, data: d(c.speed_kmh)! }] },
       { key: "brake", title: "Frein (%)", height: 90, range: [0, 100], series: [{ label: "Réf.", color: REF, data: d(r.brake)!.map((v) => v * 100) }, { label: "Tour", color: CMP, data: d(c.brake)!.map((v) => v * 100) }] },
       { key: "throttle", title: "Accélérateur (%)", height: 90, range: [0, 100], series: [{ label: "Réf.", color: REF, data: d(r.throttle)!.map((v) => v * 100) }, { label: "Tour", color: CMP, data: d(c.throttle)!.map((v) => v * 100) }] },

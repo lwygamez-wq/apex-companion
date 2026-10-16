@@ -12,7 +12,7 @@ function Sparkline({ points }: { points: [number, number][] }) {
   const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${(i / (points.length - 1)) * 300},${60 - ((p[1] - min) / span) * 50 - 5}`).join(" ");
   return (
     <svg viewBox="0 0 300 60" style={{ width: "100%", height: 60 }}>
-      <path d={d} stroke="#c3c9cf" strokeWidth={2} fill="none" />
+      <path d={d} stroke="#c9c9d4" strokeWidth={2} fill="none" />
     </svg>
   );
 }

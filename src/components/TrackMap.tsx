@@ -27,7 +27,7 @@ export function TrackMap({ cmp, cursor, selected, onSelectCorner }: {
     for (let i = 0; i + step < xs.length; i += step) {
       const rate = ((cmp.delta_s[i + step] ?? 0) - (cmp.delta_s[i] ?? 0)) / (step * cmp.step_m); // s/m
       const k = Math.max(-1, Math.min(1, rate * 400)); // ±2,5 ms/m = saturation
-      const color = k > 0.05 ? `rgba(244,194,13,${0.35 + 0.65 * k})` : k < -0.05 ? `rgba(43,213,118,${0.35 - 0.65 * k})` : "#4a5058";
+      const color = k > 0.05 ? `rgba(255,212,0,${0.35 + 0.65 * k})` : k < -0.05 ? `rgba(43,213,118,${0.35 - 0.65 * k})` : "#3c3c4e";
       segs.push({ d: `M${px(i).toFixed(1)},${py(i).toFixed(1)} L${px(i + step).toFixed(1)},${py(i + step).toFixed(1)}`, color });
     }
     const corners = cmp.corners.map((c) => {
@@ -47,11 +47,11 @@ export function TrackMap({ cmp, cursor, selected, onSelectCorner }: {
       ))}
       {geo.corners.map((c) => (
         <g key={c.id} onClick={() => onSelectCorner(c.id)} style={{ cursor: "pointer" }}>
-          <circle cx={c.x} cy={c.y} r={selected === c.id ? 24 : 18} fill={selected === c.id ? "#e6e8ea" : "#272b30"} stroke="#e6e8ea" strokeWidth={2} />
-          <text x={c.x} y={c.y + 6} textAnchor="middle" fontSize={18} fontWeight={700} fill={selected === c.id ? "#1f2226" : "#e6e8ea"} fontFamily="Archivo Variable, sans-serif">{c.name.replace("V", "")}</text>
+          <circle cx={c.x} cy={c.y} r={selected === c.id ? 24 : 18} fill={selected === c.id ? "#ffffff" : "#1f1f2b"} stroke="#ffffff" strokeWidth={2} />
+          <text x={c.x} y={c.y + 6} textAnchor="middle" fontSize={18} fontWeight={700} fill={selected === c.id ? "#15151e" : "#ffffff"} fontFamily="Archivo Variable, sans-serif">{c.name.replace("V", "")}</text>
         </g>
       ))}
-      {cursor != null && <circle cx={geo.px(cursor)} cy={geo.py(cursor)} r={11} fill="#a259ff" stroke="#1f2226" strokeWidth={3} />}
+      {cursor != null && <circle cx={geo.px(cursor)} cy={geo.py(cursor)} r={11} fill="#a259ff" stroke="#15151e" strokeWidth={3} />}
     </svg>
   );
 }
