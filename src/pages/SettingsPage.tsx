@@ -180,8 +180,11 @@ export function SettingsPage() {
           Les journaux sont locaux et ne contiennent pas de télémétrie.
         </p>
         <div className="row">
-          <button className="btn" onClick={() => void save({ defaultPath: "apex-export.json", filters: [{ name: "JSON", extensions: ["json"] }] }).then(async (p) => p && setMsg(`${await api.exportData(p)} session(s) exportée(s).`))}>Exporter toutes les données</button>
-          <button className="btn" onClick={() => void api.diagnostics().then((d) => navigator.clipboard.writeText(JSON.stringify(d, null, 2))).then(() => setMsg("Diagnostic (sans données personnelles) copié dans le presse-papiers."))}>Copier le diagnostic</button>
+          <button className="btn" onClick={() => void save({ defaultPath: "apex-export.json", filters: [{ name: "JSON", extensions: ["json"] }] })
+            .then(async (p) => p && setMsg(`${await api.exportData(p)} session(s) exportée(s).`))
+            .catch((e: unknown) => setMsg(`Export impossible : ${e instanceof Error ? e.message : String(e)}`))}>Exporter toutes les données</button>
+          <button className="btn" onClick={() => void api.diagnostics().then((d) => navigator.clipboard.writeText(JSON.stringify(d, null, 2))).then(() => setMsg("Diagnostic (sans données personnelles) copié dans le presse-papiers."))
+            .catch((e: unknown) => setMsg(`Copie impossible : ${e instanceof Error ? e.message : String(e)}`))}>Copier le diagnostic</button>
           {!confirmDelete ? (
             <button className="btn danger" onClick={() => setConfirmDelete(true)}>Supprimer toutes les données…</button>
           ) : (

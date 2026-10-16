@@ -31,9 +31,10 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
   const exportOne = async (s: SessionSummary) => {
     const date = new Date(s.started_at_unix * 1000).toISOString().slice(0, 10);
     const name = `apex-${s.track}-${date}`.replace(/[^\w.-]+/g, "_") + ".apex.json.gz";
-    const path = await save({ defaultPath: name, filters: [{ name: "Export Apex", extensions: ["gz"] }] });
-    if (!path) return;
     try {
+      const path = await save({ defaultPath: name, filters: [{ name: "Export Apex", extensions: ["gz"] }] });
+      if (!path) return;
+      setMsg("Export en cours…");
       const r = await api.exportSession(s.id, path);
       setMsg(`Export prêt (${(r.bytes / 1e6).toFixed(1)} Mo, ${r.laps} tours) : glisse ce fichier dans ta conversation avec Claude.`);
     } catch (e) {
