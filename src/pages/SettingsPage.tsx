@@ -81,7 +81,8 @@ export function SettingsPage() {
               })}
             </div>
             <div className="muted" style={{ fontSize: 12 }}>
-              Installation : {c.install.detail} · Processus : {c.process_names.join(", ")}
+              <div>Installation : {c.install.detail}</div>
+              <div>Processus détectés : {c.process_names.join(", ")}</div>
               {c.capabilities.notes.map((n) => <div key={n}>• {n}</div>)}
             </div>
           </div>

@@ -9,7 +9,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
   const live = status?.live;
   return (
     <>
-      <div className="page-title"><h1>Live Coach</h1><span className="chip warn">Phase 2 — en développement</span></div>
+      <div className="page-title"><h1>Live Coach</h1><span className="chip warn">En développement (phase 2)</span></div>
       <div className="grid cols-2">
         <div className="card">
           <h2>Connexion simulateur</h2>
@@ -38,7 +38,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
         <ul className="muted">
           <li>Delta live par distance contre la référence choisie (même moteur que l'analyse post-session).</li>
           <li>Indication du prochain freinage (tôt / cohérent / tard) seulement si la confiance est élevée sur ce virage.</li>
-          <li>Affichage sur second écran, tablette ou téléphone via le réseau local — plus robuste qu'un overlay au-dessus d'un triple écran en plein écran.</li>
+          <li>Affichage sur second écran, tablette ou téléphone via le réseau local, plus robuste qu'un overlay au-dessus d'un triple écran en plein écran.</li>
           <li>Règles anti-distraction : fréquence limitée, aucun message pendant freinage ou appui, désactivé par défaut en course.</li>
         </ul>
       </div>

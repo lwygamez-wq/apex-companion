@@ -87,7 +87,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
               <tr key={s.id} className="clickable" onClick={() => navigate({ page: "analysis", sessionId: s.id })}>
                 <td>{dateTime(s.started_at_unix)}</td>
                 <td>{s.sim_name}</td>
-                <td>{s.track}{s.track_config ? <span className="muted"> · {s.track_config}</span> : null}</td>
+                <td>{s.track}{s.track_config ? <span className="muted">, {s.track_config}</span> : null}</td>
                 <td>{s.car}</td>
                 <td>{SESSION_KIND_FR[s.kind]}</td>
                 <td className="num">{lapTime(s.best_lap_s)}</td>
@@ -98,7 +98,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
                 <td className="num">{s.fuel_per_lap_l != null ? `${s.fuel_per_lap_l.toFixed(2)} L` : "—"}</td>
                 <td className="muted">
                   {s.weather.description ?? "—"}
-                  {s.weather.track_temp_c != null ? ` · piste ${s.weather.track_temp_c.toFixed(0)} °C` : ""}
+                  {s.weather.track_temp_c != null ? `, piste ${s.weather.track_temp_c.toFixed(0)} °C` : ""}
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="row" style={{ flexWrap: "nowrap" }}>

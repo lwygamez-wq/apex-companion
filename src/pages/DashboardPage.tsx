@@ -12,7 +12,7 @@ function Sparkline({ points }: { points: [number, number][] }) {
   const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${(i / (points.length - 1)) * 300},${60 - ((p[1] - min) / span) * 50 - 5}`).join(" ");
   return (
     <svg viewBox="0 0 300 60" style={{ width: "100%", height: 60 }}>
-      <path d={d} stroke="#4da3ff" strokeWidth={2} fill="none" />
+      <path d={d} stroke="#c3c9cf" strokeWidth={2} fill="none" />
     </svg>
   );
 }
@@ -37,7 +37,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
     <>
       <div className="page-title">
         <h1>Tableau de bord</h1>
-        <button className="btn" onClick={() => navigate({ page: "live" })}>Live Coach →</button>
+        <button className="btn" onClick={() => navigate({ page: "live" })}>Ouvrir le Live Coach</button>
       </div>
       {dash.error && <div className="error">{dash.error}</div>}
       {msg && <div className="warning">{msg}</div>}
@@ -64,18 +64,18 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
           <div className="grid cols-4">
             <div className="card">
               <h2>Dernière session</h2>
-              <div style={{ fontWeight: 600 }}>{s.track}{s.track_config ? ` — ${s.track_config}` : ""}</div>
-              <div className="kpi-sub">{s.car} · {s.sim_name}</div>
-              <div className="kpi-sub">{SESSION_KIND_FR[s.kind]} · {dateTime(s.started_at_unix)}</div>
+              <div style={{ fontWeight: 600 }}>{s.track}{s.track_config ? `, ${s.track_config}` : ""}</div>
+              <div className="kpi-sub">{s.car}, {s.sim_name}</div>
+              <div className="kpi-sub">{SESSION_KIND_FR[s.kind]}, {dateTime(s.started_at_unix)}</div>
             </div>
             <div className="card">
               <h2>Meilleur tour propre</h2>
-              <div className="kpi">{lapTime(s.best_lap_s)}</div>
+              <div className="kpi best">{lapTime(s.best_lap_s)}</div>
               <div className="kpi-sub">{s.clean_lap_count} tour(s) propre(s) sur {s.lap_count}</div>
             </div>
             <div className="card">
               <h2>Temps théorique</h2>
-              <div className="kpi">{lapTime(d.theoretical_best_s)}</div>
+              <div className="kpi best">{lapTime(d.theoretical_best_s)}</div>
               <div className="kpi-sub">
                 {d.theoretical_best_s != null && s.best_lap_s != null ? `${delta(d.theoretical_best_s - s.best_lap_s)} s vs meilleur tour` : "Au moins 2 tours propres requis"}
               </div>
@@ -90,7 +90,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
           {d.active_goal && (
             <div className="card" style={{ borderColor: d.active_goal.result?.achieved ? "#1c5234" : "#24476b" }}>
               <div className="row" style={{ justifyContent: "space-between" }}>
-                <h2 style={{ margin: 0 }}>🎯 Objectif en cours</h2>
+                <h2 style={{ margin: 0 }}>Objectif en cours</h2>
                 <button className="btn" onClick={() => run(api.archiveGoal(d.active_goal!.id), "Objectif clôturé.")}>Clôturer</button>
               </div>
               <div style={{ fontWeight: 600, marginTop: 8 }}>{d.active_goal.title}</div>
@@ -111,7 +111,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
               <div>{d.next_goal}</div>
               {d.next_goal_suggestion && !d.active_goal && (
                 <button className="btn" style={{ marginTop: 10 }} onClick={() => run(api.createGoal(s.id, d.next_goal_suggestion!), "Objectif enregistré.")}>
-                  🎯 En faire mon objectif : {d.next_goal_suggestion.title}
+                  Fixer comme objectif : {d.next_goal_suggestion.title}
                 </button>
               )}
             </div>

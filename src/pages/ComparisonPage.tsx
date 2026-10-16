@@ -11,7 +11,7 @@ export function ComparisonPage({ navigate }: { navigate: (r: Route) => void }) {
   const combos = useMemo(() => {
     const m = new Map<string, SessionSummary[]>();
     for (const s of all.data ?? []) {
-      const k = `${s.sim_name} · ${s.track}${s.track_config ? ` (${s.track_config})` : ""} · ${s.car}`;
+      const k = `${s.track}${s.track_config ? ` (${s.track_config})` : ""}, ${s.car}, ${s.sim_name}`;
       m.set(k, [...(m.get(k) ?? []), s]);
     }
     return [...m.entries()].sort((a, b) => b[1].length - a[1].length);
@@ -26,7 +26,7 @@ export function ComparisonPage({ navigate }: { navigate: (r: Route) => void }) {
       <div className="page-title">
         <h1>Comparaison</h1>
         <select value={sel?.[0] ?? ""} onChange={(e) => setKey(e.target.value)}>
-          {combos.map(([k, v]) => <option key={k} value={k}>{k} — {v.length} session(s)</option>)}
+          {combos.map(([k, v]) => <option key={k} value={k}>{k} ({v.length} session(s))</option>)}
         </select>
       </div>
       <div className="warning">
@@ -45,7 +45,7 @@ export function ComparisonPage({ navigate }: { navigate: (r: Route) => void }) {
                 <td className="num">{lapTime(s.mean_clean_s)}</td>
                 <td className="num">{s.stddev_clean_s?.toFixed(3) ?? "—"}</td>
                 <td className="num">{s.clean_lap_count}/{s.lap_count}</td>
-                <td className="muted">{s.weather.description ?? "inconnue"}{s.weather.track_temp_c != null ? ` · ${s.weather.track_temp_c.toFixed(0)} °C` : ""}</td>
+                <td className="muted">{s.weather.description ?? "inconnue"}{s.weather.track_temp_c != null ? `, ${s.weather.track_temp_c.toFixed(0)} °C` : ""}</td>
               </tr>
             ))}
           </tbody>

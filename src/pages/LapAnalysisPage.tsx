@@ -71,7 +71,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   };
 
   const lapLabel = (l: LapRow) =>
-    `Tour ${l.number} · ${lapTime(l.lap_time_s)}${l.id === d?.best_lap_id ? " · meilleur" : ""}${l.is_reference ? " · réf. perso" : ""}${l.clean ? "" : " · ⚠"}`;
+    `Tour ${l.number}, ${lapTime(l.lap_time_s)}${l.id === d?.best_lap_id ? ", meilleur" : ""}${l.is_reference ? ", réf. perso" : ""}${l.clean ? "" : " (perturbé)"}`;
 
   return (
     <>
@@ -79,7 +79,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
         <h1>Analyse de tour</h1>
         <select value={sessionId ?? ""} onChange={(e) => navigate({ page: "analysis", sessionId: Number(e.target.value) })}>
           {(sessions.data ?? []).map((s) => (
-            <option key={s.id} value={s.id}>{dateTime(s.started_at_unix)} — {s.track} — {s.car}</option>
+            <option key={s.id} value={s.id}>{s.track}, {s.car}, {dateTime(s.started_at_unix)}</option>
           ))}
         </select>
       </div>
@@ -89,8 +89,8 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
         <>
           <div className="grid cols-4" style={{ marginBottom: 14 }}>
             <div className="card"><h2>Session</h2><div style={{ fontWeight: 600 }}>{d.meta.track}</div><div className="kpi-sub">{d.meta.car}</div></div>
-            <div className="card"><h2>Meilleur tour</h2><div className="kpi">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
-            <div className="card"><h2>Théorique</h2><div className="kpi">{lapTime(d.theoretical_best_s)}</div></div>
+            <div className="card"><h2>Meilleur tour</h2><div className="kpi best">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
+            <div className="card"><h2>Théorique</h2><div className="kpi best">{lapTime(d.theoretical_best_s)}</div></div>
             <div className="card"><h2>Régularité</h2><div className="kpi">{d.consistency ? `σ ${d.consistency.stddev_s.toFixed(3)} s` : "—"}</div><div className="kpi-sub">{d.consistency ? `${d.consistency.clean_laps} tours propres` : ""}</div></div>
           </div>
 
@@ -167,8 +167,8 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               </div>
               <div>
                 <TrackMap cmp={c} cursor={cursor} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} />
-                <h2 style={{ fontSize: 13, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "16px 0 8px" }}>
-                  {corner != null ? `Conseils — ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
+                <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "16px 0 8px" }}>
+                  {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
                 </h2>
                 {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
                 {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i) => <InsightCard key={i.id} insight={i} sessionId={d.id} />)}
@@ -192,7 +192,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               <tbody>
                 {d.laps.map((l) => (
                   <tr key={l.id}>
-                    <td className="mono">{l.number}{l.id === d.best_lap_id && <span className="chip good" style={{ marginLeft: 6 }}>meilleur</span>}</td>
+                    <td className="mono">{l.number}{l.id === d.best_lap_id && <span className="chip best" style={{ marginLeft: 6 }}>meilleur</span>}</td>
                     <td>{LAP_KIND_FR[l.kind]}</td>
                     <td className="num">{lapTime(l.lap_time_s)}</td>
                     <td>

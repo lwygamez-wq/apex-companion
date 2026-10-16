@@ -37,9 +37,9 @@ export function App() {
       <nav className="sidebar">
         <div className="brand">
           <svg width="22" height="22" viewBox="0 0 1024 1024" aria-hidden>
-            <path d="M190 780 C 330 780, 400 700, 470 560 S 640 250, 834 244" fill="none" stroke="#ff4d2e" strokeWidth="90" strokeLinecap="round" />
+            <path d="M190 780 C 330 780, 400 700, 470 560 S 640 250, 834 244" fill="none" stroke="#a259ff" strokeWidth="110" strokeLinecap="round" />
           </svg>
-          APEX <span>COMPANION</span>
+          Apex Companion
         </div>
         {NAV.map((n) => (
           <button key={n.page} className={`nav-item ${route.page === n.page ? "active" : ""}`} onClick={() => setRoute({ page: n.page } as Route)}>

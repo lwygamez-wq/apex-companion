@@ -27,7 +27,7 @@ export function InsightCard({ insight, active, onFocus, sessionId }: { insight: 
               );
             }}
           >
-            🎯 En faire mon objectif
+            Fixer comme objectif
           </button>
           <span className="muted" style={{ fontSize: 12 }}>{goalMsg ?? insight.goal.title}</span>
         </div>
