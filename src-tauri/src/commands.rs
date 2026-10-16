@@ -1,0 +1,118 @@
+//! Commandes IPC : fines enveloppes autour de `AppService`.
+//! Les opérations lourdes passent par `spawn_blocking` pour ne jamais bloquer l'UI.
+
+use crate::monitor::StatusPayload;
+use crate::AppState;
+use apex_core::analysis::Comparison;
+use apex_core::service::{AppService, AppSettings, ConnectorInfo, Dashboard, Diagnostics, ImportReport, ServiceError, SessionDetail};
+use apex_core::storage::{InsertOutcome, SessionFilter, SessionSummary};
+use std::path::PathBuf;
+use std::sync::Arc;
+use tauri::State;
+
+type R<T> = Result<T, ServiceError>;
+
+async fn blocking<T: Send + 'static>(svc: Arc<AppService>, f: impl FnOnce(&AppService) -> R<T> + Send + 'static) -> R<T> {
+    tauri::async_runtime::spawn_blocking(move || f(&svc))
+        .await
+        .map_err(|e| ServiceError::User(format!("tâche interrompue : {e}")))?
+}
+
+#[tauri::command]
+pub fn get_status(state: State<'_, AppState>) -> StatusPayload {
+    state.status.lock().map(|s| s.clone()).unwrap_or_default()
+}
+
+#[tauri::command]
+pub fn list_connectors(state: State<'_, AppState>) -> Vec<ConnectorInfo> {
+    state.svc.connectors_info()
+}
+
+#[tauri::command]
+pub async fn list_sessions(state: State<'_, AppState>, filter: Option<SessionFilter>) -> R<Vec<SessionSummary>> {
+    blocking(state.svc.clone(), move |s| s.list_sessions(&filter.unwrap_or_default())).await
+}
+
+#[tauri::command]
+pub async fn get_session(state: State<'_, AppState>, id: i64) -> R<SessionDetail> {
+    blocking(state.svc.clone(), move |s| s.session_detail(id)).await
+}
+
+#[tauri::command]
+pub async fn import_files(state: State<'_, AppState>, paths: Vec<String>) -> R<Vec<ImportReport>> {
+    let status = state.status.clone();
+    crate::monitor::set_importing(&status, Some(format!("{} fichier(s)", paths.len())));
+    let r = blocking(state.svc.clone(), move |s| Ok(s.import_paths(&paths.into_iter().map(PathBuf::from).collect::<Vec<_>>()))).await;
+    crate::monitor::set_importing(&status, None);
+    r
+}
+
+#[tauri::command]
+pub async fn scan_iracing(state: State<'_, AppState>) -> R<Vec<ImportReport>> {
+    blocking(state.svc.clone(), |s| s.scan_iracing()).await
+}
+
+#[tauri::command]
+pub async fn load_demo(state: State<'_, AppState>) -> R<InsertOutcome> {
+    blocking(state.svc.clone(), |s| s.load_demo()).await
+}
+
+#[tauri::command]
+pub async fn compare_laps(state: State<'_, AppState>, reference_lap_id: i64, compared_lap_id: i64, step_m: Option<f32>) -> R<Comparison> {
+    blocking(state.svc.clone(), move |s| s.compare(reference_lap_id, compared_lap_id, step_m.unwrap_or(1.0))).await
+}
+
+#[tauri::command]
+pub async fn set_reference(state: State<'_, AppState>, lap_id: i64) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.set_reference(lap_id)).await
+}
+
+#[tauri::command]
+pub async fn delete_session(state: State<'_, AppState>, id: i64) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.delete_session(id)).await
+}
+
+#[tauri::command]
+pub async fn delete_all_data(state: State<'_, AppState>) -> R<()> {
+    blocking(state.svc.clone(), |s| s.delete_all()).await
+}
+
+#[tauri::command]
+pub async fn export_data(state: State<'_, AppState>, path: String) -> R<usize> {
+    blocking(state.svc.clone(), move |s| s.export_all(path.as_ref())).await
+}
+
+#[tauri::command]
+pub async fn get_diagnostics(state: State<'_, AppState>) -> R<Diagnostics> {
+    blocking(state.svc.clone(), |s| s.diagnostics(env!("CARGO_PKG_VERSION"))).await
+}
+
+#[tauri::command]
+pub async fn get_dashboard(state: State<'_, AppState>) -> R<Dashboard> {
+    blocking(state.svc.clone(), |s| s.dashboard()).await
+}
+
+#[tauri::command]
+pub fn get_settings(state: State<'_, AppState>) -> AppSettings {
+    state.svc.settings()
+}
+
+#[tauri::command]
+pub fn save_settings(state: State<'_, AppState>, settings: AppSettings) -> R<AppSettings> {
+    state.svc.save_settings(settings)
+}
+
+#[tauri::command]
+pub async fn check_update(app: tauri::AppHandle) -> Result<Option<crate::updater::UpdateInfo>, String> {
+    let current = app.package_info().version.to_string();
+    tauri::async_runtime::spawn_blocking(move || crate::updater::check(&current)).await.map_err(|e| e.to_string())?
+}
+
+/// Télécharge et vérifie l'installeur, le lance, puis ferme l'application pour qu'il puisse la remplacer.
+#[tauri::command]
+pub async fn install_update(app: tauri::AppHandle) -> Result<String, String> {
+    let current = app.package_info().version.to_string();
+    let v = tauri::async_runtime::spawn_blocking(move || crate::updater::download_and_launch(&current)).await.map_err(|e| e.to_string())??;
+    app.exit(0);
+    Ok(v)
+}

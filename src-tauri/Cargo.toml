@@ -1,0 +1,25 @@
+[package]
+name = "apex-companion"
+description = "Apex Companion — compagnon de pilotage simracing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "apex_companion_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+apex-core = { path = "../crates/apex-core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-log = "2"
+ureq = "3"
+minisign-verify = "0.2"
+base64 = "0.22"
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
