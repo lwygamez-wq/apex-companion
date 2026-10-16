@@ -37,10 +37,25 @@ jobs:
           npm test
 
       - name: Construire et signer l'installeur
+        shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-        run: npm run tauri build
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::Le secret TAURI_SIGNING_PRIVATE_KEY est absent (nom exact à vérifier dans Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          echo "Clé de signature présente (${#TAURI_SIGNING_PRIVATE_KEY} caractères)."
+          set +e
+          npm run tauri build 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            # Remonte les dernières lignes en annotations (lisibles sans ouvrir le journal complet).
+            grep -iE "error|failed|panicked|warn" build.log | tail -15 | while IFS= read -r l; do echo "::error::${l:0:300}"; done
+            tail -8 build.log | while IFS= read -r l; do echo "::error::${l:0:300}"; done
+          fi
+          exit $rc
 
       - name: Publier la release et latest.json
         shell: bash
