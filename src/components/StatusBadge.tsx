@@ -21,6 +21,11 @@ export function StatusBadge({ status }: { status: StatusPayload | null }) {
         <div>{status.label}</div>
         {sim && <div className="muted">{sim}</div>}
         {status.importing && <div className="muted">{status.importing}</div>}
+        {st.state === "session_active" && status.live?.disk_logging != null && (
+          <div className={status.live.disk_logging ? "neg" : "pos"}>
+            {status.live.disk_logging ? "● Télémétrie enregistrée" : "● Télémétrie NON enregistrée"}
+          </div>
+        )}
       </div>
     </div>
   );

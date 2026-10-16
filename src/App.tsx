@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RecordingAlert } from "./components/RecordingAlert";
 import { StatusBadge } from "./components/StatusBadge";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { isTauri } from "./lib/api";
@@ -50,6 +51,7 @@ export function App() {
       </nav>
       <main className="main">
         <UpdateBanner />
+        <RecordingAlert status={status} />
         {!isTauri() && <div className="error">Mode navigateur : lance l'application avec « npm run tauri dev » pour accéder aux données.</div>}
         {route.page === "dashboard" && <DashboardPage navigate={setRoute} />}
         {route.page === "sessions" && <SessionsPage navigate={setRoute} />}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
 import { api, onSessionsChanged } from "../lib/api";
@@ -19,6 +19,13 @@ function Sparkline({ points }: { points: [number, number][] }) {
 
 export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
   const dash = useAsync(() => api.dashboard(), []);
+  const autolog = useAsync(() => api.iracingAutolog().catch(() => null), []);
+  const [msg, setMsg] = useState<string | null>(null);
+  const run = (p: Promise<unknown>, ok: string) =>
+    p.then(
+      () => (setMsg(ok), dash.reload(), autolog.reload()),
+      (e: unknown) => setMsg(e instanceof Error ? e.message : String(e)),
+    );
   useEffect(() => {
     const un = onSessionsChanged(dash.reload);
     return () => void un.then((f) => f());
@@ -33,6 +40,18 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
         <button className="btn" onClick={() => navigate({ page: "live" })}>Live Coach →</button>
       </div>
       {dash.error && <div className="error">{dash.error}</div>}
+      {msg && <div className="warning">{msg}</div>}
+      {autolog.data?.enabled === false && (
+        <div className="card" style={{ marginBottom: 14, borderColor: "#5c4a14" }}>
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <div>
+              <b>iRacing n'enregistre tes sessions que si tu appuies sur Alt+L.</b>
+              <div className="muted" style={{ fontSize: 12 }}>Active l'enregistrement automatique pour ne jamais perdre une session (iRacing doit être fermé). Environ 200 Mo par heure de roulage.</div>
+            </div>
+            <button className="btn primary" onClick={() => run(api.setIracingAutolog(true), "Enregistrement automatique activé : toutes tes sessions iRacing seront enregistrées.")}>Activer</button>
+          </div>
+        </div>
+      )}
       {d && !s && (
         <div className="card empty">
           <h2>Aucune session enregistrée</h2>
@@ -68,10 +87,33 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
             </div>
           </div>
 
+          {d.active_goal && (
+            <div className="card" style={{ borderColor: d.active_goal.result?.achieved ? "#1c5234" : "#24476b" }}>
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <h2 style={{ margin: 0 }}>🎯 Objectif en cours</h2>
+                <button className="btn" onClick={() => run(api.archiveGoal(d.active_goal!.id), "Objectif clôturé.")}>Clôturer</button>
+              </div>
+              <div style={{ fontWeight: 600, marginTop: 8 }}>{d.active_goal.title}</div>
+              {d.active_goal.result ? (
+                <div style={{ marginTop: 6 }}>
+                  <span className={`chip ${d.active_goal.result.achieved ? "good" : "warn"}`}>{d.active_goal.result.achieved ? "Atteint" : "Pas encore"}</span>{" "}
+                  <span className="muted">{d.active_goal.result.summary}</span>
+                </div>
+              ) : (
+                <div className="muted" style={{ marginTop: 6 }}>Sera vérifié sur ta prochaine session sur ce circuit.</div>
+              )}
+            </div>
+          )}
+
           {d.next_goal && (
             <div className="card" style={{ borderColor: "#5c2a1e" }}>
               <h2>Prochain objectif</h2>
               <div>{d.next_goal}</div>
+              {d.next_goal_suggestion && !d.active_goal && (
+                <button className="btn" style={{ marginTop: 10 }} onClick={() => run(api.createGoal(s.id, d.next_goal_suggestion!), "Objectif enregistré.")}>
+                  🎯 En faire mon objectif : {d.next_goal_suggestion.title}
+                </button>
+              )}
             </div>
           )}
 

@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppSettings,
+  AutoLogStatus,
+  ExportSummary,
+  GoalSuggestion,
+  GoalView,
   Comparison,
   ConnectorInfo,
   Dashboard,
@@ -46,6 +50,12 @@ export const api = {
   dashboard: () => call<Dashboard>("get_dashboard"),
   settings: () => call<AppSettings>("get_settings"),
   saveSettings: (settings: AppSettings) => call<AppSettings>("save_settings", { settings }),
+  iracingAutolog: () => call<AutoLogStatus>("get_iracing_autolog"),
+  setIracingAutolog: (enable: boolean) => call<AutoLogStatus>("set_iracing_autolog", { enable }),
+  exportSession: (id: number, path: string) => call<ExportSummary>("export_session", { id, path }),
+  setCornerName: (sessionId: number, apexM: number, name: string) => call<void>("set_corner_name", { sessionId, apexM, name }),
+  createGoal: (sessionId: number, goal: GoalSuggestion) => call<GoalView>("create_goal", { sessionId, goal }),
+  archiveGoal: (id: number) => call<void>("archive_goal", { id }),
 };
 
 export function onStatus(cb: (s: StatusPayload) => void): Promise<UnlistenFn> {

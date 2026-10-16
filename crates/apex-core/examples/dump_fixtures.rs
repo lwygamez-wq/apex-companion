@@ -20,6 +20,10 @@ fn main() {
     w("list_sessions", serde_json::to_value(&sessions).unwrap());
     w("get_session", serde_json::to_value(&d).unwrap());
     w("compare_laps", serde_json::to_value(svc.compare(best, other, 1.0).unwrap()).unwrap());
+    // Objectif fixé depuis le premier conseil, pour montrer la carte « Objectif en cours ».
+    if let Some(g) = svc.compare(best, other, 1.0).unwrap().insights.iter().find_map(|i| i.goal.clone()) {
+        svc.create_goal(sid, &g).unwrap();
+    }
     w("get_dashboard", serde_json::to_value(svc.dashboard().unwrap()).unwrap());
     w("list_connectors", serde_json::to_value(svc.connectors_info()).unwrap());
     w("get_settings", serde_json::to_value(svc.settings()).unwrap());

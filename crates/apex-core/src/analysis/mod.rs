@@ -2,6 +2,7 @@
 
 pub mod compare;
 pub mod corners;
+pub mod goals;
 pub mod insights;
 pub mod progress;
 pub mod resample;

@@ -75,7 +75,28 @@ CREATE TABLE imported_files (
   error TEXT,
   checked_at INTEGER NOT NULL
 );
+"#, r#"
+-- v3 : noms de virages par circuit (combo simulateur / circuit / configuration).
+CREATE TABLE corner_names (
+  track_key TEXT NOT NULL,
+  apex_m REAL NOT NULL,
+  name TEXT NOT NULL,
+  PRIMARY KEY (track_key, apex_m)
+);
+"#, r#"
+-- v4 : objectif de session (un seul actif à la fois).
+CREATE TABLE goals (
+  id INTEGER PRIMARY KEY,
+  track_key TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  metric_json TEXT NOT NULL,
+  archived INTEGER NOT NULL DEFAULT 0
+);
 "#];
+
+/// (id, clé circuit, date de création, titre, métrique JSON).
+pub type GoalRow = (i64, String, i64, String, String);
 
 pub struct Store {
     conn: Connection,
@@ -362,7 +383,7 @@ impl Store {
     /// Suppression totale des données (droit à l'effacement).
     pub fn delete_all(&mut self) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
-        tx.execute_batch("DELETE FROM lap_traces; DELETE FROM laps; DELETE FROM sessions; DELETE FROM imported_files;")?;
+        tx.execute_batch("DELETE FROM lap_traces; DELETE FROM laps; DELETE FROM sessions; DELETE FROM imported_files; DELETE FROM corner_names; DELETE FROM goals;")?;
         tx.commit()?;
         self.conn.execute_batch("VACUUM;")?;
         Ok(())
@@ -383,6 +404,57 @@ impl Store {
                error = excluded.error, checked_at = excluded.checked_at",
             params![path, size, mtime, session_id, error, now_unix()],
         )?;
+        Ok(())
+    }
+
+    pub fn corner_names(&self, track_key: &str) -> Result<Vec<(f32, String)>, StoreError> {
+        let mut st = self.conn.prepare("SELECT apex_m, name FROM corner_names WHERE track_key = ?1 ORDER BY apex_m")?;
+        let v = st.query_map([track_key], |r| Ok((r.get::<_, f64>(0)? as f32, r.get(1)?)))?.collect::<Result<_, _>>()?;
+        Ok(v)
+    }
+
+    /// Nomme le virage dont l'apex est à `apex_m` (remplace un nom existant à moins de 60 m ; nom vide = suppression).
+    pub fn set_corner_name(&mut self, track_key: &str, apex_m: f32, name: &str) -> Result<(), StoreError> {
+        let tx = self.conn.transaction()?;
+        tx.execute(
+            "DELETE FROM corner_names WHERE track_key = ?1 AND ABS(apex_m - ?2) <= 60.0",
+            params![track_key, apex_m as f64],
+        )?;
+        let name = name.trim();
+        if !name.is_empty() {
+            tx.execute("INSERT INTO corner_names (track_key, apex_m, name) VALUES (?1, ?2, ?3)", params![track_key, apex_m as f64, name])?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Crée l'objectif actif (archive le précédent : un seul point travaillé à la fois).
+    pub fn create_goal(&mut self, track_key: &str, title: &str, metric_json: &str) -> Result<i64, StoreError> {
+        let tx = self.conn.transaction()?;
+        tx.execute("UPDATE goals SET archived = 1 WHERE archived = 0", [])?;
+        tx.execute(
+            "INSERT INTO goals (track_key, created_at, title, metric_json) VALUES (?1, ?2, ?3, ?4)",
+            params![track_key, now_unix(), title, metric_json],
+        )?;
+        let id = tx.last_insert_rowid();
+        tx.commit()?;
+        Ok(id)
+    }
+
+    /// (id, clé circuit, date de création, titre, métrique JSON) de l'objectif actif.
+    pub fn active_goal(&self) -> Result<Option<GoalRow>, StoreError> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT id, track_key, created_at, title, metric_json FROM goals WHERE archived = 0 ORDER BY id DESC LIMIT 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
+            )
+            .optional()?)
+    }
+
+    pub fn archive_goal(&self, id: i64) -> Result<(), StoreError> {
+        self.conn.execute("UPDATE goals SET archived = 1 WHERE id = ?1", [id])?;
         Ok(())
     }
 

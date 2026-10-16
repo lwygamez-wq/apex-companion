@@ -1,3 +1,4 @@
+import { save } from "@tauri-apps/plugin-dialog";
 import { useMemo, useState } from "react";
 import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
@@ -26,6 +27,19 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
   const list = useAsync(() => api.sessions(filter), [filter]);
   const uniq = (f: (s: SessionSummary) => string) => [...new Set((all.data ?? []).map(f))].sort();
 
+  const [msg, setMsg] = useState<string | null>(null);
+  const exportOne = async (s: SessionSummary) => {
+    const date = new Date(s.started_at_unix * 1000).toISOString().slice(0, 10);
+    const name = `apex-${s.track}-${date}`.replace(/[^\w.-]+/g, "_") + ".apex.json.gz";
+    const path = await save({ defaultPath: name, filters: [{ name: "Export Apex", extensions: ["gz"] }] });
+    if (!path) return;
+    try {
+      const r = await api.exportSession(s.id, path);
+      setMsg(`Export prêt (${(r.bytes / 1e6).toFixed(1)} Mo, ${r.laps} tours) : glisse ce fichier dans ta conversation avec Claude.`);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const remove = async (id: number) => {
     await api.deleteSession(id);
     list.reload();
@@ -58,6 +72,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
         <label className="muted">depuis <input type="text" placeholder="AAAA-MM-JJ" value={from} onChange={(e) => setFrom(e.target.value)} style={{ width: 110 }} /></label>
       </div>
       {list.error && <div className="error">{list.error}</div>}
+      {msg && <div className="warning">{msg}</div>}
       <div className="card" style={{ padding: 0 }}>
         <table>
           <thead>
@@ -86,7 +101,10 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
                   {s.weather.track_temp_c != null ? ` · piste ${s.weather.track_temp_c.toFixed(0)} °C` : ""}
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
-                  <button className="btn danger" onClick={() => void remove(s.id)}>Supprimer</button>
+                  <div className="row" style={{ flexWrap: "nowrap" }}>
+                    <button className="btn" title="Fichier compact à envoyer pour analyse" onClick={() => void exportOne(s)}>Exporter</button>
+                    <button className="btn danger" onClick={() => void remove(s.id)}>Supprimer</button>
+                  </div>
                 </td>
               </tr>
             ))}

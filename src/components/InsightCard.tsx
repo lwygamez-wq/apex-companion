@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { api } from "../lib/api";
 import { CONFIDENCE_FR, PRIORITY_FR } from "../lib/format";
 import type { Insight } from "../lib/types";
 
-export function InsightCard({ insight, active, onFocus }: { insight: Insight; active?: boolean; onFocus?: () => void }) {
+export function InsightCard({ insight, active, onFocus, sessionId }: { insight: Insight; active?: boolean; onFocus?: () => void; sessionId?: number }) {
   const g = insight.est_gain_s;
+  const [goalMsg, setGoalMsg] = useState<string | null>(null);
   return (
     <div className="insight" style={active ? { borderColor: "var(--accent)" } : undefined} onClick={onFocus}>
       <div className="head">
@@ -12,6 +15,23 @@ export function InsightCard({ insight, active, onFocus }: { insight: Insight; ac
       <h3>{insight.title}</h3>
       <div>{insight.explanation}</div>
       <div className="rec">{insight.recommendation}</div>
+      {insight.goal && sessionId != null && (
+        <div className="row" style={{ marginTop: 8 }}>
+          <button
+            className="btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              api.createGoal(sessionId, insight.goal!).then(
+                () => setGoalMsg("Objectif enregistré : il sera vérifié sur ta prochaine session ici."),
+                (err: unknown) => setGoalMsg(err instanceof Error ? err.message : String(err)),
+              );
+            }}
+          >
+            🎯 En faire mon objectif
+          </button>
+          <span className="muted" style={{ fontSize: 12 }}>{goalMsg ?? insight.goal.title}</span>
+        </div>
+      )}
       <details>
         <summary>Données et confiance ({CONFIDENCE_FR[insight.confidence]})</summary>
         <table>

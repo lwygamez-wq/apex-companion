@@ -116,3 +116,34 @@ pub async fn install_update(app: tauri::AppHandle) -> Result<String, String> {
     app.exit(0);
     Ok(v)
 }
+
+#[tauri::command]
+pub async fn get_iracing_autolog(state: State<'_, AppState>) -> R<apex_core::service::AutoLogStatus> {
+    blocking(state.svc.clone(), |s| s.iracing_autolog()).await
+}
+
+#[tauri::command]
+pub async fn set_iracing_autolog(state: State<'_, AppState>, enable: bool) -> R<apex_core::service::AutoLogStatus> {
+    let running = state.status.lock().map(|s| s.running.contains(&apex_core::model::SimId::Iracing)).unwrap_or(true);
+    blocking(state.svc.clone(), move |s| s.set_iracing_autolog(enable, running)).await
+}
+
+#[tauri::command]
+pub async fn export_session(state: State<'_, AppState>, id: i64, path: String) -> R<apex_core::service::ExportSummary> {
+    blocking(state.svc.clone(), move |s| s.export_session(id, path.as_ref(), env!("CARGO_PKG_VERSION"))).await
+}
+
+#[tauri::command]
+pub async fn set_corner_name(state: State<'_, AppState>, session_id: i64, apex_m: f32, name: String) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.set_corner_name(session_id, apex_m, &name)).await
+}
+
+#[tauri::command]
+pub async fn create_goal(state: State<'_, AppState>, session_id: i64, goal: apex_core::analysis::goals::GoalSuggestion) -> R<apex_core::service::GoalView> {
+    blocking(state.svc.clone(), move |s| s.create_goal(session_id, &goal)).await
+}
+
+#[tauri::command]
+pub async fn archive_goal(state: State<'_, AppState>, id: i64) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.archive_goal(id)).await
+}

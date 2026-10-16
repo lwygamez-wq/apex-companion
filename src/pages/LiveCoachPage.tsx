@@ -28,6 +28,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               <div>En piste <b>{live.on_track ? "oui" : "non"}</b></div>
               <div>Gaz <b>{(live.throttle * 100).toFixed(0)} %</b></div>
               <div>Frein <b>{(live.brake * 100).toFixed(0)} %</b></div>
+              <div>Enregistrement <b>{live.disk_logging == null ? "inconnu" : live.disk_logging ? "actif" : "INACTIF (Alt+L)"}</b></div>
             </div>
           )}
         </div>

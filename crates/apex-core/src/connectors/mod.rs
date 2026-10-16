@@ -105,6 +105,8 @@ pub struct LiveSnapshot {
     pub throttle: f32,
     pub brake: f32,
     pub tick: i64,
+    /// iRacing : la télémétrie est-elle en cours d'enregistrement sur disque (.ibt) ?
+    pub disk_logging: Option<bool>,
 }
 
 pub trait LiveSource: Send {

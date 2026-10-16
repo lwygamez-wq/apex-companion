@@ -1,8 +1,9 @@
 //! Couche de service applicative : toute la logique des commandes UI,
 //! indépendante de Tauri (donc testable sans WebView).
 
-use crate::analysis::compare::{compare_laps, Comparison, LapInput};
-use crate::analysis::progress::{progress_zones, ProgressZone, SessionLap};
+use crate::analysis::compare::{compare_laps_named, Comparison, LapInput};
+use crate::analysis::goals::{evaluate as evaluate_goal, GoalMetric, GoalResult, GoalSuggestion};
+use crate::analysis::progress::{progress_zones_named, ProgressZone, SessionLap};
 use crate::analysis::session::{best_clean_lap, consistency, theoretical_best, Consistency};
 use crate::connectors::{registry, Capabilities, ConnectorConfig, InstallStatus, SimulatorConnector};
 use crate::mock::demo_session;
@@ -86,6 +87,20 @@ pub struct ImportReport {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ExportSummary {
+    pub path: String,
+    pub bytes: u64,
+    pub laps: usize,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct AutoLogStatus {
+    /// `None` : réglage absent du fichier (on n'invente rien).
+    pub enabled: Option<bool>,
+    pub path: String,
+}
+
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
 pub struct SyncReport {
     pub imported: usize,
@@ -108,7 +123,21 @@ pub struct SessionDetail {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct GoalView {
+    pub id: i64,
+    pub title: String,
+    pub track_key: String,
+    pub created_at_unix: i64,
+    /// Résultat sur la dernière session du même circuit roulée après la création de l'objectif.
+    pub result: Option<GoalResult>,
+    pub evaluated_session_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct Dashboard {
+    pub active_goal: Option<GoalView>,
+    /// Objectif proposé (mode débutant : rester en piste / régularité).
+    pub next_goal_suggestion: Option<GoalSuggestion>,
     pub last_session: Option<SessionSummary>,
     pub theoretical_best_s: Option<f64>,
     pub progress_zones: Vec<ProgressZone>,
@@ -134,6 +163,11 @@ pub struct AppService {
 }
 
 const SETTINGS_KEY: &str = "app_settings";
+
+/// Clé de circuit pour les noms de virages : simulateur + circuit + configuration.
+pub fn track_key(m: &SessionMeta) -> String {
+    format!("{}|{}|{}", m.sim.as_str(), m.track, m.track_config.as_deref().unwrap_or(""))
+}
 
 /// 66.052 → « 1:06.052 »
 pub fn fmt_lap(s: f64) -> String {
@@ -312,6 +346,39 @@ impl AppService {
         Ok(rep)
     }
 
+    fn iracing_app_ini(&self) -> Result<PathBuf> {
+        let tdir = self.connector_config(SimId::Iracing).telemetry_dir;
+        crate::connectors::iracing::app_ini_candidates(tdir.as_deref())
+            .into_iter()
+            .find(|p| p.exists())
+            .ok_or_else(|| ServiceError::User("fichier app.ini d'iRacing introuvable (iRacing installé et lancé au moins une fois ?)".into()))
+    }
+
+    /// État de l'enregistrement automatique des sessions iRacing.
+    pub fn iracing_autolog(&self) -> Result<AutoLogStatus> {
+        let path = self.iracing_app_ini()?;
+        let bytes = std::fs::read(&path).map_err(|e| ServiceError::User(format!("lecture de app.ini : {e}")))?;
+        Ok(AutoLogStatus { enabled: crate::connectors::iracing::read_autolog(&bytes), path: path.to_string_lossy().into_owned() })
+    }
+
+    /// Active/désactive l'enregistrement automatique. Refusé si iRacing tourne
+    /// (il réécrit app.ini en quittant). Sauvegarde le fichier d'origine une fois.
+    pub fn set_iracing_autolog(&self, enable: bool, iracing_running: bool) -> Result<AutoLogStatus> {
+        if iracing_running {
+            return Err(ServiceError::User("ferme iRacing d'abord : il réécrit son fichier de réglages en quittant et annulerait la modification".into()));
+        }
+        let path = self.iracing_app_ini()?;
+        let bytes = std::fs::read(&path).map_err(|e| ServiceError::User(format!("lecture de app.ini : {e}")))?;
+        let out = crate::connectors::iracing::write_autolog(&bytes, enable).map_err(ServiceError::User)?;
+        let backup = path.with_extension("ini.apex-backup");
+        if !backup.exists() {
+            std::fs::write(&backup, &bytes).map_err(|e| ServiceError::User(format!("sauvegarde de app.ini : {e}")))?;
+        }
+        std::fs::write(&path, &out).map_err(|e| ServiceError::User(format!("écriture de app.ini : {e}")))?;
+        log::info!("irsdkAutoLogDisk={} dans {}", enable as u8, path.display());
+        self.iracing_autolog()
+    }
+
     pub fn load_demo(&self) -> Result<InsertOutcome> {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
         let n = self.db().list_sessions(&SessionFilter { sim: Some(SimId::Demo), ..Default::default() })?.len() as u64;
@@ -365,12 +432,60 @@ impl AppService {
         let (lr, lc) = (db.lap(ref_lap)?, db.lap(cmp_lap)?);
         let (mr, mc) = (db.session_meta(lr.session_id)?, db.session_meta(lc.session_id)?);
         let (tr, tc) = (db.trace(ref_lap)?, db.trace(cmp_lap)?);
-        compare_laps(
+        let names = db.corner_names(&track_key(&mr))?;
+        compare_laps_named(
             &LapInput { lap_id: ref_lap, session: &mr, lap: &lr.meta, trace: &tr },
             &LapInput { lap_id: cmp_lap, session: &mc, lap: &lc.meta, trace: &tc },
             step_m,
+            &names,
         )
         .map_err(|e| ServiceError::User(format!("comparaison impossible : {e}")))
+    }
+
+    /// Fixe l'objectif de session à partir d'une suggestion (conseil ou tableau de bord).
+    pub fn create_goal(&self, session_id: i64, goal: &GoalSuggestion) -> Result<GoalView> {
+        let meta = self.db().session_meta(session_id)?;
+        let json = serde_json::to_string(&goal.metric).map_err(|e| ServiceError::User(e.to_string()))?;
+        self.db().create_goal(&track_key(&meta), &goal.title, &json)?;
+        self.active_goal()?.ok_or_else(|| ServiceError::User("objectif non enregistré".into()))
+    }
+
+    pub fn archive_goal(&self, id: i64) -> Result<()> {
+        Ok(self.db().archive_goal(id)?)
+    }
+
+    /// Objectif actif et son évaluation sur la session la plus récente du même circuit roulée après sa création.
+    pub fn active_goal(&self) -> Result<Option<GoalView>> {
+        let Some((id, key, created, title, json)) = self.db().active_goal()? else { return Ok(None) };
+        let metric: GoalMetric = serde_json::from_str(&json).map_err(|e| ServiceError::User(format!("objectif illisible : {e}")))?;
+        let sessions = self.list_sessions(&SessionFilter { from_unix: Some(created), ..Default::default() })?;
+        let mut result = None;
+        let mut evaluated = None;
+        for s in sessions {
+            let meta = self.db().session_meta(s.id)?;
+            if track_key(&meta) != key {
+                continue;
+            }
+            let db = self.db();
+            let rows = db.laps(s.id)?;
+            let traces: Vec<(LapMeta, LapTrace)> = rows.iter().filter_map(|r| db.trace(r.id).ok().map(|t| (r.meta.clone(), t))).collect();
+            drop(db);
+            let pairs: Vec<(&LapMeta, &LapTrace)> = traces.iter().map(|(m, t)| (m, t)).collect();
+            let length = meta.track_length_m.or_else(|| traces.iter().map(|(_, t)| t.max_dist()).reduce(f32::max)).unwrap_or(0.0);
+            result = Some(evaluate_goal(&metric, &pairs, length));
+            evaluated = Some(s.id);
+            break; // list_sessions est trié du plus récent au plus ancien
+        }
+        Ok(Some(GoalView { id, title, track_key: key, created_at_unix: created, result, evaluated_session_id: evaluated }))
+    }
+
+    /// Nomme un virage pour tout le circuit (toutes les sessions du même combo).
+    pub fn set_corner_name(&self, session_id: i64, apex_m: f32, name: &str) -> Result<()> {
+        if name.chars().count() > 40 {
+            return Err(ServiceError::User("nom de virage trop long (40 caractères max)".into()));
+        }
+        let meta = self.db().session_meta(session_id)?;
+        Ok(self.db().set_corner_name(&track_key(&meta), apex_m, name)?)
     }
 
     pub fn set_reference(&self, lap_id: i64) -> Result<()> {
@@ -388,11 +503,12 @@ impl AppService {
     pub fn dashboard(&self) -> Result<Dashboard> {
         let all = self.list_sessions(&SessionFilter::default())?;
         let Some(last) = all.first().cloned() else {
-            return Ok(Dashboard { last_session: None, theoretical_best_s: None, progress_zones: vec![], consistency_trend: vec![], next_goal: None, total_sessions: 0 });
+            return Ok(Dashboard { active_goal: None, next_goal_suggestion: None, last_session: None, theoretical_best_s: None, progress_zones: vec![], consistency_trend: vec![], next_goal: None, total_sessions: 0 });
         };
         let detail = self.session_detail(last.id)?;
         let zones = {
             let db = self.db();
+            let names = db.corner_names(&track_key(&detail.meta))?;
             let traces: Vec<(i64, LapMeta, LapTrace)> = detail
                 .laps
                 .iter()
@@ -402,7 +518,7 @@ impl AppService {
             drop(db);
             let laps: Vec<SessionLap> = traces.iter().map(|(id, m, t)| SessionLap { lap_id: *id, meta: m, trace: t }).collect();
             match detail.best_lap_id.and_then(|b| laps.iter().position(|l| l.lap_id == b)) {
-                Some(bi) => progress_zones(&detail.meta, &laps[bi], &laps, 2.0),
+                Some(bi) => progress_zones_named(&detail.meta, &laps[bi], &laps, 2.0, &names),
                 None => vec![],
             }
         };
@@ -415,14 +531,19 @@ impl AppService {
         let beginner = self.settings().beginner_mode;
         let flying = last.lap_count.saturating_sub(2).max(1);
         // Mode débutant : rester sur la piste, puis être régulier, avant de chercher les dixièmes.
+        let mut suggestion = None;
         let beginner_goal = if !beginner {
             None
         } else if last.incident_laps * 3 >= flying && last.incident_laps >= 2 {
+            suggestion = Some(GoalSuggestion { title: "Enchaîner 5 tours propres".into(), metric: GoalMetric::CleanLaps { target: 5 } });
             Some(format!(
                 "Priorité : rester sur la piste. {} tour(s) sur {} ont eu une sortie ou un incident. Roule à 95 % de ton rythme jusqu'à enchaîner 5 tours propres : un tour propre et régulier fait plus progresser qu'un tour rapide raté.",
                 last.incident_laps, last.lap_count
             ))
         } else if let (Some(sd), Some(best)) = (last.stddev_clean_s, last.best_lap_s) {
+            if sd > 0.5 {
+                suggestion = Some(GoalSuggestion { title: "Régularité : écart-type ≤ 0,5 s".into(), metric: GoalMetric::Consistency { target_sd_s: 0.5 } });
+            }
             (sd > 0.5).then(|| format!(
                 "Priorité : la régularité. Tes tours propres varient de ±{:.1} s. Objectif : 5 tours d'affilée à moins de 0,5 s de ton meilleur tour ({}), avec les mêmes points de freinage à chaque tour.",
                 sd, fmt_lap(best)
@@ -451,7 +572,12 @@ impl AppService {
             }),
             _ => Some("Pas assez de tours propres pour identifier une zone de progrès : roule au moins 3 tours lancés sans incident.".into()),
         });
+        if suggestion.is_none() {
+            suggestion = zones.first().and_then(|z| z.example.goal.clone());
+        }
         Ok(Dashboard {
+            active_goal: self.active_goal()?,
+            next_goal_suggestion: suggestion,
             theoretical_best_s: detail.theoretical_best_s,
             last_session: Some(last),
             progress_zones: zones,
@@ -489,6 +615,75 @@ impl AppService {
         serde_json::to_writer(std::io::BufWriter::new(f), &serde_json::json!({ "format": "apex-companion-export", "version": 1, "sessions": out }))
             .map_err(|e| ServiceError::User(format!("export : {e}")))?;
         Ok(sessions.len())
+    }
+
+    /// Export d'une session pour analyse externe (fichier JSON compressé gzip).
+    /// Contient méta, tours, traces brutes et conseils ; le chemin d'origine est réduit
+    /// au nom de fichier (pas de nom d'utilisateur Windows).
+    pub fn export_session(&self, id: i64, path: &Path, app_version: &str) -> Result<ExportSummary> {
+        #[derive(Serialize)]
+        struct ExportLap {
+            #[serde(flatten)]
+            row: LapRow,
+            trace: LapTrace,
+        }
+        #[derive(Serialize)]
+        struct LapAnalysis {
+            lap_id: i64,
+            number: i32,
+            delta_s: Option<f32>,
+            corners: Vec<crate::analysis::compare::CornerComparison>,
+            insights: Vec<crate::analysis::insights::Insight>,
+            warnings: Vec<String>,
+        }
+        let detail = self.session_detail(id)?;
+        let mut meta = detail.meta.clone();
+        meta.source_path = meta.source_path.as_deref().map(|p| p.rsplit(['\\', '/']).next().unwrap_or(p).to_string());
+        let laps: Vec<ExportLap> = {
+            let db = self.db();
+            detail
+                .laps
+                .iter()
+                .map(|row| Ok(ExportLap { trace: db.trace(row.id)?, row: row.clone() }))
+                .collect::<std::result::Result<_, StoreError>>()?
+        };
+        let analyses: Vec<LapAnalysis> = match detail.best_lap_id {
+            Some(best) => detail
+                .laps
+                .iter()
+                .filter(|l| l.meta.lap_time_s.is_some() && l.id != best)
+                .filter_map(|l| self.compare(best, l.id, 1.0).ok().map(|c| LapAnalysis {
+                    lap_id: l.id,
+                    number: l.meta.number,
+                    delta_s: c.delta_s.last().copied(),
+                    corners: c.corners,
+                    insights: c.insights,
+                    warnings: c.warnings,
+                }))
+                .collect(),
+            None => vec![],
+        };
+        let doc = serde_json::json!({
+            "format": "apex-session-export",
+            "version": 1,
+            "app_version": app_version,
+            "exported_at": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0),
+            "session": meta,
+            "best_lap_id": detail.best_lap_id,
+            "theoretical_best_s": detail.theoretical_best_s,
+            "consistency": detail.consistency,
+            "laps": laps,
+            "analysis_vs_best": analyses,
+        });
+        let f = std::fs::File::create(path).map_err(|e| ServiceError::User(format!("export : {e}")))?;
+        let mut gz = flate2::write::GzEncoder::new(std::io::BufWriter::new(f), flate2::Compression::default());
+        serde_json::to_writer(&mut gz, &doc).map_err(|e| ServiceError::User(format!("export : {e}")))?;
+        gz.finish().and_then(|mut w| std::io::Write::flush(&mut w)).map_err(|e| ServiceError::User(format!("export : {e}")))?;
+        Ok(ExportSummary {
+            path: path.to_string_lossy().into_owned(),
+            bytes: std::fs::metadata(path).map(|m| m.len()).unwrap_or(0),
+            laps: detail.laps.len(),
+        })
     }
 
     /// Diagnostic exportable sans données personnelles (ni chemins, ni noms, ni télémétrie).
@@ -561,6 +756,84 @@ mod tests {
         let r = svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap();
         assert_eq!(r, SyncReport::default());
         assert_eq!(svc.list_sessions(&SessionFilter::default()).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn autolog_toggle_with_backup_and_running_guard() {
+        let svc = AppService::in_memory().unwrap();
+        let root = tempfile::tempdir().unwrap();
+        let tel = root.path().join("telemetry");
+        std::fs::create_dir_all(&tel).unwrap();
+        let ini = root.path().join("app.ini");
+        std::fs::write(&ini, "[Telemetry]\r\nirsdkAutoLogDisk=0 ; auto\r\n").unwrap();
+        svc.save_settings(AppSettings { iracing_telemetry_dir: Some(tel.to_string_lossy().into()), ..Default::default() }).unwrap();
+        assert_eq!(svc.iracing_autolog().unwrap().enabled, Some(false));
+        assert!(svc.set_iracing_autolog(true, true).is_err(), "refus si iRacing tourne");
+        assert_eq!(svc.set_iracing_autolog(true, false).unwrap().enabled, Some(true));
+        assert!(root.path().join("app.ini.apex-backup").exists());
+        assert_eq!(std::fs::read_to_string(root.path().join("app.ini.apex-backup")).unwrap(), "[Telemetry]\r\nirsdkAutoLogDisk=0 ; auto\r\n");
+    }
+
+    #[test]
+    fn session_export_is_compact_and_anonymised() {
+        let svc = AppService::in_memory().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        svc.save_settings(AppSettings { iracing_telemetry_dir: Some(dir.path().to_string_lossy().into()), ..Default::default() }).unwrap();
+        std::fs::write(dir.path().join("spa.ibt"), crate::ingest::ibt::writer::synthetic()).unwrap();
+        svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap();
+        let sid = svc.list_sessions(&SessionFilter::default()).unwrap()[0].id;
+        let out = dir.path().join("export.apex.json.gz");
+        let r = svc.export_session(sid, &out, "0.4.0").unwrap();
+        assert!(r.bytes > 1000);
+        let mut txt = String::new();
+        std::io::Read::read_to_string(&mut flate2::read::GzDecoder::new(std::fs::File::open(&out).unwrap()), &mut txt).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&txt).unwrap();
+        assert_eq!(v["format"], "apex-session-export");
+        assert_eq!(v["session"]["source_path"], "spa.ibt", "chemin réduit au nom de fichier");
+        assert!(!v["laps"].as_array().unwrap().is_empty());
+        assert!(!txt.contains(&*dir.path().to_string_lossy()));
+    }
+
+    #[test]
+    fn corner_names_apply_to_comparison_and_insights() {
+        let svc = AppService::in_memory().unwrap();
+        let InsertOutcome::Inserted(sid) = svc.load_demo().unwrap() else { panic!() };
+        let d = svc.session_detail(sid).unwrap();
+        let best = d.best_lap_id.unwrap();
+        let other = d.laps.iter().find(|l| l.meta.number == 1).unwrap().id; // tour avec freinage précoce en V1
+        let c = svc.compare(best, other, 1.0).unwrap();
+        let v1 = c.corners[0].corner.apex_m;
+        svc.set_corner_name(sid, v1 + 12.0, "La Source").unwrap();
+        let c = svc.compare(best, other, 1.0).unwrap();
+        assert_eq!(c.corners[0].corner.name, "La Source");
+        assert!(c.insights[0].title.starts_with("La Source :"), "{}", c.insights[0].title);
+        // Renommer remplace, nom vide efface.
+        svc.set_corner_name(sid, v1, "Virage 1").unwrap();
+        assert_eq!(svc.compare(best, other, 1.0).unwrap().corners[0].corner.name, "Virage 1");
+        svc.set_corner_name(sid, v1, "").unwrap();
+        assert_eq!(svc.compare(best, other, 1.0).unwrap().corners[0].corner.name, "V1");
+    }
+
+    #[test]
+    fn goal_from_insight_is_evaluated_on_next_session() {
+        let svc = AppService::in_memory().unwrap();
+        let InsertOutcome::Inserted(sid) = svc.load_demo().unwrap() else { panic!() };
+        let d = svc.session_detail(sid).unwrap();
+        let lap1 = d.laps.iter().find(|l| l.meta.number == 1).unwrap().id;
+        let c = svc.compare(d.best_lap_id.unwrap(), lap1, 1.0).unwrap();
+        let g = c.insights[0].goal.clone().expect("le freinage précoce propose un objectif");
+        assert!(matches!(g.metric, GoalMetric::BrakePoint { .. }));
+        let view = svc.create_goal(sid, &g).unwrap();
+        assert!(view.result.is_none(), "aucune session après la création");
+        // Session suivante sur le même circuit : 2 tours sur 4 freinent encore trop tôt.
+        let later = crate::mock::demo_session(77, view.created_at_unix + 60);
+        svc.db().insert_session(&later).unwrap();
+        let view = svc.active_goal().unwrap().unwrap();
+        let r = view.result.unwrap();
+        assert_eq!((r.laps_ok, r.laps_evaluated, r.achieved), (2, 4, false), "{}", r.summary);
+        assert!(svc.dashboard().unwrap().active_goal.is_some());
+        svc.archive_goal(view.id).unwrap();
+        assert!(svc.active_goal().unwrap().is_none());
     }
 
     #[test]

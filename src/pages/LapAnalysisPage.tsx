@@ -34,6 +34,13 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const [cursor, setCursor] = useState<number | null>(null);
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [renaming, setRenaming] = useState<{ apex: number; name: string } | null>(null);
+  const saveName = async () => {
+    if (!renaming || !detail.data) return;
+    await api.setCornerName(detail.data.id, renaming.apex, renaming.name);
+    setRenaming(null);
+    cmp.reload();
+  };
   const settings = useAsync(() => api.settings(), []);
   const beginner = settings.data?.beginner_mode ?? true;
 
@@ -122,7 +129,28 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     <tbody>
                       {c.corners.map((k) => (
                         <tr key={k.corner.id} className="clickable" onClick={() => setCorner(corner === k.corner.id ? null : k.corner.id)} style={corner === k.corner.id ? { background: "var(--panel-2)" } : undefined}>
-                          <td className="mono">{k.corner.name}</td>
+                          <td className="mono" onClick={(e) => e.stopPropagation()}>
+                            {renaming?.apex === k.corner.apex_m ? (
+                              <input
+                                autoFocus
+                                type="text"
+                                value={renaming.name}
+                                maxLength={40}
+                                placeholder="nom (vide = V…)"
+                                style={{ width: 130 }}
+                                onChange={(e) => setRenaming({ apex: k.corner.apex_m, name: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") void saveName();
+                                  if (e.key === "Escape") setRenaming(null);
+                                }}
+                                onBlur={() => void saveName()}
+                              />
+                            ) : (
+                              <span title="Cliquer pour renommer ce virage (enregistré pour ce circuit)" style={{ cursor: "text" }} onClick={() => setRenaming({ apex: k.corner.apex_m, name: /^V\d+$/.test(k.corner.name) ? "" : k.corner.name })}>
+                                {k.corner.name} <span className="muted">✎</span>
+                              </span>
+                            )}
+                          </td>
                           <td className={`num ${k.time_delta_s > 0.02 ? "pos" : k.time_delta_s < -0.02 ? "neg" : ""}`}>{delta(k.time_delta_s, 2)}</td>
                           <td className="num">{k.reference.brake_on_m?.toFixed(0) ?? "—"} / {k.compared.brake_on_m?.toFixed(0) ?? "—"} m</td>
                           <td className="num">{k.reference.min_speed_kmh.toFixed(0)} / {k.compared.min_speed_kmh.toFixed(0)}</td>
@@ -133,7 +161,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     </tbody>
                   </table>
                   <div className="muted" style={{ padding: "8px 10px", fontSize: 12 }}>
-                    Numérotation des virages détectée automatiquement (V1, V2…) : elle peut différer de la numérotation officielle du circuit.
+                    Virages détectés automatiquement. Clique sur un nom (✎) pour le renommer : le nom est gardé pour toutes tes sessions sur ce circuit.
                   </div>
                 </div>
               </div>
@@ -143,7 +171,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   {corner != null ? `Conseils — ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
                 </h2>
                 {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
-                {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i) => <InsightCard key={i.id} insight={i} />)}
+                {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i) => <InsightCard key={i.id} insight={i} sessionId={d.id} />)}
                 {beginner && corner == null && insights.length > 3 && (
                   <button className="btn" onClick={() => setShowAll((v) => !v)}>
                     {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}

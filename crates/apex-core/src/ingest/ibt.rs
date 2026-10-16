@@ -478,7 +478,7 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
 // ---------------------------------------------------------------------------
 // Écriture de fichiers .ibt synthétiques (tests uniquement, conforme à la spec).
 // ---------------------------------------------------------------------------
-#[cfg(test)]
+#[cfg(any(test, feature = "testkit"))]
 pub mod writer {
     use super::*;
 

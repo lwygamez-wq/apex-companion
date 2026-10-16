@@ -1,7 +1,7 @@
 //! Zones de progrès d'une session : chaque tour propre est comparé au meilleur,
 //! et les pertes sont regroupées par virage. Un défaut répété = priorité réelle.
 
-use super::compare::{compare_laps, LapInput};
+use super::compare::{compare_laps_named, CornerName, LapInput};
 use super::insights::Insight;
 use crate::model::{LapMeta, LapTrace, SessionMeta};
 use serde::Serialize;
@@ -29,11 +29,15 @@ pub struct SessionLap<'a> {
 }
 
 pub fn progress_zones(session: &SessionMeta, reference: &SessionLap, laps: &[SessionLap], step_m: f32) -> Vec<ProgressZone> {
+    progress_zones_named(session, reference, laps, step_m, &[])
+}
+
+pub fn progress_zones_named(session: &SessionMeta, reference: &SessionLap, laps: &[SessionLap], step_m: f32, names: &[CornerName]) -> Vec<ProgressZone> {
     let rf = LapInput { lap_id: reference.lap_id, session, lap: reference.meta, trace: reference.trace };
     let mut by_seg: BTreeMap<String, Vec<Insight>> = BTreeMap::new();
     let mut compared = 0usize;
     for l in laps.iter().filter(|l| l.lap_id != reference.lap_id && l.meta.is_clean()) {
-        let Ok(c) = compare_laps(&rf, &LapInput { lap_id: l.lap_id, session, lap: l.meta, trace: l.trace }, step_m) else { continue };
+        let Ok(c) = compare_laps_named(&rf, &LapInput { lap_id: l.lap_id, session, lap: l.meta, trace: l.trace }, step_m, names) else { continue };
         compared += 1;
         for i in c.insights {
             if let Some(s) = i.segment.clone() {

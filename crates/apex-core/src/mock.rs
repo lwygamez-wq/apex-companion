@@ -168,7 +168,12 @@ impl Rng {
 
 /// Génère un tour lancé (ou de sortie) échantillonné à `hz`.
 pub fn generate_lap(faults: &[CornerFault], hz: f32, seed: u64) -> (LapTrace, f64) {
-    let pts = geometry(DEMO_TRACK);
+    generate_lap_on(DEMO_TRACK, faults, hz, seed)
+}
+
+/// Variante sur un circuit quelconque (ex. circuit long pour les tests de charge).
+pub fn generate_lap_on(track: &[Seg], faults: &[CornerFault], hz: f32, seed: u64) -> (LapTrace, f64) {
+    let pts = geometry(track);
     let (v, thr, brk) = speed_profile(&pts, faults, 1.9);
     let n = pts.len();
     // Temps cumulé par mètre.

@@ -22,6 +22,12 @@ const SUPPORT_CLS: Record<Support, string> = { implemented: "good", unverified: 
 export function SettingsPage() {
   const settings = useAsync(() => api.settings(), []);
   const connectors = useAsync(() => api.connectors(), []);
+  const autolog = useAsync(() => api.iracingAutolog(), []);
+  const toggleAutolog = (enable: boolean) =>
+    api.setIracingAutolog(enable).then(
+      () => (setMsg(enable ? "Enregistrement automatique activé." : "Enregistrement automatique désactivé."), autolog.reload()),
+      (e: unknown) => setMsg(e instanceof Error ? e.message : String(e)),
+    );
   const [s, setS] = useState<AppSettings | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -90,6 +96,25 @@ export function SettingsPage() {
             <div className="row">
               <input type="text" style={{ flex: 1, minWidth: 320 }} value={s.iracing_telemetry_dir ?? ""} placeholder="par défaut" onChange={(e) => upd("iracing_telemetry_dir", e.target.value || null)} />
               <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("iracing_telemetry_dir", d))}>Parcourir</button>
+            </div>
+          </div>
+          <div className="form-row">
+            <div>
+              Enregistrement automatique iRacing
+              <div className="hint">Toutes les sessions sont enregistrées sans Alt+L (réglage irsdkAutoLogDisk d'iRacing, fichier sauvegardé avant modification). iRacing doit être fermé. Environ 200 Mo par heure.</div>
+            </div>
+            <div className="row">
+              {autolog.error && <span className="muted">{autolog.error}</span>}
+              {autolog.data && (
+                <>
+                  <span className={`chip ${autolog.data.enabled ? "good" : autolog.data.enabled === false ? "warn" : ""}`}>
+                    {autolog.data.enabled ? "Actif" : autolog.data.enabled === false ? "Inactif" : "Réglage introuvable"}
+                  </span>
+                  {autolog.data.enabled != null && (
+                    <button className="btn" onClick={() => void toggleAutolog(!autolog.data!.enabled)}>{autolog.data.enabled ? "Désactiver" : "Activer"}</button>
+                  )}
+                </>
+              )}
             </div>
           </div>
           <div className="form-row">

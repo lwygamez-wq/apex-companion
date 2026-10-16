@@ -52,6 +52,12 @@ pub fn run() {
             commands::save_settings,
             commands::check_update,
             commands::install_update,
+            commands::get_iracing_autolog,
+            commands::set_iracing_autolog,
+            commands::export_session,
+            commands::set_corner_name,
+            commands::create_goal,
+            commands::archive_goal,
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement d'Apex Companion");

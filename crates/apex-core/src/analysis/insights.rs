@@ -4,6 +4,7 @@
 //! niveau de confiance justifié. Aucun conseil générique.
 
 use super::corners::{CornerDef, CornerMetrics};
+use super::goals::{GoalMetric, GoalSuggestion};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -61,6 +62,8 @@ pub struct Insight {
     pub confidence: Confidence,
     pub confidence_notes: Vec<String>,
     pub recommendation: String,
+    /// Objectif mesurable proposé pour la prochaine session (`None` si non mesurable).
+    pub goal: Option<GoalSuggestion>,
 }
 
 /// Qualité des données de la comparaison, calculée en amont.
@@ -167,7 +170,7 @@ pub fn corner_insight(
 
     let v = |x: f32| format!("{x:.0} km/h");
     let seg = &corner.name;
-    let (title, explanation, rec, mut sharp) = if let Some(be) = brake_early.filter(|b| *b >= th.brake_m) {
+    let (title, explanation, rec, mut sharp, goal) = if let Some(be) = brake_early.filter(|b| *b >= th.brake_m) {
         (
             format!("{seg} : freinage trop précoce"),
             format!(
@@ -179,6 +182,7 @@ pub fn corner_insight(
                 (be * 0.7).max(5.0), fmt_opt_m(rf.brake_on_m), v(rf.min_speed_kmh)
             ),
             be >= th.brake_m * 1.5,
+            rf.brake_on_m.map(|t| (format!("{seg} : commencer à freiner à {t:.0} m ou plus loin"), GoalMetric::BrakePoint { apex_m: corner.apex_m, target_m: t })),
         )
     } else if let Some(bl) = brake_early.filter(|b| -*b >= th.brake_m && (vmin_deficit >= th.speed_kmh || exit_deficit >= th.speed_kmh)) {
         let bl = -bl;
@@ -193,6 +197,7 @@ pub fn corner_insight(
                 fmt_opt_m(rf.brake_on_m), v(rf.exit_speed_kmh)
             ),
             bl >= th.brake_m * 1.5,
+            Some((format!("{seg} : sortir à {} au moins", v(rf.exit_speed_kmh)), GoalMetric::ExitSpeed { apex_m: corner.apex_m, target_kmh: rf.exit_speed_kmh })),
         )
     } else if vmin_deficit >= th.speed_kmh {
         (
@@ -206,6 +211,7 @@ pub fn corner_insight(
                 v(rf.min_speed_kmh), rf.min_speed_at_m
             ),
             vmin_deficit >= th.speed_kmh * 2.0,
+            Some((format!("{seg} : passer la corde à {} au moins", v(rf.min_speed_kmh)), GoalMetric::MinSpeed { apex_m: corner.apex_m, target_kmh: rf.min_speed_kmh })),
         )
     } else if let Some(tl) = throttle_late.filter(|t| *t >= th.throttle_m) {
         (
@@ -219,6 +225,7 @@ pub fn corner_insight(
                 fmt_opt_m(rf.throttle_on_m)
             ),
             tl >= th.throttle_m * 2.0,
+            rf.throttle_on_m.map(|t| (format!("{seg} : remettre les gaz avant {t:.0} m"), GoalMetric::ThrottleOn { apex_m: corner.apex_m, target_m: t })),
         )
     } else if exit_deficit >= th.speed_kmh {
         (
@@ -229,6 +236,7 @@ pub fn corner_insight(
             ),
             "Ouvre la trajectoire en sortie et vise une montée des gaz continue plutôt qu'une reprise hésitante.".into(),
             false,
+            Some((format!("{seg} : sortir à {} au moins", v(rf.exit_speed_kmh)), GoalMetric::ExitSpeed { apex_m: corner.apex_m, target_kmh: rf.exit_speed_kmh })),
         )
     } else if let (Some(r), Some(f)) = (extra_rev.filter(|r| *r >= th.extra_reversals as i64), ramp_faster.filter(|f| *f > 0.15)) {
         (
@@ -238,6 +246,7 @@ pub fn corner_insight(
             ),
             "Allonge la montée des gaz entre la corde et la sortie ; n'atteins 100 % qu'une fois le volant quasiment droit.".into(),
             false,
+            None,
         )
     } else {
         // Perte mesurée mais pas de cause isolable avec les canaux disponibles : on le dit.
@@ -246,6 +255,7 @@ pub fn corner_insight(
             format!("Tu perds {loss:.2} s sur ce virage, mais freinage, vitesse minimale et remise des gaz restent dans les seuils de détection."),
             "Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.".into(),
             false,
+            None,
         )
     };
 
@@ -321,6 +331,7 @@ pub fn corner_insight(
         confidence: conf,
         confidence_notes: notes,
         recommendation: rec,
+        goal: goal.map(|(title, metric)| GoalSuggestion { title, metric }),
     })
 }
 

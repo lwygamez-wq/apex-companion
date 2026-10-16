@@ -152,6 +152,47 @@ export interface Insight {
   confidence: Confidence;
   confidence_notes: string[];
   recommendation: string;
+  goal: GoalSuggestion | null;
+}
+
+export type GoalMetric =
+  | { kind: "brake_point"; apex_m: number; target_m: number }
+  | { kind: "min_speed"; apex_m: number; target_kmh: number }
+  | { kind: "exit_speed"; apex_m: number; target_kmh: number }
+  | { kind: "throttle_on"; apex_m: number; target_m: number }
+  | { kind: "consistency"; target_sd_s: number }
+  | { kind: "clean_laps"; target: number };
+
+export interface GoalSuggestion {
+  title: string;
+  metric: GoalMetric;
+}
+
+export interface GoalResult {
+  laps_evaluated: number;
+  laps_ok: number;
+  achieved: boolean;
+  summary: string;
+}
+
+export interface GoalView {
+  id: number;
+  title: string;
+  track_key: string;
+  created_at_unix: number;
+  result: GoalResult | null;
+  evaluated_session_id: number | null;
+}
+
+export interface AutoLogStatus {
+  enabled: boolean | null;
+  path: string;
+}
+
+export interface ExportSummary {
+  path: string;
+  bytes: number;
+  laps: number;
 }
 
 export interface LapSummary {
@@ -203,6 +244,7 @@ export interface LiveSnapshot {
   throttle: number;
   brake: number;
   tick: number;
+  disk_logging: boolean | null;
 }
 
 export interface StatusPayload {
@@ -248,6 +290,8 @@ export interface ProgressZone {
 }
 
 export interface Dashboard {
+  active_goal: GoalView | null;
+  next_goal_suggestion: GoalSuggestion | null;
   last_session: SessionSummary | null;
   theoretical_best_s: number | null;
   progress_zones: ProgressZone[];

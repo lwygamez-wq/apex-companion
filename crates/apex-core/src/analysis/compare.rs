@@ -71,7 +71,27 @@ pub fn comparability_warnings(a: &SessionMeta, b: &SessionMeta) -> Vec<String> {
     w
 }
 
+/// Nom donné à un virage par le pilote ou par une table de circuit : (distance de l'apex en m, nom).
+pub type CornerName = (f32, String);
+
+/// Applique les noms connus aux virages détectés (apex le plus proche, à moins de 60 m).
+pub fn apply_corner_names(defs: &mut [CornerDef], names: &[CornerName]) {
+    for d in defs.iter_mut() {
+        if let Some((_, n)) = names
+            .iter()
+            .filter(|(a, _)| (a - d.apex_m).abs() <= 60.0)
+            .min_by(|x, y| (x.0 - d.apex_m).abs().total_cmp(&(y.0 - d.apex_m).abs()))
+        {
+            d.name = n.clone();
+        }
+    }
+}
+
 pub fn compare_laps(rf: &LapInput, cmp: &LapInput, step_m: f32) -> Result<Comparison, ResampleError> {
+    compare_laps_named(rf, cmp, step_m, &[])
+}
+
+pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[CornerName]) -> Result<Comparison, ResampleError> {
     let length = rf
         .session
         .track_length_m
@@ -108,7 +128,8 @@ pub fn compare_laps(rf: &LapInput, cmp: &LapInput, step_m: f32) -> Result<Compar
         },
     };
 
-    let defs = detect_corners(&r, &CornerConfig::default());
+    let mut defs = detect_corners(&r, &CornerConfig::default());
+    apply_corner_names(&mut defs, names);
     let th = Thresholds::default();
     let mut corners = Vec::with_capacity(defs.len());
     let mut insights = Vec::new();
