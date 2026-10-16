@@ -146,4 +146,16 @@ mod tests {
         assert!(verify_signature(&bad, SAMPLE_SIG).is_err());
         assert!(verify_signature(SAMPLE, "pas une signature").is_err());
     }
+
+    /// Vérifie une release réellement publiée : `APEX_E2E_DIR` contient latest.json et setup.exe téléchargés.
+    #[test]
+    fn published_release_signature() {
+        let Some(dir) = std::env::var_os("APEX_E2E_DIR") else { return };
+        let dir = std::path::PathBuf::from(dir);
+        let m: Manifest = serde_json::from_str(&std::fs::read_to_string(dir.join("latest.json")).unwrap()).unwrap();
+        let p = &m.platforms[PLATFORM];
+        assert!(p.url.starts_with(ALLOWED_PREFIX));
+        verify_signature(&std::fs::read(dir.join("setup.exe")).unwrap(), &p.signature).unwrap();
+        println!("release {} : signature valide", m.version);
+    }
 }
