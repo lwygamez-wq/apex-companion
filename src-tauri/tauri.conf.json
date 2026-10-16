@@ -41,5 +41,13 @@
     "shortDescription": "Compagnon de pilotage simracing",
     "copyright": "© 2026 Alex — marques des simulateurs propriété de leurs détenteurs",
     "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDkyRDUyMzkwQzI5MTZBQzIKUldUQ2FwSENrQ1BWa3EyQ2l3eUZCOUkwQndZOXZaQzFvd2VPZGJaWENVczF0dEdpM0psRlhyYlUK",
+      "endpoints": [
+        "https://github.com/lwygamez-wq/apex-companion/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
