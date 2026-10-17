@@ -134,8 +134,14 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
     let mut corners = Vec::with_capacity(defs.len());
     let mut insights = Vec::new();
     for d in defs {
-        let mr = corner_metrics(&r, &d);
-        let mc = corner_metrics(&c, &d);
+        let mut mr = corner_metrics(&r, &d);
+        let mut mc = corner_metrics(&c, &d);
+        // Vitesses de sortie comparées au même endroit (le plus tôt des deux points de mesure).
+        let at = mr.exit_at_m.min(mc.exit_at_m);
+        mr.exit_speed_kmh = r.speed_kmh[r.idx(at)];
+        mc.exit_speed_kmh = c.speed_kmh[c.idx(at)];
+        mr.exit_at_m = at;
+        mc.exit_at_m = at;
         if !hard_mismatch {
             if let Some(i) = corner_insight(&d, &mr, &mc, &q, &th) {
                 insights.push(i);

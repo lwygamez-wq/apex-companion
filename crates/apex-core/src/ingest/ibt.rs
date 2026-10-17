@@ -88,8 +88,25 @@ fn rd_i32(b: &[u8], o: usize) -> Result<i32, IbtError> {
 
 fn cstr(b: &[u8]) -> String {
     let end = b.iter().position(|&c| c == 0).unwrap_or(b.len());
-    // YAML iRacing en Windows-1252 : on remplace les octets non UTF-8.
-    String::from_utf8_lossy(&b[..end]).into_owned()
+    decode_text(&b[..end])
+}
+
+/// Le YAML d'iRacing est en Windows-1252 (ex. « Autódromo José Carlos Pace ») :
+/// UTF-8 si valide, sinon décodage Windows-1252 complet.
+pub fn decode_text(b: &[u8]) -> String {
+    if let Ok(s) = std::str::from_utf8(b) {
+        return s.to_owned();
+    }
+    const CP1252_80_9F: [char; 32] = [
+        '€', '\u{81}', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', '\u{8D}', 'Ž', '\u{8F}',
+        '\u{90}', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', '\u{9D}', 'ž', 'Ÿ',
+    ];
+    b.iter()
+        .map(|&c| match c {
+            0x80..=0x9F => CP1252_80_9F[(c - 0x80) as usize],
+            _ => c as char, // 0x00–0x7F ASCII, 0xA0–0xFF = Latin-1
+        })
+        .collect()
 }
 
 pub fn parse_header(b: &[u8]) -> Result<Header, IbtError> {
@@ -355,13 +372,24 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
     let pct = &ch.lap_dist_pct;
     let t = &ch.session_time;
     // (index du 1er échantillon du nouveau tour, temps de franchissement interpolé)
+    // iRacing peut donner une valeur très légèrement négative pile sur la ligne (-0,00001),
+    // et -1 quand la position est inconnue (voiture hors du monde, menus) : on compare
+    // chaque échantillon valide au dernier échantillon valide, et on ramène les quasi-zéros à 0.
     let mut crossings: Vec<(usize, f64)> = Vec::new();
-    for i in 1..n {
-        if pct[i - 1] > 0.9 && pct[i] < 0.1 && pct[i] >= 0.0 {
-            let span = pct[i] + 1.0 - pct[i - 1];
-            let frac = if span > 0.0 { (1.0 - pct[i - 1]) / span } else { 0.0 };
-            crossings.push((i, t[i - 1] + frac * (t[i] - t[i - 1])));
+    let mut last: Option<usize> = None;
+    for i in 0..n {
+        if pct[i] < -0.01 {
+            continue;
         }
+        if let Some(p) = last {
+            let (a, b) = (pct[p], pct[i].max(0.0));
+            if a > 0.9 && b < 0.1 {
+                let span = b + 1.0 - a;
+                let frac = if span > 0.0 { (1.0 - a) / span } else { 0.0 };
+                crossings.push((i, t[p] + frac * (t[i] - t[p])));
+            }
+        }
+        last = Some(i);
     }
     let length = si.track_length_m.map(|l| l as f64);
     let mut laps = Vec::new();
@@ -425,8 +453,8 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
             .map(|i| {
                 let d = ch.lap_dist[i];
                 match length {
-                    Some(len) if d <= 0.0 => (pct[i] * len) as f32,
-                    _ => d as f32,
+                    Some(len) if d <= 0.0 => (pct[i].max(0.0) * len) as f32,
+                    _ => d.max(0.0) as f32,
                 }
             })
             .collect();
@@ -618,6 +646,50 @@ mod tests {
         for l in &s.laps {
             l.trace.validate().unwrap();
         }
+    }
+
+    #[test]
+    fn line_crossing_with_tiny_negative_or_invalid_sample() {
+        // Données réelles iRacing (Interlagos) : pile sur la ligne, LapDistPct = -0.00001.
+        // Ici on reproduit ce cas au 2e franchissement, et une valeur -1 (invalide) au 3e.
+        let vars = [
+            Var { name: "SessionTime", ty: VarType::Double, unit: "s" },
+            Var { name: "LapDist", ty: VarType::Float, unit: "m" },
+            Var { name: "LapDistPct", ty: VarType::Float, unit: "%" },
+            Var { name: "Speed", ty: VarType::Float, unit: "m/s" },
+            Var { name: "Throttle", ty: VarType::Float, unit: "%" },
+            Var { name: "Brake", ty: VarType::Float, unit: "%" },
+        ];
+        let (v, len, hz) = (50.0f64, 2000.0f64, 60.0f64);
+        let n = (4.5 * len / v * hz) as usize;
+        let mut crossing = 0;
+        let rows: Vec<Vec<f64>> = (0..n)
+            .map(|i| {
+                let t = i as f64 / hz;
+                let lap = (t * v / len).floor();
+                let d = t * v - lap * len;
+                let mut pct = d / len;
+                let prev_lap = (((i as f64 - 1.0) / hz) * v / len).floor();
+                if i > 0 && lap > prev_lap {
+                    crossing += 1;
+                    if crossing == 2 { pct = -0.00001; }
+                    if crossing == 3 { pct = -1.0; }
+                }
+                vec![t, d, pct, v, 1.0, 0.0]
+            })
+            .collect();
+        let s = import_ibt_bytes(&build(&vars, &rows, YAML, 60, 1)).unwrap();
+        let complete: Vec<_> = s.laps.iter().filter_map(|l| l.meta.lap_time_s).collect();
+        assert_eq!(complete.len(), 3, "aucun tour fusionné : {complete:?}");
+        assert!(complete.iter().all(|t| (t - 40.0).abs() < 0.05), "{complete:?}");
+        assert!(s.laps.iter().all(|l| l.trace.dist_m.iter().all(|d| *d >= 0.0)));
+    }
+
+    #[test]
+    fn windows_1252_track_names() {
+        assert_eq!(decode_text(b"Aut\xf3dromo Jos\xe9 Carlos Pace"), "Autódromo José Carlos Pace");
+        assert_eq!(decode_text("Autódromo".as_bytes()), "Autódromo");
+        assert_eq!(decode_text(b"\x80 \x93ok\x94"), "€ “ok”");
     }
 
     #[test]

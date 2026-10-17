@@ -432,7 +432,7 @@ impl AppService {
         let (lr, lc) = (db.lap(ref_lap)?, db.lap(cmp_lap)?);
         let (mr, mc) = (db.session_meta(lr.session_id)?, db.session_meta(lc.session_id)?);
         let (tr, tc) = (db.trace(ref_lap)?, db.trace(cmp_lap)?);
-        let names = db.corner_names(&track_key(&mr))?;
+        let names = crate::tracks::merge_names(crate::tracks::builtin_corner_names(&mr), db.corner_names(&track_key(&mr))?);
         compare_laps_named(
             &LapInput { lap_id: ref_lap, session: &mr, lap: &lr.meta, trace: &tr },
             &LapInput { lap_id: cmp_lap, session: &mc, lap: &lc.meta, trace: &tc },
@@ -508,7 +508,7 @@ impl AppService {
         let detail = self.session_detail(last.id)?;
         let zones = {
             let db = self.db();
-            let names = db.corner_names(&track_key(&detail.meta))?;
+            let names = crate::tracks::merge_names(crate::tracks::builtin_corner_names(&detail.meta), db.corner_names(&track_key(&detail.meta))?);
             let traces: Vec<(i64, LapMeta, LapTrace)> = detail
                 .laps
                 .iter()

@@ -149,6 +149,8 @@ pub struct CornerMetrics {
     pub min_speed_at_m: f32,
     pub throttle_on_m: Option<f32>,
     pub exit_speed_kmh: f32,
+    /// Distance où la vitesse de sortie est mesurée (avant tout freinage pour le virage suivant).
+    pub exit_at_m: f32,
     /// Durée de la montée des gaz de 20 % à 90 % (s) — brutalité de la remise des gaz.
     pub throttle_ramp_s: Option<f32>,
     /// Inversions de sens du volant (hystérésis 3°) — `None` si canal volant absent.
@@ -183,6 +185,9 @@ pub fn corner_metrics(r: &Resampled, c: &CornerDef) -> CornerMetrics {
         Some(r.time[i90] - r.time[i0])
     });
     let steer_reversals = r.steer_deg.as_ref().map(|st| count_reversals(&st[e..=x], 3.0));
+    // Vitesse de sortie : mesurée avant tout freinage pour le virage suivant
+    // (sinon on attribue à ce virage une perte qui appartient au suivant).
+    let exit_i = (min_i + 1..=x).find(|&j| r.brake[j] >= BRAKE_ON).map(|j| j - 1).unwrap_or(x);
 
     CornerMetrics {
         corner_id: c.id,
@@ -192,7 +197,8 @@ pub fn corner_metrics(r: &Resampled, c: &CornerDef) -> CornerMetrics {
         min_speed_kmh: min_v,
         min_speed_at_m: r.dist[min_i],
         throttle_on_m: throttle_on_i.map(|i| r.dist[i]),
-        exit_speed_kmh: r.speed_kmh[x],
+        exit_speed_kmh: r.speed_kmh[exit_i],
+        exit_at_m: r.dist[exit_i],
         throttle_ramp_s,
         steer_reversals,
     }

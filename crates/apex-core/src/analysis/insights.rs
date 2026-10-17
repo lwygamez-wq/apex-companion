@@ -199,11 +199,30 @@ pub fn corner_insight(
             bl >= th.brake_m * 1.5,
             Some((format!("{seg} : sortir à {} au moins", v(rf.exit_speed_kmh)), GoalMetric::ExitSpeed { apex_m: corner.apex_m, target_kmh: rf.exit_speed_kmh })),
         )
+    } else if let (None, Some(b)) = (rf.brake_on_m, cmp.brake_on_m.filter(|_| vmin_deficit >= th.speed_kmh)) {
+        // Cas réel (Interlagos, Pinheirinho) : la référence passe sans freiner, ce tour freine.
+        (
+            format!("{seg} : freinage inutile"),
+            format!(
+                "Sur la référence, tu passes ce virage sans freiner (simple levé de pied) à {}. Ici, tu freines vers {b:.0} m et tombes à {} : {vmin_deficit:.0} km/h de moins à la corde.",
+                v(rf.min_speed_kmh), v(cmp.min_speed_kmh)
+            ),
+            format!(
+                "Essaie de ne pas toucher au frein : lève le pied un peu plus tôt, garde de la vitesse et vise {} à la corde comme sur ton meilleur tour.",
+                v(rf.min_speed_kmh)
+            ),
+            vmin_deficit >= th.speed_kmh * 2.0,
+            Some((format!("{seg} : passer sans freiner, à {} au moins", v(rf.min_speed_kmh)), GoalMetric::MinSpeed { apex_m: corner.apex_m, target_kmh: rf.min_speed_kmh })),
+        )
     } else if vmin_deficit >= th.speed_kmh {
+        let brake_note = match brake_early {
+            Some(b) if b.abs() < th.brake_m => "Ton point de freinage est proche de la référence mais ta",
+            _ => "Ta",
+        };
         (
             format!("{seg} : vitesse minimale insuffisante"),
             format!(
-                "Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de {vmin_deficit:.0} km/h ({} contre {}) : tu freines trop fort ou trop longtemps dans la phase de relâche.",
+                "{brake_note} vitesse minimale est inférieure de {vmin_deficit:.0} km/h ({} contre {}) : tu freines trop fort ou trop longtemps dans la phase de relâche.",
                 v(cmp.min_speed_kmh), v(rf.min_speed_kmh)
             ),
             format!(
@@ -349,6 +368,7 @@ mod tests {
             min_speed_at_m: brake + 80.0,
             throttle_on_m: Some(thr),
             exit_speed_kmh: exit,
+            exit_at_m: brake + 200.0,
             throttle_ramp_s: Some(0.4),
             steer_reversals: Some(1),
         }
@@ -373,6 +393,18 @@ mod tests {
         assert!(i.explanation.contains("5 km/h"));
         let g = i.est_gain_s.unwrap();
         assert!((g[1] - 0.18).abs() < 1e-3 && (g[0] - 0.09).abs() < 1e-3);
+    }
+
+    #[test]
+    fn reference_without_braking_gives_unneeded_braking_advice() {
+        // Cas réel Interlagos/Pinheirinho : meilleur tour sans freinage à 102 km/h, tour analysé freine et passe à 80.
+        let mut rf = m(5.00, 0.0, 102.0, 130.0, 2417.0);
+        rf.brake_on_m = None;
+        let cmp = m(5.27, 2353.0, 80.0, 120.0, 2395.0);
+        let i = corner_insight(&corner(), &rf, &cmp, &good_q(), &Thresholds::default()).unwrap();
+        assert!(i.title.contains("freinage inutile"), "{}", i.title);
+        assert!(i.explanation.contains("sans freiner") && i.explanation.contains("2353 m"), "{}", i.explanation);
+        assert!(!i.explanation.contains("proche de la référence"));
     }
 
     #[test]
