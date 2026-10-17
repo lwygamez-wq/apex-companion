@@ -8,10 +8,14 @@ export interface ReplayState {
   t: number;
   playing: boolean;
   speed: number;
+  /** Les courbes affichent une fenêtre glissante autour de la voiture. */
+  chartFollow: boolean;
+  /** Dernier déplacement venu du survol d'une courbe (la fenêtre des courbes ne bouge pas). */
+  fromChart: boolean;
 }
 
 export class ReplayStore {
-  private s: ReplayState = { t: 0, playing: false, speed: 1 };
+  private s: ReplayState = { t: 0, playing: false, speed: 1, chartFollow: true, fromChart: false };
   private subs = new Set<() => void>();
   private raf = 0;
   constructor(public readonly start: number, public readonly end: number) {
@@ -26,8 +30,11 @@ export class ReplayStore {
     this.s = { ...this.s, ...p };
     this.subs.forEach((f) => f());
   }
-  seek(t: number) {
-    this.set({ t: Math.min(this.end, Math.max(this.start, t)) });
+  seek(t: number, fromChart = false) {
+    this.set({ t: Math.min(this.end, Math.max(this.start, t)), fromChart });
+  }
+  setChartFollow(chartFollow: boolean) {
+    this.set({ chartFollow });
   }
   setSpeed(speed: number) {
     this.set({ speed });
@@ -45,7 +52,7 @@ export class ReplayStore {
         this.set({ t: this.end, playing: false });
         return;
       }
-      this.set({ t });
+      this.set({ t, fromChart: false });
       this.raf = requestAnimationFrame(tick);
     };
     this.raf = requestAnimationFrame(tick);

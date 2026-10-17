@@ -63,6 +63,10 @@ pub fn comparability_warnings(a: &SessionMeta, b: &SessionMeta) -> Vec<String> {
     if a.car != b.car {
         w.push(format!("Voitures différentes ({} / {}).", a.car, b.car));
     }
+    // Deux tours de la même session : mêmes conditions, inutile d'alerter sur une météo inconnue.
+    if a.source_fingerprint == b.source_fingerprint {
+        return w;
+    }
     match (a.weather.wet, b.weather.wet) {
         (Some(x), Some(y)) if x != y => w.push("Piste sèche contre piste humide.".into()),
         (None, _) | (_, None) => w.push("Météo inconnue pour au moins un tour : comparabilité non vérifiable.".into()),

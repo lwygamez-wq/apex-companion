@@ -1,14 +1,16 @@
 {
   "name": "apex-companion",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:mobile": "tsc --noEmit && vite build -c vite.mobile.config.ts",
+    "dev:mobile": "vite -c vite.mobile.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

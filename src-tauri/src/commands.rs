@@ -134,6 +134,11 @@ pub async fn export_session(state: State<'_, AppState>, id: i64, path: String) -
 }
 
 #[tauri::command]
+pub async fn export_to_mobile(state: State<'_, AppState>, id: i64) -> R<Option<String>> {
+    blocking(state.svc.clone(), move |s| s.export_to_mobile_dir(id).map(|p| p.map(|p| p.to_string_lossy().into_owned()))).await
+}
+
+#[tauri::command]
 pub async fn set_corner_name(state: State<'_, AppState>, session_id: i64, apex_m: f32, name: String) -> R<()> {
     blocking(state.svc.clone(), move |s| s.set_corner_name(session_id, apex_m, &name)).await
 }

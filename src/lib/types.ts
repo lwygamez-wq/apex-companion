@@ -317,6 +317,7 @@ export interface AppSettings {
   cloud_enabled: boolean;
   beginner_mode: boolean;
   check_updates: boolean;
+  mobile_export_dir: string | null;
 }
 
 export interface SessionFilter {

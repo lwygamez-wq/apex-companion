@@ -1,0 +1,57 @@
+/* App mobile (iPhone) : mêmes couleurs que l'app PC, mise en page une colonne, cibles tactiles ≥ 40 px. */
+html, body { overscroll-behavior-y: none; }
+body { -webkit-tap-highlight-color: transparent; }
+.m-app { min-height: 100dvh; display: flex; flex-direction: column; }
+.m-head {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; background: rgba(16,16,23,0.94);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #23232e;
+}
+.m-logo { font-weight: 900; font-style: italic; font-stretch: 125%; font-size: 18px; color: var(--text); border-left: 4px solid var(--red); padding-left: 8px; }
+.m-back { background: none; border: 0; color: var(--text); font-size: 34px; line-height: 1; width: 36px; height: 40px; margin-left: -8px; cursor: pointer; }
+.m-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.m-title b { font-size: 16px; font-weight: 800; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-title span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-main { flex: 1; padding: 12px 12px calc(env(safe-area-inset-bottom) + 24px); }
+.m-busy { padding: 12px; text-align: center; color: var(--muted); }
+.m-empty { padding: 24px 8px; }
+.m-empty h2 { font-size: 20px; font-style: italic; font-weight: 900; }
+.m-empty ol { padding-left: 20px; line-height: 1.6; color: #d5d5de; }
+.m-empty .btn { margin: 10px 0; padding: 11px 22px; }
+.m-list { display: flex; flex-direction: column; gap: 8px; }
+.m-card { display: flex; justify-content: space-between; gap: 10px; background: var(--panel); padding: 14px; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); cursor: pointer; }
+.m-card:active { background: var(--panel-2); }
+.m-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.m-card-main b { font-size: 15px; }
+.m-card-main span { font-size: 12px; }
+.m-card-side { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
+.m-kpi { font-size: 22px; }
+.m-del { background: none; border: 0; color: var(--muted); font-size: 12px; padding: 6px 0 0; }
+.m-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.m-kpis .card { padding: 10px; }
+.m-kpis .card h2 { font-size: 11px; margin-bottom: 4px; }
+.m-kpis .m-kpi { font-size: 18px; }
+.m-top { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid #2a2a36; font-size: 14px; }
+.m-top:first-of-type { border-top: 0; }
+.m-h2 { font-size: 13px; color: var(--text); margin: 16px 2px 8px; font-weight: 700; }
+.m-laps { display: flex; flex-direction: column; gap: 4px; }
+.m-lap { display: grid; grid-template-columns: 28px 86px 82px 1fr 14px; align-items: center; gap: 6px; min-height: 46px; padding: 0 12px; background: var(--panel); border: 0; border-radius: var(--radius); color: var(--text); text-align: left; font-size: 15px; }
+.m-lap:active:not(:disabled) { background: var(--panel-2); }
+.m-lap:disabled { opacity: 0.55; }
+.m-lapn { color: var(--muted); }
+.m-lapt { font-weight: 800; font-style: italic; }
+.m-lapf { display: flex; gap: 4px; justify-content: flex-end; }
+.m-chev { color: var(--muted); font-size: 20px; }
+.m-lapbar { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; }
+.m-tabs { display: flex; width: 100%; margin-bottom: 12px; }
+.m-tabs button { flex: 1; padding: 9px 4px; font-size: 13px; }
+.m-replay { display: flex; flex-direction: column; gap: 8px; }
+.m-corners { display: flex; flex-direction: column; gap: 8px; }
+.m-corner table td, .m-corner table th { padding: 5px 6px; font-size: 13px; }
+.m-app .insight h3 { font-size: 16px; }
+.m-app .chart-title { flex-wrap: wrap; font-size: 12px; }
+.m-app .rp-keys { display: none; }
+.m-app .trackmap-tools .seg button { padding: 7px 9px; }
+.m-app .replay .btn.primary { padding-top: 10px; padding-bottom: 10px; }
+.m-app .replay .rp-scrub { height: 28px; }
+.m-app .chart { padding: 4px 6px 0; }

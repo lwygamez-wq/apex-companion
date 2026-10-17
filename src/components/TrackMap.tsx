@@ -136,12 +136,35 @@ function cornerLabels(c: Comparison, geo: Geo) {
 
 interface View { cx: number; cy: number; w: number }
 
-export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420 }: {
+/** Cap (degrés, repère écran) de la trajectoire autour de l'index `fi`, sur ±15 m. */
+function headingAt(X: number[], Y: number[], fi: number, span: number): number {
+  const n = X.length;
+  const a = Math.max(0, Math.floor(fi - span)), b = Math.min(n - 1, Math.ceil(fi + span));
+  return (Math.atan2(Y[b]! - Y[a]!, X[b]! - X[a]!) * 180) / Math.PI;
+}
+
+/** Petite vue d'ensemble affichée quand la carte est zoomée. */
+const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y: number }) {
+  const b = geo.bounds;
+  const w = (b.x1 - b.x0) * 1.15, h = (b.y1 - b.y0) * 1.15;
+  const s = Math.max(w, h);
+  const d = useMemo(() => linePath(geo.X, geo.Y, 6), [geo]);
+  return (
+    <svg className="trackmap-overview" viewBox={`${(b.x0 + b.x1) / 2 - s / 2} ${(b.y0 + b.y1) / 2 - s / 2} ${s} ${s}`}>
+      <path d={d} stroke="#6b6b80" strokeWidth={2} fill="none" vectorEffect="non-scaling-stroke" />
+      <circle cx={x} cy={y} r={s * 0.035} fill={CMP_LINE} stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+});
+
+export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, big, onToggleBig }: {
   cmp: Comparison;
   store: ReplayStore;
   selected: number | null;
   onSelectCorner: (id: number) => void;
   height?: number;
+  big?: boolean;
+  onToggleBig?: () => void;
 }) {
   const geo = useMemo(() => buildGeo(cmp), [cmp]);
   const labels = useMemo(() => (geo ? cornerLabels(cmp, geo) : []), [cmp, geo]);
@@ -149,7 +172,11 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420 }:
   const [px, setPx] = useState(400);
   const [mode, setMode] = useState<ColorMode>("delta");
   const [follow, setFollow] = useState(false);
-  const [zoomW, setZoomW] = useState(260);
+  /** Orientation en mode suivi : la voiture pointe toujours vers le haut. */
+  const [carUp, setCarUp] = useState(true);
+  /** Échelle du suivi rapproché (mètres par pixel), indépendante de la taille de la carte. */
+  const [zoomMpp, setZoomMpp] = useState(0.55);
+  const zoomW = zoomMpp * px;
   const full = useMemo<View | null>(() => {
     if (!geo) return null;
     const b = geo.bounds;
@@ -170,46 +197,97 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420 }:
   const rs = useReplay(store);
   const { ci, ri } = positionsAt(cmp, rs.t);
 
-  const car = geo?.CX && geo.CY ? { x: at(geo.CX, ci)!, y: at(geo.CY, ci)! } : geo ? { x: at(geo.X, ci)!, y: at(geo.Y, ci)! } : null;
+  // Lecture lancée : la caméra passe automatiquement en suivi rapproché.
+  const wasPlaying = useRef(false);
+  useEffect(() => {
+    if (rs.playing && !wasPlaying.current) setFollow(true);
+    wasPlaying.current = rs.playing;
+  }, [rs.playing]);
+
+  const CX = geo?.CX && geo.CY ? geo.CX : geo?.X;
+  const CY = geo?.CX && geo.CY ? geo.CY : geo?.Y;
+  const car = geo && CX && CY ? { x: at(CX, ci)!, y: at(CY, ci)! } : null;
   const ghost = geo ? { x: at(geo.X, ri)!, y: at(geo.Y, ri)! } : null;
 
-  const v: View | null = follow && car ? { cx: car.x, cy: car.y, w: zoomW } : view ?? full;
-  const mPerPx = v ? v.w / px : 1;
+  // Cap lissé (évite les à-coups de rotation).
+  const smooth = useRef<number | null>(null);
+  let rot = 0;
+  if (follow && carUp && geo && CX && CY) {
+    const hd = headingAt(CX, CY, ci, 15 / cmp.step_m);
+    const prev = smooth.current ?? hd;
+    let diff = ((hd - prev + 540) % 360) - 180;
+    const next = prev + diff * (rs.playing && Math.abs(diff) < 90 ? 0.18 : 1);
+    smooth.current = next;
+    rot = -90 - next;
+  } else {
+    smooth.current = null;
+  }
 
-  // Déplacement à la souris.
+  let v: View | null = follow && car ? { cx: car.x, cy: car.y, w: zoomW } : view ?? full;
+  if (v && follow && car && carUp && smooth.current != null) {
+    // Vue pilote : la voiture est placée dans le tiers bas pour voir ce qui arrive.
+    const a = (smooth.current * Math.PI) / 180;
+    const ahead = 0.2 * zoomW * (height / px);
+    v = { ...v, cx: car.x + Math.cos(a) * ahead, cy: car.y + Math.sin(a) * ahead };
+  }
+  const mPerPx = v ? v.w / px : 1;
+  const zoomed = !!(v && full && v.w < full.w * 0.6);
+
+  // Déplacement à la souris / au doigt.
   const drag = useRef<{ x: number; y: number; v: View } | null>(null);
+  // Pincement à deux doigts : zoom.
+  const pts = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<number | null>(null);
   const onDown = (e: React.PointerEvent) => {
     if (!v) return;
-    drag.current = { x: e.clientX, y: e.clientY, v };
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    drag.current = pts.current.size === 1 ? { x: e.clientX, y: e.clientY, v } : null;
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
+    if (pts.current.has(e.pointerId)) pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.current.size === 2) {
+      const [a, b] = [...pts.current.values()];
+      const dist = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      if (pinch.current) zoomBy(pinch.current / dist, (a!.x + b!.x) / 2, (a!.y + b!.y) / 2);
+      pinch.current = dist;
+      return;
+    }
     const d = drag.current;
     if (!d) return;
-    const dx = (e.clientX - d.x) * (d.v.w / px), dy = (e.clientY - d.y) * (d.v.w / px);
-    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 3) {
+    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 4) {
+      const k = d.v.w / px;
       setFollow(false);
-      setView({ ...d.v, cx: d.v.cx - dx, cy: d.v.cy - dy });
+      setView({ ...d.v, cx: d.v.cx - (e.clientX - d.x) * k, cy: d.v.cy - (e.clientY - d.y) * k });
     }
   };
-  const onUp = () => { drag.current = null; };
+  const onUp = (e: React.PointerEvent) => {
+    pts.current.delete(e.pointerId);
+    if (pts.current.size < 2) pinch.current = null;
+    drag.current = null;
+  };
 
-  const onWheel = useCallback(
-    (e: WheelEvent) => {
+  const zoomBy = useCallback(
+    (f: number, clientX?: number, clientY?: number) => {
       if (!v || !host.current) return;
-      e.preventDefault();
-      const f = Math.exp(e.deltaY * 0.0015);
       if (follow) {
-        setZoomW((w) => Math.max(40, Math.min(3000, w * f)));
+        setZoomMpp((m) => Math.max(0.08, Math.min(8, m * f)));
         return;
       }
       const r = host.current.getBoundingClientRect();
-      const mx = v.cx + (e.clientX - r.left - r.width / 2) * (v.w / px);
-      const my = v.cy + (e.clientY - r.top - r.height / 2) * (v.w / px);
+      const mx = clientX == null ? v.cx : v.cx + (clientX - r.left - r.width / 2) * (v.w / px);
+      const my = clientY == null ? v.cy : v.cy + (clientY - r.top - r.height / 2) * (v.w / px);
       const w = Math.max(40, Math.min((full?.w ?? 5000) * 1.5, v.w * f));
       setView({ w, cx: mx + (v.cx - mx) * (w / v.w), cy: my + (v.cy - my) * (w / v.w) });
     },
     [v, follow, px, full],
+  );
+  const onWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      zoomBy(Math.exp(e.deltaY * 0.0015), e.clientX, e.clientY);
+    },
+    [zoomBy],
   );
   useEffect(() => {
     const el = host.current;
@@ -224,8 +302,11 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420 }:
 
   const hView = v.w * (height / px);
   const vb = `${v.cx - v.w / 2} ${v.cy - hView / 2} ${v.w} ${hView}`;
-  const showNames = v.w < 900;
+  const showNames = v.w < 1200;
   const zoomTo = (x: number, y: number, w: number) => { setFollow(false); setView({ cx: x, cy: y, w }); };
+  const g = `rotate(${rot.toFixed(2)} ${v.cx} ${v.cy})`;
+  /** Garde les textes lisibles (droits) quand la carte tourne. */
+  const upright = (x: number, y: number) => `rotate(${(-rot).toFixed(2)} ${x} ${y})`;
 
   return (
     <div className="trackmap">
@@ -236,8 +317,10 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420 }:
           ))}
         </div>
         <div className="seg">
-          <button className={follow ? "on" : ""} onClick={() => setFollow((f) => !f)} title="La caméra suit la voiture (molette : zoom)">Suivre</button>
+          <button className={follow ? "on" : ""} onClick={() => setFollow((f) => !f)} title="La caméra suit la voiture (molette : zoom). Activé automatiquement en lecture.">Suivre</button>
+          {follow && <button className={carUp ? "on" : ""} onClick={() => setCarUp((x) => !x)} title="La carte tourne pour que la voiture pointe vers le haut">Vue pilote</button>}
           <button onClick={() => { setFollow(false); setView(null); }} title="Voir tout le circuit">Circuit</button>
+          {onToggleBig && <button className={big ? "on" : ""} onClick={onToggleBig} title="Agrandir la carte et la relecture">{big ? "Réduire" : "Agrandir"}</button>}
         </div>
       </div>
       <div
@@ -247,36 +330,44 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420 }:
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
-        onPointerLeave={onUp}
+        onPointerCancel={onUp}
       >
         <svg viewBox={vb} width="100%" height={height} preserveAspectRatio="xMidYMid meet">
-          <StaticLayers c={cmp} geo={geo} mode={mode} />
-          {/* Ligne de départ */}
-          {(() => {
-            const dx = geo.X[3]! - geo.X[0]!, dy = geo.Y[3]! - geo.Y[0]!;
-            const l = Math.hypot(dx, dy) || 1;
-            const s = 9 * mPerPx;
-            return <line x1={geo.X[0]! - (dy / l) * s} y1={geo.Y[0]! + (dx / l) * s} x2={geo.X[0]! + (dy / l) * s} y2={geo.Y[0]! - (dx / l) * s} stroke="#fff" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
-          })()}
-          {labels.map((k) => {
-            const off = 22 * mPerPx;
-            const x = k.x + k.nx * off, y = k.y + k.ny * off;
-            const sel = selected === k.id;
-            const r = (sel ? 12 : 10) * mPerPx;
-            return (
-              <g key={k.id} style={{ cursor: "pointer" }} onPointerDown={(e) => e.stopPropagation()} onClick={() => { onSelectCorner(k.id); zoomTo(k.x, k.y, 380); }}>
-                <title>{k.name}</title>
-                <circle cx={x} cy={y} r={r} fill={sel ? "#ffffff" : "#15151e"} stroke="#ffffff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-                <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={800} fill={sel ? "#15151e" : "#ffffff"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
-                {showNames && (
-                  <text x={x + (k.nx >= 0 ? 1 : -1) * 15 * mPerPx} y={y + 4 * mPerPx} textAnchor={k.nx >= 0 ? "start" : "end"} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="#ffffff" stroke="#15151e" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">{k.name}</text>
-                )}
-              </g>
-            );
-          })}
-          {ghost && <circle cx={ghost.x} cy={ghost.y} r={6 * mPerPx} fill="rgba(21,21,30,0.6)" stroke={REF_LINE} strokeWidth={2} vectorEffect="non-scaling-stroke" />}
-          {car && <circle cx={car.x} cy={car.y} r={7 * mPerPx} fill={CMP_LINE} stroke="#ffffff" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+          <g transform={g}>
+            <StaticLayers c={cmp} geo={geo} mode={mode} />
+            {(() => {
+              const dx = geo.X[3]! - geo.X[0]!, dy = geo.Y[3]! - geo.Y[0]!;
+              const l = Math.hypot(dx, dy) || 1;
+              const s = 9 * mPerPx;
+              return <line x1={geo.X[0]! - (dy / l) * s} y1={geo.Y[0]! + (dx / l) * s} x2={geo.X[0]! + (dy / l) * s} y2={geo.Y[0]! - (dx / l) * s} stroke="#fff" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
+            })()}
+            {labels.map((k) => {
+              const off = 22 * mPerPx;
+              const x = k.x + k.nx * off, y = k.y + k.ny * off;
+              const sel = selected === k.id;
+              const r = (sel ? 12 : 10) * mPerPx;
+              return (
+                <g key={k.id} style={{ cursor: "pointer" }} onPointerDown={(e) => e.stopPropagation()} onClick={() => { onSelectCorner(k.id); zoomTo(k.x, k.y, 380); }}>
+                  <title>{k.name}</title>
+                  <circle cx={x} cy={y} r={r} fill={sel ? "#ffffff" : "#15151e"} stroke="#ffffff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  <g transform={upright(x, y)}>
+                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={800} fill={sel ? "#15151e" : "#ffffff"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
+                    {showNames && (
+                      <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="#ffffff" stroke="#101017" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">{k.name}</text>
+                    )}
+                  </g>
+                </g>
+              );
+            })}
+            {ghost && <circle cx={ghost.x} cy={ghost.y} r={6 * mPerPx} fill="rgba(21,21,30,0.6)" stroke={REF_LINE} strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+            {car && <circle cx={car.x} cy={car.y} r={7 * mPerPx} fill={CMP_LINE} stroke="#ffffff" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+          </g>
         </svg>
+        {zoomed && car && <Overview geo={geo} x={car.x} y={car.y} />}
+        <div className="trackmap-zoom">
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(0.7)} aria-label="Zoomer">+</button>
+          <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(1.4)} aria-label="Dézoomer">−</button>
+        </div>
       </div>
       <div className="trackmap-legend">
         <span><i style={{ background: REF_LINE }} />Référence (tour {cmp.reference.number}) · cercle vide = fantôme</span>

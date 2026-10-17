@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-mobile/
 target/
 src-tauri/gen/
 *.db

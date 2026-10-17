@@ -16,7 +16,7 @@ function Bar({ v, color }: { v: number | null; color: string }) {
 }
 
 /** Lecture du tour : commandes, curseur temporel et valeurs instantanées des deux tours. */
-export function ReplayPanel({ cmp, store }: { cmp: Comparison; store: ReplayStore }) {
+export function ReplayPanel({ cmp, store, compact = false }: { cmp: Comparison; store: ReplayStore; compact?: boolean }) {
   const s = useReplay(store);
   const { ci } = positionsAt(cmp, s.t);
   const r = cmp.ref_trace;
@@ -61,6 +61,7 @@ export function ReplayPanel({ cmp, store }: { cmp: Comparison; store: ReplayStor
         <div className="row">
           <button className="btn primary" onClick={() => store.toggle()} title="Espace">{s.playing ? "❚❚ Pause" : "▶ Lecture"}</button>
           <span className="mono rp-clock">{lapTime(s.t - store.start)}</span>
+          <span className="muted rp-keys">Espace · ← → 1 s · Maj 5 s</span>
         </div>
         <div className="seg">
           {SPEEDS.map((v) => (
@@ -80,10 +81,14 @@ export function ReplayPanel({ cmp, store }: { cmp: Comparison; store: ReplayStor
           store.seek(Number(e.target.value));
         }}
       />
-      <div className="row muted" style={{ justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
-        <span>{(distM / 1000).toFixed(2)} km{corner ? ` · ${corner.corner.name}` : ""}</span>
-        <span>← → : 1 s · Maj : 5 s</span>
+      <div className="row" style={{ justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
+        <span className="rp-where">{(distM / 1000).toFixed(2)} km{corner ? <b> · {corner.corner.name}</b> : null}</span>
+        <div className="seg small" title="Pendant la lecture, les courbes peuvent zoomer automatiquement autour de la voiture">
+          <button className={s.chartFollow ? "on" : ""} onClick={() => store.setChartFollow(true)}>Courbes : zoom voiture</button>
+          <button className={!s.chartFollow ? "on" : ""} onClick={() => store.setChartFollow(false)}>Tour entier</button>
+        </div>
       </div>
+      {!compact && <>
       <table className="rp-table">
         <thead>
           <tr><th /><th className="num">Réf. ({cmp.reference.number})</th><th className="num">Tour {cmp.compared.number}</th></tr>
@@ -110,6 +115,7 @@ export function ReplayPanel({ cmp, store }: { cmp: Comparison; store: ReplayStor
           <b className="mono">{off == null ? "—" : Math.abs(off) < 0.3 ? "identique" : `${Math.abs(off).toFixed(1)} m à ${off > 0 ? "gauche" : "droite"}`}</b>
         </div>
       </div>
+      </>}
     </div>
   );
 }

@@ -47,6 +47,9 @@ pub struct AppSettings {
     pub beginner_mode: bool,
     /// Vérifie au démarrage si une nouvelle version existe (seule requête réseau de l'app).
     pub check_updates: bool,
+    /// Dossier où copier automatiquement chaque nouvelle session (ex. iCloud Drive) pour l'app mobile.
+    /// Vide = désactivé. L'app n'envoie rien elle-même : c'est le dossier choisi qui synchronise.
+    pub mobile_export_dir: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -64,6 +67,7 @@ impl Default for AppSettings {
             cloud_enabled: false,
             beginner_mode: true,
             check_updates: true,
+            mobile_export_dir: None,
         }
     }
 }
@@ -170,6 +174,28 @@ pub fn track_key(m: &SessionMeta) -> String {
 }
 
 /// 66.052 → « 1:06.052 »
+/// Date civile (UTC) d'un horodatage Unix : (année, mois, jour).
+fn civil_date(unix: i64) -> (i64, u32, u32) {
+    let z = unix.div_euclid(86_400) + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (yoe + era * 400 + i64::from(m <= 2), m, d)
+}
+
+/// Nom de fichier d'export lisible : « 2026-10-17 21h05 Interlagos - Super Formula Lights.apex.json.gz ».
+pub fn export_file_name(m: &SessionMeta) -> String {
+    let (y, mo, d) = civil_date(m.started_at_unix);
+    let secs = m.started_at_unix.rem_euclid(86_400);
+    let raw = format!("{y:04}-{mo:02}-{d:02} {:02}h{:02} {} - {}", secs / 3600, (secs % 3600) / 60, m.track, m.car);
+    let clean: String = raw.chars().map(|c| if c.is_alphanumeric() || " -_.()".contains(c) { c } else { '_' }).collect();
+    format!("{}.apex.json.gz", clean.trim())
+}
+
 pub fn fmt_lap(s: f64) -> String {
     let ms = (s * 1000.0).round() as i64;
     format!("{}:{:06.3}", ms / 60_000, (ms % 60_000) as f64 / 1000.0)
@@ -355,6 +381,9 @@ impl AppService {
             let sid = match r.outcome {
                 Some(InsertOutcome::Inserted(id)) => {
                     rep.imported += 1;
+                    if let Err(e) = self.export_to_mobile_dir(id) {
+                        rep.errors.push(format!("copie pour le mobile : {e}"));
+                    }
                     Some(id)
                 }
                 Some(InsertOutcome::Duplicate(id)) => {
@@ -402,6 +431,11 @@ impl AppService {
         std::fs::write(&path, &out).map_err(|e| ServiceError::User(format!("écriture de app.ini : {e}")))?;
         log::info!("irsdkAutoLogDisk={} dans {}", enable as u8, path.display());
         self.iracing_autolog()
+    }
+
+    /// Insère une session déjà décodée (outils, tests).
+    pub fn insert_imported(&self, s: &ImportedSession) -> Result<InsertOutcome> {
+        Ok(self.db().insert_session(s)?)
     }
 
     pub fn load_demo(&self) -> Result<InsertOutcome> {
@@ -645,21 +679,25 @@ impl AppService {
     /// Export d'une session pour analyse externe (fichier JSON compressé gzip).
     /// Contient méta, tours, traces brutes et conseils ; le chemin d'origine est réduit
     /// au nom de fichier (pas de nom d'utilisateur Windows).
+    /// Copie automatique d'une session vers le dossier « mobile » choisi dans les réglages.
+    pub fn export_to_mobile_dir(&self, id: i64) -> Result<Option<PathBuf>> {
+        let Some(dir) = self.settings().mobile_export_dir.filter(|d| !d.trim().is_empty()) else { return Ok(None) };
+        let dir = PathBuf::from(dir);
+        if !dir.is_dir() {
+            return Err(ServiceError::User(format!("dossier mobile introuvable : {}", dir.display())));
+        }
+        let meta = self.db().session_meta(id)?;
+        let path = dir.join(export_file_name(&meta));
+        self.export_session(id, &path, env!("CARGO_PKG_VERSION"))?;
+        Ok(Some(path))
+    }
+
     pub fn export_session(&self, id: i64, path: &Path, app_version: &str) -> Result<ExportSummary> {
         #[derive(Serialize)]
         struct ExportLap {
             #[serde(flatten)]
             row: LapRow,
             trace: LapTrace,
-        }
-        #[derive(Serialize)]
-        struct LapAnalysis {
-            lap_id: i64,
-            number: i32,
-            delta_s: Option<f32>,
-            corners: Vec<crate::analysis::compare::CornerComparison>,
-            insights: Vec<crate::analysis::insights::Insight>,
-            warnings: Vec<String>,
         }
         let detail = self.session_detail(id)?;
         let mut meta = detail.meta.clone();
@@ -672,33 +710,45 @@ impl AppService {
                 .map(|row| Ok(ExportLap { trace: db.trace(row.id)?, row: row.clone() }))
                 .collect::<std::result::Result<_, StoreError>>()?
         };
-        let analyses: Vec<LapAnalysis> = match detail.best_lap_id {
-            Some(best) => detail
+        // Analyses précalculées (mêmes calculs que sur le PC) : l'app mobile se contente de les afficher.
+        // La trace de référence n'est écrite qu'une fois pour toute la session.
+        let ref_id = detail
+            .personal_reference_lap_id
+            .filter(|r| detail.laps.iter().any(|l| l.id == *r))
+            .or(detail.best_lap_id);
+        let mut reference_trace = serde_json::Value::Null;
+        let comparisons: Vec<serde_json::Value> = match ref_id {
+            Some(rid) => detail
                 .laps
                 .iter()
-                .filter(|l| l.meta.lap_time_s.is_some() && l.id != best)
-                .filter_map(|l| self.compare(best, l.id, 1.0).ok().map(|c| LapAnalysis {
-                    lap_id: l.id,
-                    number: l.meta.number,
-                    delta_s: c.delta_s.last().copied(),
-                    corners: c.corners,
-                    insights: c.insights,
-                    warnings: c.warnings,
-                }))
+                .filter(|l| l.meta.lap_time_s.is_some() && l.id != rid)
+                .filter_map(|l| self.compare(rid, l.id, 1.0).ok())
+                .filter_map(|c| {
+                    let mut v = serde_json::to_value(&c).ok()?;
+                    if let Some(o) = v.as_object_mut() {
+                        let rt = o.remove("ref_trace").unwrap_or_default();
+                        if reference_trace.is_null() {
+                            reference_trace = rt;
+                        }
+                    }
+                    Some(v)
+                })
                 .collect(),
             None => vec![],
         };
         let doc = serde_json::json!({
             "format": "apex-session-export",
-            "version": 1,
+            "version": 2,
             "app_version": app_version,
             "exported_at": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0),
             "session": meta,
             "best_lap_id": detail.best_lap_id,
+            "reference_lap_id": ref_id,
             "theoretical_best_s": detail.theoretical_best_s,
             "consistency": detail.consistency,
             "laps": laps,
-            "analysis_vs_best": analyses,
+            "reference_trace": reference_trace,
+            "comparisons": comparisons,
         });
         let f = std::fs::File::create(path).map_err(|e| ServiceError::User(format!("export : {e}")))?;
         let mut gz = flate2::write::GzEncoder::new(std::io::BufWriter::new(f), flate2::Compression::default());
@@ -727,6 +777,36 @@ impl AppService {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn export_file_name_is_readable() {
+        assert_eq!(civil_date(0), (1970, 1, 1));
+        assert_eq!(civil_date(1_760_738_700), (2025, 10, 17));
+        let mut m = demo_session(1, 1_760_738_700).meta;
+        m.track = "Autódromo José Carlos Pace".into();
+        m.car = "Super Formula Lights 324".into();
+        assert_eq!(export_file_name(&m), "2025-10-17 22h05 Autódromo José Carlos Pace - Super Formula Lights 324.apex.json.gz");
+    }
+
+    #[test]
+    fn export_v2_contains_precomputed_comparisons() {
+        let svc = AppService::in_memory().unwrap();
+        let InsertOutcome::Inserted(sid) = svc.load_demo().unwrap() else { panic!() };
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("x.apex.json.gz");
+        svc.export_session(sid, &path, "test").unwrap();
+        let doc: serde_json::Value = serde_json::from_reader(flate2::read::GzDecoder::new(std::fs::File::open(&path).unwrap())).unwrap();
+        assert_eq!(doc["version"], 2);
+        let n_timed = doc["laps"].as_array().unwrap().iter().filter(|l| !l["lap_time_s"].is_null()).count();
+        let comps = doc["comparisons"].as_array().unwrap();
+        assert_eq!(comps.len(), n_timed - 1);
+        assert!(comps.iter().all(|c| c.get("ref_trace").is_none() && c["cmp_trace"]["speed_kmh"].is_array()));
+        assert!(doc["reference_trace"]["dist"].is_array());
+        // Copie automatique vers le dossier mobile.
+        svc.save_settings(AppSettings { mobile_export_dir: Some(dir.path().to_string_lossy().into()), ..Default::default() }).unwrap();
+        let p = svc.export_to_mobile_dir(sid).unwrap().unwrap();
+        assert!(p.exists() && p.to_string_lossy().ends_with(".apex.json.gz"));
+    }
 
     #[test]
     fn demo_flow_end_to_end() {

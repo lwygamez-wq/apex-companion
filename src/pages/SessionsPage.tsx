@@ -41,6 +41,15 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
       setMsg(e instanceof Error ? e.message : String(e));
     }
   };
+  const toMobile = async (s: SessionSummary) => {
+    try {
+      setMsg("Copie en cours…");
+      const p = await api.exportToMobile(s.id);
+      setMsg(p ? `Copiée pour le mobile : ${p}` : "Choisis d'abord le dossier « Copie automatique pour le mobile » dans les Réglages.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const remove = async (id: number) => {
     await api.deleteSession(id);
     list.reload();
@@ -104,6 +113,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="row" style={{ flexWrap: "nowrap" }}>
                     <button className="btn" title="Fichier compact à envoyer pour analyse" onClick={() => void exportOne(s)}>Exporter</button>
+                    <button className="btn" title="Copier dans le dossier de l'app mobile (Réglages)" onClick={() => void toMobile(s)}>Mobile</button>
                     <button className="btn danger" onClick={() => void remove(s.id)}>Supprimer</button>
                   </div>
                 </td>

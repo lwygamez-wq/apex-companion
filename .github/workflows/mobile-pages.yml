@@ -1,0 +1,39 @@
+name: Publier l'app mobile
+
+# Construit l'app mobile (page web installable sur iPhone) et la publie sur la branche gh-pages
+# (GitHub Pages : https://<compte>.github.io/apex-companion/).
+on:
+  push:
+    branches: [main]
+    paths: ["mobile/**", "src/**", "vite.mobile.config.ts", "package.json", "package-lock.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:mobile
+      - name: Publier sur gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist-mobile
+          touch .nojekyll
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -q -m "App mobile ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

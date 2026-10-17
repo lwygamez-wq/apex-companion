@@ -117,8 +117,9 @@ td.num, th.num { text-align: right; }
 .insight table td, .insight table th { padding: 4px 6px; font-size: 13px; }
 
 /* Graphiques ------------------------------------------------------------ */
-.chart { background: var(--panel); border-radius: var(--radius); padding: 8px 10px 2px; margin-bottom: 8px; }
-.chart-title { font-size: 13px; color: var(--muted); padding: 2px 4px; font-weight: 500; }
+.chart { background: var(--panel); border-radius: var(--radius); padding: 6px 10px 0; margin-bottom: 4px; }
+.chart-title { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); padding: 2px 4px; font-weight: 600; }
+.chart-readout { color: var(--text); font-variant-numeric: tabular-nums; font-stretch: 108%; font-weight: 700; white-space: nowrap; }
 .legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
 .legend i { display: inline-block; width: 16px; height: 3px; vertical-align: middle; margin-right: 6px; }
 .uplot { font-family: "Archivo Variable", system-ui, sans-serif !important; }
@@ -172,3 +173,14 @@ td.num, th.num { text-align: right; }
 .rp-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .rp-facts div { background: var(--panel-2); padding: 7px 9px; border-radius: var(--radius); display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
 .rp-facts b { font-size: 14px; }
+
+.trackmap-canvas { position: relative; }
+.trackmap-overview { position: absolute; left: 8px; bottom: 8px; width: 112px; height: 112px; background: rgba(16,16,23,0.88); border: 1px solid var(--line); border-radius: 3px; pointer-events: none; }
+.trackmap-zoom { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.trackmap-zoom button { width: 30px; height: 30px; border: 1px solid var(--line); background: rgba(31,31,43,0.92); color: var(--text); border-radius: 3px; font-size: 18px; font-weight: 700; cursor: pointer; line-height: 1; }
+.trackmap-zoom button:hover { background: var(--panel-2); }
+.replay-big { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 10px; align-items: start; margin-bottom: 12px; }
+@media (max-width: 1100px) { .replay-big { grid-template-columns: 1fr; } }
+.seg.small button { font-size: 12px; padding: 3px 8px; }
+.rp-keys { font-size: 11px; }
+.rp-where b { color: var(--text); font-style: italic; }

@@ -55,6 +55,7 @@ pub fn run() {
             commands::get_iracing_autolog,
             commands::set_iracing_autolog,
             commands::export_session,
+            commands::export_to_mobile,
             commands::set_corner_name,
             commands::create_goal,
             commands::archive_goal,

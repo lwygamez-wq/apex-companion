@@ -101,6 +101,18 @@ export function SettingsPage() {
           </div>
           <div className="form-row">
             <div>
+              Copie automatique pour le mobile
+              <div className="hint">
+                Chaque nouvelle session est exportée dans ce dossier, prête à ouvrir dans l'app mobile. Choisis ton dossier <b>iCloud Drive</b> (installe « iCloud pour Windows ») pour la retrouver sur ton iPhone. Vide = désactivé ; l'app n'envoie rien elle-même.
+              </div>
+            </div>
+            <div className="row">
+              <input type="text" style={{ flex: 1, minWidth: 320 }} value={s.mobile_export_dir ?? ""} placeholder="désactivé" onChange={(e) => upd("mobile_export_dir", e.target.value || null)} />
+              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("mobile_export_dir", d))}>Parcourir</button>
+            </div>
+          </div>
+          <div className="form-row">
+            <div>
               Enregistrement automatique iRacing
               <div className="hint">Toutes les sessions sont enregistrées sans Alt+L (réglage irsdkAutoLogDisk d'iRacing, fichier sauvegardé avant modification). iRacing doit être fermé. Environ 200 Mo par heure.</div>
             </div>

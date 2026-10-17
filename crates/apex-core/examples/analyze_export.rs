@@ -18,6 +18,17 @@ fn main() {
         .iter()
         .map(|l| (l["id"].as_i64().unwrap(), serde_json::from_value(l.clone()).unwrap(), serde_json::from_value(l["trace"].clone()).unwrap()))
         .collect();
+    // APEX_MOBILE=fichier.apex.json.gz : réécrit la session au format d'export actuel (v2, pour l'app mobile).
+    if let Ok(out) = std::env::var("APEX_MOBILE") {
+        use apex_core::model::{ImportedLap, ImportedSession};
+        let svc = apex_core::service::AppService::in_memory().unwrap();
+        let s = ImportedSession { meta: meta.clone(), laps: laps.iter().map(|l| ImportedLap { meta: l.1.clone(), trace: l.2.clone() }).collect(), sample_rate_hz: Some(60.0) };
+        let id = match svc.insert_imported(&s).unwrap() {
+            apex_core::storage::InsertOutcome::Inserted(id) | apex_core::storage::InsertOutcome::Duplicate(id) => id,
+        };
+        let r = svc.export_session(id, std::path::Path::new(&out), env!("CARGO_PKG_VERSION")).unwrap();
+        println!("export v2 : {} octets\n", r.bytes);
+    }
     let names = builtin_corner_names(&meta);
     let metas: Vec<LapMeta> = laps.iter().map(|l| l.1.clone()).collect();
     let bi = best_clean_lap(&metas).expect("aucun tour propre");

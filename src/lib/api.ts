@@ -53,6 +53,7 @@ export const api = {
   iracingAutolog: () => call<AutoLogStatus>("get_iracing_autolog"),
   setIracingAutolog: (enable: boolean) => call<AutoLogStatus>("set_iracing_autolog", { enable }),
   exportSession: (id: number, path: string) => call<ExportSummary>("export_session", { id, path }),
+  exportToMobile: (id: number) => call<string | null>("export_to_mobile", { id }),
   setCornerName: (sessionId: number, apexM: number, name: string) => call<void>("set_corner_name", { sessionId, apexM, name }),
   createGoal: (sessionId: number, goal: GoalSuggestion) => call<GoalView>("create_goal", { sessionId, goal }),
   archiveGoal: (id: number) => call<void>("archive_goal", { id }),

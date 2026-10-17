@@ -35,6 +35,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const [cmpId, setCmpId] = useState<number | null>(route.cmpLapId ?? null);
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [bigMap, setBigMap] = useState(false);
   const [renaming, setRenaming] = useState<{ apex: number; name: string } | null>(null);
   const saveName = async () => {
     if (!renaming || !detail.data) return;
@@ -65,7 +66,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const onChartCursor = (idx: number | null) => {
     if (!store || !c || idx == null || store.get().playing) return;
     const t = c.cmp_trace.time[idx];
-    if (t != null) store.seek(t);
+    if (t != null) store.seek(t, true);
   };
   const insights = useMemo(() => {
     if (!c) return [];
@@ -146,7 +147,13 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   </div>
                 )}
               </div>
-              <div className="grid analysis">
+              {bigMap && (
+                <div className="replay-big">
+                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={560} big onToggleBig={() => setBigMap(false)} />
+                  <ReplayPanel cmp={c} store={store} />
+                </div>
+              )}
+              <div className={bigMap ? "" : "grid analysis"}>
                 <div>
                 <TelemetryCharts cmp={c} onCursor={onChartCursor} simple={beginner} store={store ?? undefined} />
                 <div className="card" style={{ padding: 0, marginTop: 8 }}>
@@ -194,10 +201,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   </div>
                 </div>
               </div>
-                <div className="analysis-side">
-                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} />
-                  <ReplayPanel cmp={c} store={store} />
-                </div>
+                {!bigMap && (
+                  <div className="analysis-side">
+                    <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} onToggleBig={() => setBigMap(true)} />
+                    <ReplayPanel cmp={c} store={store} />
+                  </div>
+                )}
               </div>
             </>
           )}
