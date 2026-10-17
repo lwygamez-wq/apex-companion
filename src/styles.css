@@ -54,7 +54,7 @@ button, select, input { font: inherit; color: inherit; }
 .grid { display: grid; gap: 12px; }
 .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.grid.analysis { grid-template-columns: minmax(0, 1fr) 390px; align-items: start; }
+.grid.analysis { grid-template-columns: minmax(0, 1fr) 460px; align-items: start; }
 
 .card { background: var(--panel); padding: 16px 18px; clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
 .card h2 { font-size: 13px; color: var(--muted); margin: 0 0 8px; font-weight: 550; }
@@ -137,3 +137,38 @@ td.num, th.num { text-align: right; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .brand svg { flex: none; }
+
+/* Analyse : conseils en bandeau, carte + relecture collantes à droite ------- */
+.insights-strip { margin-bottom: 14px; }
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; align-items: start; }
+.insight-grid .insight { margin-bottom: 0; }
+.analysis-side { position: sticky; top: 0; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 1250px) { .grid.analysis { grid-template-columns: 1fr; } .analysis-side { position: static; } }
+
+/* Boutons segmentés */
+.seg { display: inline-flex; background: var(--panel-2); border-radius: var(--radius); padding: 2px; gap: 2px; }
+.seg button { background: none; border: 0; padding: 4px 10px; border-radius: 3px; cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 600; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--text); color: var(--asphalt); font-style: italic; font-weight: 800; }
+
+/* Carte du circuit */
+.trackmap { background: var(--panel); padding: 10px; clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
+.trackmap-tools { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.trackmap-canvas { background: #101017; border-radius: 3px; cursor: grab; touch-action: none; overflow: hidden; }
+.trackmap-canvas:active { cursor: grabbing; }
+.trackmap-canvas svg { display: block; user-select: none; }
+.trackmap-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.trackmap-legend i { display: inline-block; width: 12px; height: 3px; vertical-align: middle; margin-right: 5px; }
+
+/* Panneau de relecture */
+.replay .rp-clock { font-size: 20px; font-weight: 900; font-style: italic; font-stretch: 125%; }
+.replay .rp-scrub { width: 100%; margin: 10px 0 2px; accent-color: var(--red); }
+.rp-table th { background: none; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+.rp-table td { padding: 4px 6px; width: 38%; }
+.rp-table tbody th { font-weight: 500; color: var(--muted); border-bottom: 1px solid #262633; }
+.rp-bar { position: relative; height: 16px; background: #15151e; border-radius: 2px; overflow: hidden; }
+.rp-bar div { position: absolute; inset: 0 auto 0 0; }
+.rp-bar span { position: relative; font-size: 11px; padding-left: 5px; font-variant-numeric: tabular-nums; line-height: 16px; }
+.rp-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.rp-facts div { background: var(--panel-2); padding: 7px 9px; border-radius: var(--radius); display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.rp-facts b { font-size: 14px; }

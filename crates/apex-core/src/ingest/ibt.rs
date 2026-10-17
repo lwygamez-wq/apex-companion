@@ -460,7 +460,11 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
             .collect();
         let (pos_x, pos_y) = match (&ch.lat, &ch.lon) {
             (Some(la), Some(lo)) if la[a..b].iter().any(|v| *v != 0.0) => {
-                let (lat0, lon0) = (la[a], lo[a]);
+                // Origine commune à tous les tours (et stable d'une session à l'autre sur un même
+                // circuit) : coin de la maille de 0,1° contenant le premier point GPS valide.
+                // Une origine par tour décalerait les trajectoires de ~1 m entre elles.
+                let first = la.iter().zip(lo.iter()).find(|(a, _)| **a != 0.0).map(|(a, o)| (*a, *o)).unwrap_or((la[a], lo[a]));
+                let (lat0, lon0) = ((first.0 * 10.0).floor() / 10.0, (first.1 * 10.0).floor() / 10.0);
                 let k = lat0.to_radians().cos();
                 let x = (a..b).map(|i| ((lo[i] - lon0) * 111_320.0 * k) as f32).collect();
                 let y = (a..b).map(|i| ((la[i] - lat0) * 110_540.0) as f32).collect();

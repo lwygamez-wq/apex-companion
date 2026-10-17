@@ -47,6 +47,15 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         let mut last_snap: Option<LiveSnapshot> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
         let mut next_sync = Instant::now();
+        // Sessions décodées par une ancienne version : recalculées depuis leurs fichiers .ibt.
+        match svc.reprocess_outdated() {
+            Ok(n) if n > 0 => {
+                log::info!("{n} session(s) recalculée(s) avec le nouveau décodeur");
+                let _ = app.emit("apex://sessions-changed", ());
+            }
+            Ok(_) => {}
+            Err(e) => log::warn!("recalcul des sessions : {e}"),
+        }
         loop {
             let settings = svc.settings();
             let running = scanner.running(svc.connectors());

@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import uPlot from "uplot";
 import { decimate } from "../lib/format";
+import { positionsAt, type ReplayStore } from "../lib/replay";
 import type { Comparison } from "../lib/types";
+
+/** Vrai pendant qu'on place le curseur par programme (relecture) : on ignore alors l'événement. */
+let programmatic = false;
 
 const REF = "#c9c9d4";
 const CMP = "#e10600";
@@ -18,13 +22,16 @@ interface ChartSpec {
 }
 
 /** Un graphique uPlot synchronisé (curseur partagé via `syncKey`). */
-function SyncedChart({ x, spec, syncKey, onCursor, markers }: {
+function SyncedChart({ x, spec, syncKey, onCursor, markers, onReady }: {
   x: number[];
   spec: ChartSpec;
   syncKey: string;
   onCursor: (idx: number | null) => void;
   markers: { at: number; label: string }[];
+  onReady: (key: string, u: uPlot | null) => void;
 }) {
+  const ready = useRef(onReady);
+  ready.current = onReady;
   const host = useRef<HTMLDivElement>(null);
   const plot = useRef<uPlot | null>(null);
   const cursorCb = useRef(onCursor);
@@ -45,7 +52,7 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers }: {
       ],
       series: [{}, ...spec.series.map((s) => ({ label: s.label, stroke: s.color, width: 1.4, fill: s.fill, points: { show: false } }))],
       hooks: {
-        setCursor: [(u) => cursorCb.current(u.cursor.idx ?? null)],
+        setCursor: [(u) => { if (!programmatic) cursorCb.current(u.cursor.idx ?? null); }],
         draw: [
           (u) => {
             // Repères de virages.
@@ -54,13 +61,19 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers }: {
             ctx.fillStyle = "#9aa1a9";
             ctx.strokeStyle = "rgba(154,161,169,0.22)";
             ctx.font = `italic 800 ${11 * devicePixelRatio}px "Archivo Variable", system-ui, sans-serif`;
+            // Noms décalés sur plusieurs lignes quand les virages sont proches.
+            const rowEnd: number[] = [];
             for (const m of markers) {
               const px = u.valToPos(m.at, "x", true);
               ctx.beginPath();
               ctx.moveTo(px, u.bbox.top);
               ctx.lineTo(px, u.bbox.top + u.bbox.height);
               ctx.stroke();
-              ctx.fillText(m.label, px + 3, u.bbox.top + 11 * devicePixelRatio);
+              const w = ctx.measureText(m.label).width;
+              let row = rowEnd.findIndex((end) => end < px);
+              if (row < 0) row = rowEnd.length;
+              rowEnd[row] = px + 3 + w + 6 * devicePixelRatio;
+              ctx.fillText(m.label, px + 3, u.bbox.top + (11 + row * 12) * devicePixelRatio);
             }
             ctx.restore();
           },
@@ -69,10 +82,12 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers }: {
     };
     const data = [x, ...spec.series.map((s) => s.data)] as uPlot.AlignedData;
     plot.current = new uPlot(opts, data, el);
+    ready.current(spec.key, plot.current);
     const ro = new ResizeObserver(() => plot.current?.setSize({ width: el.clientWidth, height: spec.height }));
     ro.observe(el);
     return () => {
       ro.disconnect();
+      ready.current(spec.key, null);
       plot.current?.destroy();
       plot.current = null;
     };
@@ -87,7 +102,12 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers }: {
 }
 
 /** Pile de courbes : delta, vitesse, frein, accélérateur, rapport, volant. */
-export function TelemetryCharts({ cmp, onCursor, simple = false }: { cmp: Comparison; onCursor: (idx: number | null) => void; simple?: boolean }) {
+export function TelemetryCharts({ cmp, onCursor, simple = false, store }: { cmp: Comparison; onCursor: (idx: number | null) => void; simple?: boolean; store?: ReplayStore }) {
+  const plots = useRef(new Map<string, uPlot>());
+  const onReady = useCallback((key: string, u: uPlot | null) => {
+    if (u) plots.current.set(key, u);
+    else plots.current.delete(key);
+  }, []);
   // Affichage à ≥2 m de résolution : fluide même sur un tour de 13 km.
   const every = Math.max(1, Math.round(2 / cmp.step_m));
   const { x, specs, markers } = useMemo(() => {
@@ -100,6 +120,9 @@ export function TelemetryCharts({ cmp, onCursor, simple = false }: { cmp: Compar
       { key: "brake", title: "Frein (%)", height: 90, range: [0, 100], series: [{ label: "Réf.", color: REF, data: d(r.brake)!.map((v) => v * 100) }, { label: "Tour", color: CMP, data: d(c.brake)!.map((v) => v * 100) }] },
       { key: "throttle", title: "Accélérateur (%)", height: 90, range: [0, 100], series: [{ label: "Réf.", color: REF, data: d(r.throttle)!.map((v) => v * 100) }, { label: "Tour", color: CMP, data: d(c.throttle)!.map((v) => v * 100) }] },
     ];
+    if (cmp.line_offset_m) {
+      specs.push({ key: "line", title: "Trajectoire : écart à la référence (m), au-dessus de zéro = plus à gauche", height: 90, series: [{ label: "Écart", color: CMP, data: d(cmp.line_offset_m)!, fill: "rgba(225,6,0,0.10)" }] });
+    }
     if (!simple && r.gear && c.gear) {
       specs.push({ key: "gear", title: "Rapport", height: 70, series: [{ label: "Réf.", color: REF, data: d(r.gear)! }, { label: "Tour", color: CMP, data: d(c.gear)! }] });
     }
@@ -109,6 +132,25 @@ export function TelemetryCharts({ cmp, onCursor, simple = false }: { cmp: Compar
     const markers = cmp.corners.map((k) => ({ at: k.corner.apex_m, label: k.corner.name }));
     return { x: decimate(r.dist, every), specs, markers };
   }, [cmp, every, simple]);
+
+  // Relecture : le curseur de toutes les courbes suit la voiture.
+  useEffect(() => {
+    if (!store) return;
+    const apply = () => {
+      const { ci } = positionsAt(cmp, store.get().t);
+      const xv = x[Math.min(x.length - 1, Math.round(ci / every))];
+      if (xv == null) return;
+      programmatic = true;
+      try {
+        for (const u of plots.current.values()) {
+          u.setCursor({ left: u.valToPos(xv, "x"), top: u.over.clientHeight / 2 });
+        }
+      } finally {
+        programmatic = false;
+      }
+    };
+    return store.subscribe(apply);
+  }, [store, cmp, x, every]);
 
   const missing = [!cmp.ref_trace.gear || !cmp.cmp_trace.gear ? "rapport" : null, !cmp.ref_trace.steer_deg || !cmp.cmp_trace.steer_deg ? "volant" : null].filter(Boolean);
 
@@ -122,7 +164,7 @@ export function TelemetryCharts({ cmp, onCursor, simple = false }: { cmp: Compar
         {missing.length > 0 && <span className="muted" style={{ fontSize: 12 }}>Canaux non disponibles : {missing.join(", ")}</span>}
       </div>
       {specs.map((s) => (
-        <SyncedChart key={s.key} x={x} spec={s} syncKey="apex" markers={markers} onCursor={(i) => onCursor(i == null ? null : Math.min(i * every, cmp.ref_trace.dist.length - 1))} />
+        <SyncedChart key={s.key} x={x} spec={s} syncKey="apex" markers={markers} onReady={onReady} onCursor={(i) => onCursor(i == null ? null : Math.min(i * every, cmp.ref_trace.dist.length - 1))} />
       ))}
     </div>
   );

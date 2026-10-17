@@ -36,11 +36,19 @@ fn main() {
             &names,
         )
         .unwrap();
+        // APEX_JSON=fichier.json : écrit la comparaison du premier tour (pour l'aperçu de l'interface).
+        if let (0, Ok(out)) = (printed, std::env::var("APEX_JSON")) {
+            std::fs::write(out, serde_json::to_string(&c).unwrap()).unwrap();
+        }
         if printed == 0 {
             for k in &c.corners {
                 println!("  {:<16} apex {:>5.0} m  vmin {:>4.0} km/h  sortie {:>4.0} km/h  freinage {}", k.corner.name, k.corner.apex_m, k.reference.min_speed_kmh, k.reference.exit_speed_kmh, k.reference.brake_on_m.map_or("aucun (levé)".into(), |b| format!("{b:.0} m")));
             }
             println!();
+        }
+        {
+            let offs: Vec<String> = c.corners.iter().map(|k| k.apex_offset_m.map_or("—".into(), |v| format!("{v:+.1}"))).collect();
+            println!("  tour {:>2} : trajectoire à l'apex (m, + = intérieur) {}", m.number, offs.join("  "));
         }
         for i in &c.insights {
             *by_title.entry(i.title.clone()).or_default() += 1;
@@ -51,7 +59,7 @@ fn main() {
         printed += 1;
     }
     let mut v: Vec<_> = by_title.into_iter().collect();
-    v.sort_by(|a, b| b.1.cmp(&a.1));
+    v.sort_by_key(|x| std::cmp::Reverse(x.1));
     println!("Conseils les plus fréquents sur {printed} tours comparés :");
     for (t, n) in v.iter().take(10) {
         println!("  {n:>2} × {t}");

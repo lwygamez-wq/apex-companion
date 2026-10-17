@@ -131,6 +131,8 @@ export interface CornerComparison {
   reference: CornerMetrics;
   compared: CornerMetrics;
   time_delta_s: number;
+  /** Écart de trajectoire à l'apex (m) : positif = plus à l'intérieur que la référence. */
+  apex_offset_m: number | null;
 }
 
 export interface Evidence {
@@ -211,6 +213,8 @@ export interface Comparison {
   ref_trace: Resampled;
   cmp_trace: Resampled;
   delta_s: number[];
+  /** Écart latéral à distance égale (m), positif = à gauche de la référence. */
+  line_offset_m: number[] | null;
   corners: CornerComparison[];
   insights: Insight[];
   warnings: string[];

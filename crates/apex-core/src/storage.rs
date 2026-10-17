@@ -93,7 +93,15 @@ CREATE TABLE goals (
   metric_json TEXT NOT NULL,
   archived INTEGER NOT NULL DEFAULT 0
 );
+"#, r#"
+-- v5 : version du décodeur ayant produit les tours (permet de les recalculer après une correction).
+ALTER TABLE sessions ADD COLUMN parser_version INTEGER NOT NULL DEFAULT 1;
 "#];
+
+/// Version courante du décodage des fichiers sources. À incrémenter quand une correction
+/// change les tours produits : les sessions plus anciennes sont recalculées depuis leur fichier.
+/// v2 : franchissement de ligne robuste, noms Windows-1252, origine GPS commune aux tours.
+pub const PARSER_VERSION: i64 = 2;
 
 /// (id, clé circuit, date de création, titre, métrique JSON).
 pub type GoalRow = (i64, String, i64, String, String);
@@ -196,14 +204,20 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 m.sim.as_str(), m.track, m.track_config, m.track_length_m, m.car, m.kind.as_str(), m.started_at_unix,
-                serde_json::to_string(&m.weather)?, m.source_fingerprint, m.source_path, s.sample_rate_hz, now_unix()
+                serde_json::to_string(&m.weather)?, m.source_fingerprint, m.source_path, s.sample_rate_hz, now_unix(), PARSER_VERSION
             ],
         )?;
         let sid = tx.last_insert_rowid();
+        Self::insert_laps(&tx, sid, s)?;
+        tx.commit()?;
+        Ok(InsertOutcome::Inserted(sid))
+    }
+
+    fn insert_laps(tx: &rusqlite::Transaction, sid: i64, s: &ImportedSession) -> Result<(), StoreError> {
         for l in &s.laps {
             let lm = &l.meta;
             tx.execute(
@@ -221,8 +235,48 @@ impl Store {
                 params![lid, codec::CODEC_ID, l.trace.len() as i64, codec::encode(&l.trace)],
             )?;
         }
+        Ok(())
+    }
+
+    /// Sessions iRacing décodées par une version antérieure du décodeur : (id, fichier source).
+    pub fn outdated_sessions(&self) -> Result<Vec<(i64, String)>, StoreError> {
+        let mut st = self.conn.prepare(
+            "SELECT id, source_path FROM sessions WHERE parser_version < ?1 AND sim = 'iracing' AND source_path IS NOT NULL ORDER BY id",
+        )?;
+        let rows = st.query_map([PARSER_VERSION], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Marque une session comme à jour sans la recalculer (fichier source disparu).
+    pub fn mark_parsed(&self, id: i64) -> Result<(), StoreError> {
+        self.conn.execute("UPDATE sessions SET parser_version = ?1 WHERE id = ?2", params![PARSER_VERSION, id])?;
+        Ok(())
+    }
+
+    /// Remplace les tours d'une session par un nouveau décodage du même fichier.
+    /// L'identifiant de session est conservé ; la référence personnelle est reportée par numéro de tour.
+    pub fn replace_laps(&mut self, id: i64, s: &ImportedSession) -> Result<(), StoreError> {
+        for l in &s.laps {
+            l.trace.validate().map_err(|e| StoreError::Invalid(format!("tour {} : {e}", l.meta.number)))?;
+        }
+        let refs: Vec<u32> = {
+            let mut st = self.conn.prepare("SELECT number FROM laps WHERE session_id = ?1 AND is_reference = 1")?;
+            let v = st.query_map([id], |r| r.get(0))?.collect::<Result<Vec<_>, _>>()?;
+            v
+        };
+        let tx = self.conn.transaction()?;
+        let m = &s.meta;
+        tx.execute(
+            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5 WHERE id = ?6",
+            params![m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, id],
+        )?;
+        tx.execute("DELETE FROM laps WHERE session_id = ?1", [id])?;
+        Self::insert_laps(&tx, id, s)?;
+        for n in refs {
+            tx.execute("UPDATE laps SET is_reference = 1 WHERE session_id = ?1 AND number = ?2", params![id, n])?;
+        }
         tx.commit()?;
-        Ok(InsertOutcome::Inserted(sid))
+        Ok(())
     }
 
     fn row_to_meta(r: &rusqlite::Row) -> rusqlite::Result<SessionMeta> {
@@ -475,6 +529,29 @@ impl Store {
 mod tests {
     use super::*;
     use crate::mock::demo_session;
+
+    #[test]
+    fn outdated_session_is_replaced_in_place() {
+        let mut st = Store::open_in_memory().unwrap();
+        let mut s = demo_session(7, 1_760_000_000);
+        s.meta.sim = SimId::Iracing;
+        s.meta.source_path = Some("C:/x.ibt".into());
+        let InsertOutcome::Inserted(id) = st.insert_session(&s).unwrap() else { panic!() };
+        assert!(st.outdated_sessions().unwrap().is_empty());
+        st.conn.execute("UPDATE sessions SET parser_version = 1", []).unwrap();
+        let laps = st.laps(id).unwrap();
+        st.set_reference(laps[2].id).unwrap();
+        assert_eq!(st.outdated_sessions().unwrap(), vec![(id, "C:/x.ibt".to_string())]);
+        let mut s2 = s.clone();
+        s2.meta.track = "Autódromo".into();
+        s2.laps.truncate(3);
+        st.replace_laps(id, &s2).unwrap();
+        assert!(st.outdated_sessions().unwrap().is_empty());
+        let laps = st.laps(id).unwrap();
+        assert_eq!(laps.len(), 3);
+        assert!(laps[2].is_reference, "référence reportée par numéro de tour");
+        assert_eq!(st.session_meta(id).unwrap().track, "Autódromo");
+    }
 
     #[test]
     fn insert_is_idempotent() {

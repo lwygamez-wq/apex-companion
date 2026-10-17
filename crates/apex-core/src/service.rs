@@ -297,6 +297,31 @@ impl AppService {
         c.importer().expect("import iRacing").scan(dir).map_err(|e| ServiceError::User(e.to_string()))
     }
 
+    /// Recalcule les sessions décodées par une ancienne version du décodeur, depuis leur
+    /// fichier `.ibt` s'il existe encore. Renvoie le nombre de sessions recalculées.
+    pub fn reprocess_outdated(&self) -> Result<usize> {
+        let list = self.db().outdated_sessions()?;
+        let mut n = 0;
+        for (id, path) in list {
+            let p = Path::new(&path);
+            if !p.exists() {
+                self.db().mark_parsed(id)?;
+                continue;
+            }
+            match crate::ingest::ibt::import_ibt_file(p) {
+                Ok(s) => {
+                    self.db().replace_laps(id, &s)?;
+                    n += 1;
+                }
+                Err(e) => {
+                    log::warn!("recalcul de la session {id} impossible : {e}");
+                    self.db().mark_parsed(id)?;
+                }
+            }
+        }
+        Ok(n)
+    }
+
     /// Import manuel de tout le dossier iRacing (les doublons sont ignorés).
     pub fn scan_iracing(&self) -> Result<Vec<ImportReport>> {
         let dir = self.iracing_dir()?;

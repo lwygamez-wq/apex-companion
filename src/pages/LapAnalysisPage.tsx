@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { Route } from "../App";
 import { InsightCard } from "../components/InsightCard";
 import { TelemetryCharts } from "../components/TelemetryCharts";
+import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap } from "../components/TrackMap";
 import { api } from "../lib/api";
 import { dateTime, delta, LAP_KIND_FR, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
+import { ReplayStore, replayBounds } from "../lib/replay";
 import type { LapRow, SessionDetail } from "../lib/types";
 
 function lapFlags(l: LapRow): string {
@@ -31,7 +33,6 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const detail = useAsync(() => (sessionId != null ? api.session(sessionId) : Promise.resolve(null)), [sessionId]);
   const [refId, setRefId] = useState<number | null>(route.refLapId ?? null);
   const [cmpId, setCmpId] = useState<number | null>(route.cmpLapId ?? null);
-  const [cursor, setCursor] = useState<number | null>(null);
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [renaming, setRenaming] = useState<{ apex: number; name: string } | null>(null);
@@ -59,6 +60,13 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
   const d = detail.data;
   const c = cmp.data;
+  const store = useMemo(() => (c ? new ReplayStore(...replayBounds(c)) : null), [c]);
+  useEffect(() => () => store?.dispose(), [store]);
+  const onChartCursor = (idx: number | null) => {
+    if (!store || !c || idx == null || store.get().playing) return;
+    const t = c.cmp_trace.time[idx];
+    if (t != null) store.seek(t);
+  };
   const insights = useMemo(() => {
     if (!c) return [];
     const name = c.corners.find((k) => k.corner.id === corner)?.corner.name;
@@ -117,14 +125,34 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
           {c?.warnings.map((w) => <div key={w} className="warning">⚠ {w}</div>)}
           {refId === cmpId && <div className="warning">Choisis deux tours différents.</div>}
 
-          {c && (
-            <div className="grid analysis">
-              <div>
-                <TelemetryCharts cmp={c} onCursor={setCursor} simple={beginner} />
+          {c && store && (
+            <>
+              <div className="insights-strip">
+                <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 8px" }}>
+                  {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
+                </h2>
+                {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
+                <div className="insight-grid">
+                  {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i) => <InsightCard key={i.id} insight={i} sessionId={d.id} />)}
+                </div>
+                {beginner && corner == null && insights.length > 3 && (
+                  <button className="btn" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
+                  </button>
+                )}
+                {beginner && corner == null && insights.length > 0 && (
+                  <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                    Travaille un seul conseil par session : c'est plus efficace que de tout corriger en même temps.
+                  </div>
+                )}
+              </div>
+              <div className="grid analysis">
+                <div>
+                <TelemetryCharts cmp={c} onCursor={onChartCursor} simple={beginner} store={store ?? undefined} />
                 <div className="card" style={{ padding: 0, marginTop: 8 }}>
                   <table>
                     <thead>
-                      <tr><th>Virage</th><th className="num">Δ temps</th><th className="num">Freinage réf./tour</th><th className="num">V. mini réf./tour</th><th className="num">V. sortie réf./tour</th><th className="num">Gaz réf./tour</th></tr>
+                      <tr><th>Virage</th><th className="num">Δ temps</th><th className="num">Freinage réf./tour</th><th className="num">V. mini réf./tour</th><th className="num">V. sortie réf./tour</th><th className="num">Gaz réf./tour</th><th className="num" title="Position de ton tour à l'apex par rapport à la trajectoire de référence">Trajectoire apex</th></tr>
                     </thead>
                     <tbody>
                       {c.corners.map((k) => (
@@ -156,6 +184,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                           <td className="num">{k.reference.min_speed_kmh.toFixed(0)} / {k.compared.min_speed_kmh.toFixed(0)}</td>
                           <td className="num">{k.reference.exit_speed_kmh.toFixed(0)} / {k.compared.exit_speed_kmh.toFixed(0)}</td>
                           <td className="num">{k.reference.throttle_on_m?.toFixed(0) ?? "—"} / {k.compared.throttle_on_m?.toFixed(0) ?? "—"} m</td>
+                          <td className="num">{k.apex_offset_m == null ? "—" : Math.abs(k.apex_offset_m) < 0.3 ? "identique" : `${Math.abs(k.apex_offset_m).toFixed(1)} m ${k.apex_offset_m > 0 ? "int." : "ext."}`}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -165,25 +194,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   </div>
                 </div>
               </div>
-              <div>
-                <TrackMap cmp={c} cursor={cursor} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} />
-                <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "16px 0 8px" }}>
-                  {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
-                </h2>
-                {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
-                {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i) => <InsightCard key={i.id} insight={i} sessionId={d.id} />)}
-                {beginner && corner == null && insights.length > 3 && (
-                  <button className="btn" onClick={() => setShowAll((v) => !v)}>
-                    {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
-                  </button>
-                )}
-                {beginner && corner == null && insights.length > 0 && (
-                  <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                    Travaille un seul conseil par session : c'est plus efficace que de tout corriger en même temps.
-                  </div>
-                )}
+                <div className="analysis-side">
+                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} />
+                  <ReplayPanel cmp={c} store={store} />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div className="card" style={{ padding: 0, marginTop: 14 }}>
