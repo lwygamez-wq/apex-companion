@@ -74,3 +74,13 @@ MIT — voir [`LICENSE`](LICENSE).
 3. Le workflow lance les tests, construit et signe l'installeur, puis crée la release `vX.Y.Z` avec `latest.json`.
 
 Prérequis (une seule fois) : secret de dépôt `TAURI_SIGNING_PRIVATE_KEY` contenant la clé privée générée par `npx tauri signer generate`. Si cette clé est perdue, les installations existantes ne pourront plus se mettre à jour automatiquement (réinstallation manuelle avec une nouvelle clé).
+
+## Crédits des données de circuits
+
+Les noms de virages des circuits sans relevé sur session réelle sont placés à partir de la
+géométrie publique des tracés (lignes médianes issues d'OpenStreetMap) :
+
+- [TUMFTM racetrack-database](https://github.com/TUMFTM/racetrack-database) (LGPL-3.0)
+- [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT, © Tomislav Bacinger)
+
+Seules des valeurs dérivées (position et sens de chaque virage) sont intégrées à l'application.

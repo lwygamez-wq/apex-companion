@@ -118,7 +118,7 @@ pub fn line_offset(r: &Resampled, c: &Resampled) -> Option<Vec<f32>> {
 }
 
 /// +1 virage à gauche, -1 à droite (variation de cap de la référence entre l'entrée et la sortie).
-fn turn_sign(r: &Resampled, d: &CornerDef) -> Option<f32> {
+pub(crate) fn turn_sign(r: &Resampled, d: &CornerDef) -> Option<f32> {
     let (x, y) = (r.x.as_ref()?, r.y.as_ref()?);
     let k = (5.0 / r.step_m).ceil().max(1.0) as usize;
     let (ax, ay) = tangent(x, y, r.idx(d.entry_m), k)?;
