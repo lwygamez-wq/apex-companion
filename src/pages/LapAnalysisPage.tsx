@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Route } from "../App";
 import { InsightCard } from "../components/InsightCard";
 import { TelemetryCharts } from "../components/TelemetryCharts";
+import { OffTrackCard } from "../components/OffTrackCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap } from "../components/TrackMap";
 import { api } from "../lib/api";
@@ -21,9 +22,10 @@ function lapFlags(l: LapRow): string {
 }
 
 function defaultPair(d: SessionDetail): [number | null, number | null] {
-  const ref = d.personal_reference_lap_id ?? d.best_lap_id;
+  const ref = d.analysis_reference_lap_id ?? d.personal_reference_lap_id ?? d.best_lap_id;
   const clean = d.laps.filter((l) => l.clean && l.id !== ref);
-  const cmp = clean[clean.length - 1]?.id ?? d.laps.find((l) => l.id !== ref && l.lap_time_s != null)?.id ?? null;
+  const flying = d.laps.filter((l) => l.kind === "flying" && l.lap_time_s != null && l.id !== ref);
+  const cmp = clean[clean.length - 1]?.id ?? flying[flying.length - 1]?.id ?? d.laps.find((l) => l.id !== ref && l.lap_time_s != null)?.id ?? null;
   return [ref, cmp];
 }
 
@@ -98,8 +100,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
         <>
           <div className="grid cols-4" style={{ marginBottom: 14 }}>
             <div className="card"><h2>Session</h2><div style={{ fontWeight: 600 }}>{d.meta.track}</div><div className="kpi-sub">{d.meta.car}</div></div>
-            <div className="card"><h2>Meilleur tour</h2><div className="kpi best">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
-            <div className="card"><h2>Théorique</h2><div className="kpi best">{lapTime(d.theoretical_best_s)}</div></div>
+            {d.best_lap_id != null || d.fastest_lap_id == null ? (
+              <div className="card"><h2>Meilleur tour</h2><div className="kpi best">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
+            ) : (
+              <div className="card"><h2>Tour le plus rapide</h2><div className="kpi">{lapTime(d.laps.find((l) => l.id === d.fastest_lap_id)?.lap_time_s)}</div><div className="kpi-sub">invalide : aucun tour propre dans la session</div></div>
+            )}
+            <div className="card"><h2>Théorique</h2><div className="kpi best">{lapTime(d.theoretical_best_s)}</div>{d.theoretical_best_s == null && <div className="kpi-sub">nécessite des tours propres</div>}</div>
             <div className="card"><h2>Régularité</h2><div className="kpi">{d.consistency ? `σ ${d.consistency.stddev_s.toFixed(3)} s` : "—"}</div><div className="kpi-sub">{d.consistency ? `${d.consistency.clean_laps} tours propres` : ""}</div></div>
           </div>
 
@@ -128,6 +134,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
           {c && store && (
             <>
+              <OffTrackCard zones={d.off_tracks} />
               <div className="insights-strip">
                 <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 8px" }}>
                   {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
@@ -227,7 +234,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     <td className="muted">{lapFlags(l)}</td>
                     <td className="num">{l.fuel_used_l != null ? `${l.fuel_used_l.toFixed(2)} L` : "—"}</td>
                     <td>
-                      {l.is_reference ? <span className="chip warn">référence perso</span> : l.lap_time_s != null && (
+                      {l.is_reference ? <span className="chip warn">référence perso</span> : l.lap_time_s != null && l.kind === "flying" && (
                         <button className="btn" onClick={() => void markReference(l.id)} title={l.clean ? "" : "Tour perturbé : référence déconseillée"}>Définir comme référence</button>
                       )}
                     </td>

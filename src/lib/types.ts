@@ -87,6 +87,17 @@ export interface SessionDetail {
   theoretical_best_s: number | null;
   consistency: Consistency | null;
   personal_reference_lap_id: number | null;
+  /** Tour lancé complet le plus rapide, même invalide. */
+  fastest_lap_id: number | null;
+  /** Référence par défaut : perso, sinon meilleur tour propre, sinon le plus rapide. */
+  analysis_reference_lap_id: number | null;
+  off_tracks: OffTrackZone[];
+}
+
+export interface OffTrackZone {
+  at_m: number;
+  corner: string | null;
+  laps: number[];
 }
 
 export interface Resampled {
@@ -215,6 +226,8 @@ export interface Comparison {
   delta_s: number[];
   /** Écart latéral à distance égale (m), positif = à gauche de la référence. */
   line_offset_m: number[] | null;
+  ref_off_track_m: [number, number][];
+  cmp_off_track_m: [number, number][];
   corners: CornerComparison[];
   insights: Insight[];
   warnings: string[];

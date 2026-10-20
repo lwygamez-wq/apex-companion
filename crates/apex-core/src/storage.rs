@@ -101,7 +101,9 @@ ALTER TABLE sessions ADD COLUMN parser_version INTEGER NOT NULL DEFAULT 1;
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
 /// change les tours produits : les sessions plus anciennes sont recalculées depuis leur fichier.
 /// v2 : franchissement de ligne robuste, noms Windows-1252, origine GPS commune aux tours.
-pub const PARSER_VERSION: i64 = 2;
+/// v3 : un « reset » près de la ligne ne crée plus de faux tour ; positions GPS nulles ignorées ;
+///      surface sous la voiture conservée (localisation des sorties de piste).
+pub const PARSER_VERSION: i64 = 3;
 
 /// (id, clé circuit, date de création, titre, métrique JSON).
 pub type GoalRow = (i64, String, i64, String, String);
@@ -273,7 +275,7 @@ impl Store {
         tx.execute("DELETE FROM laps WHERE session_id = ?1", [id])?;
         Self::insert_laps(&tx, id, s)?;
         for n in refs {
-            tx.execute("UPDATE laps SET is_reference = 1 WHERE session_id = ?1 AND number = ?2", params![id, n])?;
+            tx.execute("UPDATE laps SET is_reference = 1 WHERE session_id = ?1 AND number = ?2 AND kind = 'flying' AND lap_time_s IS NOT NULL", params![id, n])?;
         }
         tx.commit()?;
         Ok(())

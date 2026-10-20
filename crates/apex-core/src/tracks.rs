@@ -33,6 +33,34 @@ const TRACKS: &[TrackCorners] = &[
             (3194.0, "Junção"),
         ],
     },
+    // Relevé : session iRacing du 20/10/2026, Dallara F312 (F3), tracé GPS : sens et ordre vérifiés
+    // (G, D, puis G D G D G D G pour les Esses, épingle 11, stade 12-15, triple droite 16-18).
+    // Apex = vitesse minimale ; virages pris à fond (2, 10, 16-18) placés au milieu de la courbe.
+    TrackCorners {
+        sim: SimId::Iracing,
+        name_contains: &["circuit of the americas"],
+        config_contains: Some("grand prix"),
+        corners: &[
+            (655.0, "Virage 1"),
+            (890.0, "Virage 2"),
+            (1110.0, "Virage 3"),
+            (1278.0, "Virage 4"),
+            (1368.0, "Virage 5"),
+            (1560.0, "Virage 6"),
+            (1690.0, "Virage 7"),
+            (1878.0, "Virage 8"),
+            (1960.0, "Virage 9"),
+            (2166.0, "Virage 10"),
+            (2542.0, "Virage 11"),
+            (3735.0, "Virage 12"),
+            (3950.0, "Virage 13"),
+            (4120.0, "Virage 14"),
+            (4222.0, "Virage 15"),
+            (4575.0, "Virages 16-18"),
+            (4978.0, "Virage 19"),
+            (5262.0, "Virage 20"),
+        ],
+    },
 ];
 
 fn fold(s: &str) -> String {

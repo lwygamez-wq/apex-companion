@@ -1,5 +1,5 @@
 // Lecture des exports .apex.json.gz et mémorisation locale (IndexedDB, dans le téléphone uniquement).
-import type { Comparison, Consistency, LapRow, Resampled, SessionMeta } from "../lib/types";
+import type { Comparison, Consistency, LapRow, OffTrackZone, Resampled, SessionMeta } from "../lib/types";
 
 export interface MobileSession {
   key: string;
@@ -7,6 +7,8 @@ export interface MobileSession {
   laps: LapRow[];
   best_lap_id: number | null;
   reference_lap_id: number | null;
+  fastest_lap_id: number | null;
+  off_tracks: OffTrackZone[];
   theoretical_best_s: number | null;
   consistency: Consistency | null;
   comparisons: Comparison[];
@@ -45,7 +47,7 @@ export async function parseExport(buf: ArrayBuffer): Promise<MobileSession> {
     throw new Error("Export d'une ancienne version : mets à jour Apex Companion sur le PC (0.6 ou plus) puis exporte à nouveau la session.");
   }
   const refTrace = doc.reference_trace as Resampled;
-  const comparisons = (doc.comparisons as Comparison[]).map((c) => ({ ...c, ref_trace: refTrace }));
+  const comparisons = (doc.comparisons as Comparison[]).map((c) => ({ ...c, ref_trace: refTrace, ref_off_track_m: c.ref_off_track_m ?? [], cmp_off_track_m: c.cmp_off_track_m ?? [] }));
   // Les traces brutes ne servent pas sur mobile : on ne garde que les métadonnées des tours.
   const laps = (doc.laps as (LapRow & { trace?: unknown })[]).map(({ trace: _t, ...l }) => l as LapRow);
   const meta = doc.session as SessionMeta;
@@ -55,6 +57,8 @@ export async function parseExport(buf: ArrayBuffer): Promise<MobileSession> {
     laps,
     best_lap_id: (doc.best_lap_id as number | null) ?? null,
     reference_lap_id: (doc.reference_lap_id as number | null) ?? null,
+    fastest_lap_id: (doc.fastest_lap_id as number | null) ?? null,
+    off_tracks: (doc.off_tracks as OffTrackZone[] | undefined) ?? [],
     theoretical_best_s: (doc.theoretical_best_s as number | null) ?? null,
     consistency: (doc.consistency as Consistency | null) ?? null,
     comparisons,
@@ -63,7 +67,7 @@ export async function parseExport(buf: ArrayBuffer): Promise<MobileSession> {
 }
 
 export function summarize(s: MobileSession): StoredSummary {
-  const best = s.laps.find((l) => l.id === s.best_lap_id)?.lap_time_s ?? null;
+  const best = s.laps.find((l) => l.id === (s.best_lap_id ?? s.fastest_lap_id))?.lap_time_s ?? null;
   return { key: s.key, track: s.meta.track, car: s.meta.car, started_at_unix: s.meta.started_at_unix, best_lap_s: best, lap_count: s.laps.length, added_at: Date.now() };
 }
 

@@ -12,6 +12,7 @@ export type ColorMode = "delta" | "inputs" | "speed";
 
 const REF_LINE = "rgba(201,201,212,0.85)";
 const CMP_LINE = "#e10600";
+const OFF_COLOR = "#ff8a00";
 
 interface Geo {
   X: number[];
@@ -95,7 +96,17 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Compariso
     }
     const refD = linePath(X, Y, 1);
     const cmpD = CX && CY ? linePath(CX, CY, 1) : null;
-    return { band, refD, cmpD, cmpColored };
+    // Portions hors piste (m) → tracés sur la trajectoire concernée.
+    const spanPath = (xs: number[], ys: number[], spans: [number, number][]) =>
+      spans
+        .map(([a, b]) => {
+          const i0 = Math.max(0, Math.round(a / c.step_m)), i1 = Math.min(xs.length - 1, Math.max(i0 + 3, Math.round(b / c.step_m)));
+          return linePath(xs.slice(i0, i1 + 1), ys.slice(i0, i1 + 1), 1);
+        })
+        .join("");
+    const cmpOff = CX && CY && c.cmp_off_track_m?.length ? spanPath(CX, CY, c.cmp_off_track_m) : "";
+    const refOff = c.ref_off_track_m?.length ? spanPath(X, Y, c.ref_off_track_m) : "";
+    return { band, refD, cmpD, cmpColored, cmpOff, refOff };
   }, [c, geo, mode]);
 
   return (
@@ -107,6 +118,8 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Compariso
       {layers.cmpColored
         ? layers.cmpColored.map(([col, d]) => <path key={col} d={d} stroke={col} strokeWidth={3} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />)
         : layers.cmpD && <path d={layers.cmpD} stroke={CMP_LINE} strokeWidth={1.6} fill="none" vectorEffect="non-scaling-stroke" />}
+      {layers.refOff && <path d={layers.refOff} stroke={OFF_COLOR} strokeWidth={5} strokeDasharray="4 4" strokeLinecap="round" fill="none" opacity={0.8} vectorEffect="non-scaling-stroke" />}
+      {layers.cmpOff && <path d={layers.cmpOff} stroke={OFF_COLOR} strokeWidth={6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />}
     </g>
   );
 });
@@ -130,7 +143,9 @@ function cornerLabels(c: Comparison, geo: Geo) {
     const [tx, ty] = tan(i);
     // Normale vers l'extérieur du virage.
     const nx = -ty * -turn, ny = tx * -turn;
-    return { id: k.corner.id, num: num + 1, name: k.corner.name, x: X[i]!, y: Y[i]!, nx, ny, loss: k.time_delta_s };
+    // Numéro officiel quand le nom en contient un (« Virage 12 », « V3 »), sinon numéro d'ordre.
+    const official = /(\d+(?:-\d+)?)\s*$/.exec(k.corner.name)?.[1];
+    return { id: k.corner.id, num: official ?? String(num + 1), name: k.corner.name, x: X[i]!, y: Y[i]!, nx, ny, loss: k.time_delta_s };
   });
 }
 
@@ -351,7 +366,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
                   <title>{k.name}</title>
                   <circle cx={x} cy={y} r={r} fill={sel ? "#ffffff" : "#15151e"} stroke="#ffffff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
                   <g transform={upright(x, y)}>
-                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={800} fill={sel ? "#15151e" : "#ffffff"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
+                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={(k.num.length > 2 ? 7.5 : 11) * mPerPx} fontWeight={800} fill={sel ? "#15151e" : "#ffffff"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
                     {showNames && (
                       <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="#ffffff" stroke="#101017" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">{k.name}</text>
                     )}
@@ -372,6 +387,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
       <div className="trackmap-legend">
         <span><i style={{ background: REF_LINE }} />Référence (tour {cmp.reference.number}) · cercle vide = fantôme</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
+        {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
         {mode === "delta" && <span><i style={{ background: "#2bd576" }} />gain <i style={{ background: "#ffd400", marginLeft: 6 }} />perte</span>}
         {mode === "inputs" && <span><i style={{ background: "#ff2a1f" }} />frein <i style={{ background: "#ffd400", marginLeft: 6 }} />gaz partiel <i style={{ background: "#2bd576", marginLeft: 6 }} />plein gaz <i style={{ background: "#fff", marginLeft: 6 }} />roue libre</span>}
         {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}

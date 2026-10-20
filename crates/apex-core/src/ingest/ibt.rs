@@ -377,13 +377,22 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
     // chaque échantillon valide au dernier échantillon valide, et on ramène les quasi-zéros à 0.
     let mut crossings: Vec<(usize, f64)> = Vec::new();
     let mut last: Option<usize> = None;
+    let len_m = si.track_length_m.map(|l| l as f64);
     for i in 0..n {
         if pct[i] < -0.01 {
             continue;
         }
         if let Some(p) = last {
             let (a, b) = (pct[p], pct[i].max(0.0));
-            if a > 0.9 && b < 0.1 {
+            // Vrai franchissement seulement si la voiture a pu parcourir l'écart : un « reset »
+            // (retour aux stands) fait aussi passer la position de 0,98 à 0,0x sans franchir la ligne.
+            let dt = t[i] - t[p];
+            let span_m = len_m.map(|l| (b + 1.0 - a) * l);
+            let reachable = match span_m {
+                Some(s) => (0.0..=1.0).contains(&dt) && s <= ch.speed[p].abs().max(ch.speed[i].abs()) * dt + 30.0,
+                None => (0.0..=1.0).contains(&dt) && b + 1.0 - a <= 0.02,
+            };
+            if a > 0.9 && b < 0.1 && reachable {
                 let span = b + 1.0 - a;
                 let frac = if span > 0.0 { (1.0 - a) / span } else { 0.0 };
                 crossings.push((i, t[p] + frac * (t[i] - t[p])));
@@ -466,8 +475,19 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
                 let first = la.iter().zip(lo.iter()).find(|(a, _)| **a != 0.0).map(|(a, o)| (*a, *o)).unwrap_or((la[a], lo[a]));
                 let (lat0, lon0) = ((first.0 * 10.0).floor() / 10.0, (first.1 * 10.0).floor() / 10.0);
                 let k = lat0.to_radians().cos();
-                let x = (a..b).map(|i| ((lo[i] - lon0) * 111_320.0 * k) as f32).collect();
-                let y = (a..b).map(|i| ((la[i] - lat0) * 110_540.0) as f32).collect();
+                // Position inconnue (0,0 : menus, remorquage) : on garde le dernier point valide.
+                let valid = |i: usize| la[i] != 0.0 || lo[i] != 0.0;
+                let mut cur = (a..b).find(|&i| valid(i)).map(|i| (la[i], lo[i])).unwrap_or(first);
+                let pts: Vec<(f64, f64)> = (a..b)
+                    .map(|i| {
+                        if valid(i) {
+                            cur = (la[i], lo[i]);
+                        }
+                        cur
+                    })
+                    .collect();
+                let x = pts.iter().map(|p| ((p.1 - lon0) * 111_320.0 * k) as f32).collect();
+                let y = pts.iter().map(|p| ((p.0 - lat0) * 110_540.0) as f32).collect();
                 (Some(x), Some(y))
             }
             _ => (None, None),
@@ -486,7 +506,8 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
             pos_y,
             fuel_l: fuel.clone(),
             yaw_rate: ch.yaw_rate.as_ref().map(|v| f(v)),
-            extra: Default::default(),
+            // Surface sous la voiture (irsdk_TrkLoc : 0 = hors piste) : localise les sorties de piste.
+            extra: ch.track_surface.as_ref().map(|v| std::collections::BTreeMap::from([("track_surface".to_string(), f(v))])).unwrap_or_default(),
         };
         let number = ch.lap.as_ref().map(|l| l[half] as i32).unwrap_or(seg_i as i32);
         laps.push(ImportedLap {
@@ -687,6 +708,42 @@ mod tests {
         assert_eq!(complete.len(), 3, "aucun tour fusionné : {complete:?}");
         assert!(complete.iter().all(|t| (t - 40.0).abs() < 0.05), "{complete:?}");
         assert!(s.laps.iter().all(|l| l.trace.dist_m.iter().all(|d| *d >= 0.0)));
+    }
+
+    #[test]
+    fn reset_near_the_line_is_not_a_lap() {
+        // Données réelles iRacing (COTA) : arrêt à 79 m de la ligne, puis « reset » vers les stands
+        // (LapDistPct passe de 0,985 à 0,05 sans franchir la ligne), puis tours normaux.
+        let vars = [
+            Var { name: "SessionTime", ty: VarType::Double, unit: "s" },
+            Var { name: "LapDist", ty: VarType::Float, unit: "m" },
+            Var { name: "LapDistPct", ty: VarType::Float, unit: "%" },
+            Var { name: "Speed", ty: VarType::Float, unit: "m/s" },
+            Var { name: "Throttle", ty: VarType::Float, unit: "%" },
+            Var { name: "Brake", ty: VarType::Float, unit: "%" },
+        ];
+        let (v, len, hz) = (50.0f64, 2000.0f64, 60.0f64);
+        let mut rows = Vec::new();
+        let mut t = 0.0;
+        let mut push = |t: f64, d: f64, sp: f64| rows.push(vec![t, d, d / len, sp, 1.0, 0.0]);
+        // Tour 0 (sortie) puis tour 1 complet, arrêt à 1970 m pendant 5 s.
+        let mut d = 1500.0;
+        while d < len { push(t, d, v); t += 1.0 / hz; d += v / hz; }
+        d -= len;
+        while d < 1970.0 { push(t, d, v); t += 1.0 / hz; d += v / hz; }
+        for _ in 0..300 { push(t, 1970.0, 0.0); t += 1.0 / hz; }
+        // Reset : téléporté aux stands (100 m après la ligne), repart.
+        d = 100.0;
+        while d < len { push(t, d, v); t += 1.0 / hz; d += v / hz; }
+        d -= len;
+        while d < len - 1.0 { push(t, d, v); t += 1.0 / hz; d += v / hz; }
+        d -= len;
+        while d < 500.0 { push(t, d.max(0.0), v); t += 1.0 / hz; d += v / hz; }
+        let s = import_ibt_bytes(&build(&vars, &rows, YAML, 60, 1)).unwrap();
+        let timed: Vec<f64> = s.laps.iter().filter(|l| l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
+        assert_eq!(timed.len(), 1, "seul le tour réellement bouclé après le reset compte : {timed:?}");
+        assert!((timed[0] - 40.0).abs() < 0.1, "{timed:?}");
+        assert!(s.laps.iter().any(|l| l.meta.flags.discontinuity), "le reset est signalé");
     }
 
     #[test]

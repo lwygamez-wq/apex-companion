@@ -45,6 +45,9 @@ pub struct Comparison {
     /// Écart latéral de la trajectoire analysée par rapport à la référence, à distance égale (m).
     /// Positif = à gauche de la référence (sens de la marche). `None` sans position GPS.
     pub line_offset_m: Option<Vec<f32>>,
+    /// Portions hors piste (m depuis la ligne) du tour de référence et du tour analysé.
+    pub ref_off_track_m: Vec<(f32, f32)>,
+    pub cmp_off_track_m: Vec<(f32, f32)>,
     pub corners: Vec<CornerComparison>,
     pub insights: Vec<Insight>,
     /// Avertissements de comparabilité, affichés en tête d'écran.
@@ -232,6 +235,8 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
         cmp_trace: c,
         delta_s: delta,
         line_offset_m: offset,
+        ref_off_track_m: super::offtrack::off_track_spans(rf.trace),
+        cmp_off_track_m: super::offtrack::off_track_spans(cmp.trace),
         corners,
         insights,
         warnings,

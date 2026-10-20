@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InsightCard } from "../components/InsightCard";
+import { OffTrackCard } from "../components/OffTrackCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { TrackMap } from "../components/TrackMap";
@@ -177,10 +178,15 @@ function SessionScreen({ s, onLap }: { s: MobileSession; onLap: (id: number) => 
   return (
     <>
       <div className="m-kpis">
-        <div className="card"><h2>Meilleur</h2><div className="kpi best m-kpi">{lapTime(best?.lap_time_s)}</div></div>
+        {best || !s.fastest_lap_id ? (
+          <div className="card"><h2>Meilleur</h2><div className="kpi best m-kpi">{lapTime(best?.lap_time_s)}</div></div>
+        ) : (
+          <div className="card"><h2>Plus rapide</h2><div className="kpi m-kpi">{lapTime(s.laps.find((l) => l.id === s.fastest_lap_id)?.lap_time_s)}</div><div className="kpi-sub">invalide</div></div>
+        )}
         <div className="card"><h2>Théorique</h2><div className="kpi best m-kpi">{lapTime(s.theoretical_best_s)}</div></div>
         <div className="card"><h2>Régularité</h2><div className="kpi m-kpi">{s.consistency ? `σ ${s.consistency.stddev_s.toFixed(2)}` : "—"}</div></div>
       </div>
+      <OffTrackCard zones={s.off_tracks} />
       {top.length > 0 && (
         <div className="card" style={{ marginBottom: 10 }}>
           <h2>Ce qui revient le plus sur la session</h2>
@@ -214,7 +220,8 @@ function lapFlags(l: LapRow, s: MobileSession) {
   return (
     <>
       {l.id === s.best_lap_id && <span className="chip best">meilleur</span>}
-      {!l.clean && <span className="chip warn">perturbé</span>}
+      {l.flags.off_track ? <span className="chip warn">hors piste</span> : !l.clean && <span className="chip warn">perturbé</span>}
+      {l.kind !== "flying" && <span className="chip">{l.kind === "out_lap" ? "sortie" : l.kind === "in_lap" ? "entrée" : "interrompu"}</span>}
     </>
   );
 }

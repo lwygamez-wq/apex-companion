@@ -124,6 +124,13 @@ pub struct SessionDetail {
     pub consistency: Option<Consistency>,
     /// Référence personnelle du même combo (sim/circuit/config/voiture), si elle existe.
     pub personal_reference_lap_id: Option<i64>,
+    /// Tour lancé complet le plus rapide, même invalide (hors-piste, incident).
+    pub fastest_lap_id: Option<i64>,
+    /// Référence utilisée par défaut pour l'analyse : référence perso, sinon meilleur tour propre,
+    /// sinon tour lancé le plus rapide (quand aucun tour n'est propre).
+    pub analysis_reference_lap_id: Option<i64>,
+    /// Sorties de piste regroupées par endroit.
+    pub off_tracks: Vec<crate::analysis::offtrack::OffTrackZone>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -459,12 +466,60 @@ impl AppService {
         let length = meta.track_length_m.or_else(|| traces.first().map(|(_, t)| t.max_dist()));
         let theo = length.and_then(|l| theoretical_best(&pairs, l, 2.0)).map(|(t, _)| t);
         let personal = Self::personal_reference(&db, &meta)?;
+        let fastest = laps
+            .iter()
+            .filter(|l| l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some())
+            .min_by(|a, b| a.meta.lap_time_s.unwrap().total_cmp(&b.meta.lap_time_s.unwrap()))
+            .map(|l| l.id);
+        let best_id = best.map(|i| laps[i].id);
+        let analysis_ref = personal.or(best_id).or(fastest);
+
+        // Sorties de piste, rattachées aux virages de la référence d'analyse.
+        let mut spans = Vec::new();
+        let mut ref_trace = None;
+        for l in &laps {
+            if let Ok(t) = db.trace(l.id) {
+                let sp = crate::analysis::offtrack::off_track_spans(&t);
+                if !sp.is_empty() {
+                    spans.push((l.meta.number.max(0) as u32, sp));
+                }
+                if Some(l.id) == analysis_ref {
+                    ref_trace = Some(t);
+                }
+            }
+        }
+        let off_tracks = if spans.is_empty() {
+            vec![]
+        } else {
+            let names = crate::tracks::merge_names(crate::tracks::builtin_corner_names(&meta), db.corner_names(&track_key(&meta))?);
+            let corners: Vec<(String, f32, f32)> = match (ref_trace, length) {
+                (Some(t), Some(len)) => crate::analysis::resample::resample(&t, len, 1.0)
+                    .map(|r| {
+                        let mut d = crate::analysis::corners::detect_corners(&r, &crate::analysis::corners::CornerConfig::default());
+                        crate::analysis::compare::apply_corner_names(&mut d, &names);
+                        let mut v: Vec<(String, f32, f32)> = d.into_iter().map(|c| (c.name, c.entry_m, c.exit_m)).collect();
+                        // Virages nommés non détectés (pris à fond) : fenêtre de ±60 m autour de l'apex.
+                        for (a, n) in &names {
+                            if !v.iter().any(|c| &c.0 == n) {
+                                v.push((n.clone(), a - 60.0, a + 60.0));
+                            }
+                        }
+                        v
+                    })
+                    .unwrap_or_default(),
+                _ => names.iter().map(|(a, n)| (n.clone(), a - 60.0, a + 60.0)).collect(),
+            };
+            crate::analysis::offtrack::off_track_zones(&spans, &corners)
+        };
         Ok(SessionDetail {
             id,
-            best_lap_id: best.map(|i| laps[i].id),
+            best_lap_id: best_id,
             theoretical_best_s: theo,
             consistency: consistency(&metas),
             personal_reference_lap_id: personal,
+            fastest_lap_id: fastest,
+            analysis_reference_lap_id: analysis_ref,
+            off_tracks,
             meta,
             laps,
         })
@@ -476,7 +531,8 @@ impl AppService {
             if s.track_config != meta.track_config {
                 continue;
             }
-            if let Some(l) = db.laps(s.id)?.into_iter().find(|l| l.is_reference) {
+            // Seul un tour lancé complet peut servir de référence (un ancien choix sur un tour incomplet est ignoré).
+            if let Some(l) = db.laps(s.id)?.into_iter().find(|l| l.is_reference && l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some()) {
                 return Ok(Some(l.id));
             }
         }
@@ -548,6 +604,10 @@ impl AppService {
     }
 
     pub fn set_reference(&self, lap_id: i64) -> Result<()> {
+        let l = self.db().lap(lap_id)?;
+        if l.meta.kind != LapKind::Flying || l.meta.lap_time_s.is_none() {
+            return Err(ServiceError::User("seul un tour lancé complet peut servir de référence (pas un tour de sortie, d'entrée ou interrompu)".into()));
+        }
         Ok(self.db().set_reference(lap_id)?)
     }
 
@@ -715,14 +775,17 @@ impl AppService {
         let ref_id = detail
             .personal_reference_lap_id
             .filter(|r| detail.laps.iter().any(|l| l.id == *r))
-            .or(detail.best_lap_id);
+            .or(detail.best_lap_id)
+            .or(detail.fastest_lap_id);
         let mut reference_trace = serde_json::Value::Null;
         let comparisons: Vec<serde_json::Value> = match ref_id {
             Some(rid) => detail
                 .laps
                 .iter()
-                .filter(|l| l.meta.lap_time_s.is_some() && l.id != rid)
+                .filter(|l| l.meta.lap_time_s.is_some() && l.meta.kind == LapKind::Flying && l.id != rid)
                 .filter_map(|l| self.compare(rid, l.id, 1.0).ok())
+                // Tour tronqué (arrêt, reset) : comparaison sans objet.
+                .filter(|c| c.compared.coverage >= 0.95)
                 .filter_map(|c| {
                     let mut v = serde_json::to_value(&c).ok()?;
                     if let Some(o) = v.as_object_mut() {
@@ -744,6 +807,8 @@ impl AppService {
             "session": meta,
             "best_lap_id": detail.best_lap_id,
             "reference_lap_id": ref_id,
+            "fastest_lap_id": detail.fastest_lap_id,
+            "off_tracks": detail.off_tracks,
             "theoretical_best_s": detail.theoretical_best_s,
             "consistency": detail.consistency,
             "laps": laps,
@@ -797,7 +862,7 @@ mod tests {
         svc.export_session(sid, &path, "test").unwrap();
         let doc: serde_json::Value = serde_json::from_reader(flate2::read::GzDecoder::new(std::fs::File::open(&path).unwrap())).unwrap();
         assert_eq!(doc["version"], 2);
-        let n_timed = doc["laps"].as_array().unwrap().iter().filter(|l| !l["lap_time_s"].is_null()).count();
+        let n_timed = doc["laps"].as_array().unwrap().iter().filter(|l| !l["lap_time_s"].is_null() && l["kind"] == "flying").count();
         let comps = doc["comparisons"].as_array().unwrap();
         assert_eq!(comps.len(), n_timed - 1);
         assert!(comps.iter().all(|c| c.get("ref_trace").is_none() && c["cmp_trace"]["speed_kmh"].is_array()));

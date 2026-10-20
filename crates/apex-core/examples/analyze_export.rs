@@ -31,7 +31,16 @@ fn main() {
     }
     let names = builtin_corner_names(&meta);
     let metas: Vec<LapMeta> = laps.iter().map(|l| l.1.clone()).collect();
-    let bi = best_clean_lap(&metas).expect("aucun tour propre");
+    let bi = best_clean_lap(&metas).unwrap_or_else(|| {
+        println!("Aucun tour propre : référence = tour lancé le plus rapide (invalide).");
+        metas
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.kind == apex_core::model::LapKind::Flying && m.lap_time_s.is_some())
+            .min_by(|a, b| a.1.lap_time_s.unwrap().total_cmp(&b.1.lap_time_s.unwrap()))
+            .map(|(i, _)| i)
+            .expect("aucun tour lancé")
+    });
     let (rid, rm, rt) = &laps[bi];
     println!("{} / {} — référence : tour {} ({:.3} s), {} noms de virages intégrés\n", meta.track, meta.car, rm.number, rm.lap_time_s.unwrap(), names.len());
     let mut by_title: BTreeMap<String, usize> = BTreeMap::new();
