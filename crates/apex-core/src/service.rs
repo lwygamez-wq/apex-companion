@@ -56,6 +56,8 @@ pub struct AppSettings {
     pub garage61_auto: bool,
     /// Importe automatiquement les tours « Garage 61 - … .csv » qui arrivent dans Téléchargements.
     pub watch_downloads: bool,
+    /// Pilotes Garage 61 à utiliser comme références (identifiant ou adresse de leur profil).
+    pub garage61_drivers: Vec<String>,
 }
 
 impl Default for AppSettings {
@@ -77,6 +79,7 @@ impl Default for AppSettings {
             garage61_token: None,
             garage61_auto: true,
             watch_downloads: true,
+            garage61_drivers: vec![],
         }
     }
 }
@@ -468,8 +471,13 @@ impl AppService {
     /// circuit et la voiture de cette session, et l'importe comme référence s'il est plus rapide que
     /// la référence externe actuelle. Renvoie un message lisible.
     pub fn find_garage61_reference(&self, session_id: i64) -> Result<String> {
-        use crate::garage61_api::{lap_name, match_car, match_track};
+        self.find_garage61_reference_with(session_id, None, true)
+    }
+
+    fn find_garage61_reference_with(&self, session_id: i64, me: Option<&crate::garage61_api::G61User>, diagnose: bool) -> Result<String> {
+        use crate::garage61_api::{driver_slug, lap_name, match_car, match_track};
         let api = self.g61_api()?;
+        let extra: Vec<String> = self.settings().garage61_drivers.iter().filter_map(|d| driver_slug(d)).collect();
         let meta = self.db().session_meta(session_id)?;
         if meta.sim != SimId::Iracing {
             return Err(ServiceError::User("Garage 61 : seules les sessions iRacing sont prises en charge".into()));
@@ -485,30 +493,27 @@ impl AppService {
                 match_car(cars, &meta.car).cloned().ok_or_else(|| ServiceError::User(format!("voiture introuvable sur Garage 61 : {}", meta.car)))?,
             )
         };
-        let me = api.me().map_err(ServiceError::User)?;
+        let me = match me {
+            Some(m) => m.clone(),
+            None => api.me().map_err(ServiceError::User)?,
+        };
         let teams: Vec<String> = me.teams.iter().map(|t| t.slug.clone()).collect();
         let mut laps: Vec<_> = api
-            .best_laps(track.id, car.id, &teams)
+            .best_laps(track.id, car.id, &teams, &extra)
             .map_err(ServiceError::User)?
             .into_iter()
             .filter(|l| l.driver.as_ref().is_none_or(|d| d.slug != me.slug))
             .collect();
         laps.sort_by(|a, b| a.lap_time.total_cmp(&b.lap_time));
         if laps.is_empty() {
-            // Diagnostic : ce que l'API voit sur ce circuit, selon les filtres.
-            let n = |car: Option<i64>, d: Option<&str>| api.count_laps(track.id, car, d).map(|v| v.to_string()).unwrap_or_else(|e| format!("erreur ({e})"));
-            return Ok(format!(
-                "Aucun tour d'un pilote suivi trouvé. Diagnostic : circuit Garage 61 « {} {} » (n° {}), voiture « {} » (n° {}) ; tours visibles par l'API — pilotes suivis : {} (toutes voitures : {}), toi + coéquipiers : {}, toi seul : {}.",
-                track.name,
-                track.variant.clone().unwrap_or_default(),
-                track.id,
-                car.name,
-                car.id,
-                n(Some(car.id), Some("following")),
-                n(None, Some("following")),
-                n(Some(car.id), None),
-                n(Some(car.id), Some("me")),
-            ));
+            let who = if extra.is_empty() { "des pilotes que tu suis".to_string() } else { format!("des pilotes que tu suis ni des {} pilote(s) ajouté(s)", extra.len()) };
+            let mut m = format!("aucun tour {who} n'est visible par l'API Garage 61 sur ce circuit avec cette voiture.");
+            if diagnose {
+                // Un seul appel de contrôle (l'API gratuite limite fortement le nombre de requêtes).
+                let mine = api.count_laps(track.id, Some(car.id), Some("me")).map(|v| v.to_string()).unwrap_or_else(|e| format!("erreur ({e})"));
+                m += &format!(" Contrôle : tes propres tours visibles = {mine} (circuit n° {}, voiture n° {}).", track.id, car.id);
+            }
+            return Ok(m);
         }
         // Référence externe déjà présente sur ce combo : on ne la remplace que par plus rapide.
         let current = self
@@ -543,6 +548,7 @@ impl AppService {
     pub fn find_garage61_references_all(&self) -> Result<Vec<String>> {
         self.g61_api()?;
         let sessions = self.list_sessions(&SessionFilter { sim: Some(SimId::Iracing), ..Default::default() })?;
+        let me = self.g61_api()?.me().map_err(ServiceError::User)?;
         let mut seen = std::collections::HashSet::new();
         let mut out = vec![];
         // list_sessions est trié du plus récent au plus ancien.
@@ -551,7 +557,11 @@ impl AppService {
                 continue;
             }
             let label = format!("{} / {}", s.track, s.car);
-            out.push(match self.find_garage61_reference(s.id) {
+            if !out.is_empty() {
+                // Espacement des requêtes : l'API gratuite limite le débit.
+                std::thread::sleep(std::time::Duration::from_millis(1500));
+            }
+            out.push(match self.find_garage61_reference_with(s.id, Some(&me), false) {
                 Ok(m) => format!("{label} : {m}"),
                 Err(e) => format!("{label} : {e}"),
             });

@@ -339,6 +339,7 @@ export interface AppSettings {
   garage61_token: string | null;
   garage61_auto: boolean;
   watch_downloads: boolean;
+  garage61_drivers: string[];
 }
 
 export interface SessionFilter {

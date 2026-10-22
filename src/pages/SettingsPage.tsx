@@ -196,6 +196,19 @@ export function SettingsPage() {
           </div>
           {g61Msg && <div className="muted" style={{ padding: "4px 0 8px", whiteSpace: "pre-line" }}>{g61Msg}</div>}
           <div className="form-row">
+            <div>
+              Pilotes de référence
+              <div className="hint">Un par ligne : colle l'adresse de la page de profil Garage 61 du pilote (ou son identifiant). Leurs meilleurs tours sont cherchés en plus de ceux des pilotes que tu suis.</div>
+            </div>
+            <textarea
+              rows={4}
+              style={{ width: "100%", background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: 4, padding: 8, color: "inherit", font: "inherit" }}
+              value={(s.garage61_drivers ?? []).join("\n")}
+              placeholder="https://garage61.net/…/luke-fleming"
+              onChange={(e) => upd("garage61_drivers", e.target.value.split("\n").map((x) => x.trim()).filter(Boolean))}
+            />
+          </div>
+          <div className="form-row">
             <div>Recherche automatique<div className="hint">Après chaque nouvelle session iRacing, et une fois par jour pour toutes tes sessions déjà roulées : cherche le tour le plus rapide disponible (même circuit, même voiture) et le prend comme référence s'il bat la référence actuelle.</div></div>
             <input type="checkbox" checked={s.garage61_auto} onChange={(e) => upd("garage61_auto", e.target.checked)} disabled={!s.garage61_token} />
           </div>

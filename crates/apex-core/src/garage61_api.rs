@@ -131,8 +131,9 @@ impl G61Api {
         Ok(self.get_json::<Items<G61Track>>("/tracks", &[])?.items)
     }
 
-    /// Meilleur tour propre de chaque pilote suivi ou coéquipier, sur ce circuit et cette voiture.
-    pub fn best_laps(&self, track_id: i64, car_id: i64, teams: &[String]) -> Result<Vec<G61Lap>, String> {
+    /// Meilleur tour propre de chaque pilote suivi, coéquipier ou pilote ajouté par son identifiant,
+    /// sur ce circuit et cette voiture.
+    pub fn best_laps(&self, track_id: i64, car_id: i64, teams: &[String], extra_drivers: &[String]) -> Result<Vec<G61Lap>, String> {
         let mut q = vec![
             ("tracks", track_id.to_string()),
             ("cars", car_id.to_string()),
@@ -143,6 +144,9 @@ impl G61Api {
         ];
         if !teams.is_empty() {
             q.push(("teams", teams.join(",")));
+        }
+        if !extra_drivers.is_empty() {
+            q.push(("extraDrivers", extra_drivers.join(",")));
         }
         Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items)
     }
@@ -162,6 +166,15 @@ impl G61Api {
     pub fn lap_csv(&self, lap_id: &str) -> Result<String, String> {
         self.get(&format!("/laps/{lap_id}/csv"), &[])
     }
+}
+
+/// Identifiant Garage 61 d'un pilote à partir de ce que l'utilisateur colle : l'identifiant lui-même
+/// ou l'adresse de sa page de profil (dernier segment de l'adresse).
+pub fn driver_slug(input: &str) -> Option<String> {
+    let s = input.trim().trim_end_matches('/');
+    let s = s.split(['?', '#']).next().unwrap_or("");
+    let last = s.rsplit('/').next().unwrap_or("").trim();
+    (!last.is_empty() && last.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')).then(|| last.to_string())
 }
 
 /// Correspondance des noms Apex (issus d'iRacing) avec le catalogue Garage 61.
@@ -218,6 +231,9 @@ mod tests {
         let laps: Items<G61Lap> = serde_json::from_str(r#"{"items":[{"id":"01M5","driver":{"slug":"luke-fleming","firstName":"Luke","lastName":"Fleming"},
             "car":{"id":10,"name":"Dallara F3","platform":"iracing"},"track":{"id":1,"name":"Circuit of the Americas","variant":"Grand Prix","platform":"iracing"},
             "lapTime":116.507,"startTime":"2026-10-01T10:00:00Z","clean":true}],"total":1}"#).unwrap();
+        assert_eq!(driver_slug("https://garage61.net/app/drivers/luke-fleming/").as_deref(), Some("luke-fleming"));
+        assert_eq!(driver_slug(" luke-fleming ").as_deref(), Some("luke-fleming"));
+        assert!(driver_slug("").is_none());
         let n = lap_name(&laps.items[0]);
         assert_eq!((n.driver.as_str(), n.track.as_str()), ("Luke Fleming", "Circuit of the Americas Grand Prix"));
     }
