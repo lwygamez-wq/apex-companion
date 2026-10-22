@@ -186,8 +186,25 @@ td.num, th.num { text-align: right; }
 .rp-where b { color: var(--text); font-style: italic; }
 
 /* Sorties de piste */
-.offtrack { border-left: 4px solid #ff8a00; margin-bottom: 14px; }
+.offtrack { border-left: 4px solid #ff8a00; margin-bottom: 0; }
+.insights-strip .offtrack, .m-app .offtrack { margin-bottom: 14px; }
 .offtrack h2 { color: #ffb15c; }
 .offtrack-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .offtrack-zone { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: var(--panel-2); border: 0; border-radius: var(--radius); padding: 8px 12px; color: var(--text); font-size: 13px; text-align: left; }
 .offtrack-zone b { font-style: italic; font-size: 14px; }
+
+/* Carte de risque */
+.risk { border-left: 4px solid var(--yellow); margin-bottom: 0; }
+.risk-headline { font-weight: 700; font-style: italic; margin: 4px 0 10px; line-height: 1.35; }
+.risk-grid { display: flex; flex-direction: column; gap: 4px; }
+.risk-row { background: var(--panel-2); border-radius: var(--radius); padding: 7px 10px; cursor: pointer; border-left: 3px solid transparent; }
+.risk-row:hover { background: #363646; }
+.risk-row.secure, .risk-row.cuts { border-left-color: #ff5a4e; }
+.risk-row.push { border-left-color: var(--green); }
+.risk-main { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.risk-main b { font-style: italic; }
+.risk-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.risk-bar { display: inline-block; width: 44px; height: 6px; background: #15151e; border-radius: 3px; vertical-align: middle; margin-right: 4px; overflow: hidden; }
+.risk-bar i { display: block; height: 100%; background: #ff5a4e; }
+.risk-msg { margin-top: 6px; font-size: 13px; color: #e6e6ee; line-height: 1.4; }
+@media (max-width: 1250px) { .grid.cols-2 { grid-template-columns: 1fr; } }

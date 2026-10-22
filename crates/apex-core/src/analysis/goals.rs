@@ -29,6 +29,8 @@ pub enum GoalMetric {
     Consistency { target_sd_s: f32 },
     /// Au moins `target` tours propres dans la session.
     CleanLaps { target: u32 },
+    /// Passer ce virage sans sortie de piste sur au moins `target_rate` des tours lancés.
+    CornerClean { apex_m: f32, target_rate: f32 },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -78,6 +80,21 @@ pub fn evaluate(metric: &GoalMetric, laps: &[(&LapMeta, &LapTrace)], length_m: f
             },
             None => GoalResult { laps_evaluated: 0, laps_ok: 0, achieved: false, summary: "Pas assez de tours propres pour mesurer la régularité.".into() },
         },
+        GoalMetric::CornerClean { apex_m, target_rate } => {
+            // Tous les tours lancés complets comptent (y compris ceux avec sortie : c'est ce qu'on mesure).
+            let flying: Vec<&(&LapMeta, &LapTrace)> = laps.iter().filter(|(m, _)| m.kind == crate::model::LapKind::Flying && m.lap_time_s.is_some()).collect();
+            let n = flying.len();
+            let ok = flying
+                .iter()
+                .filter(|(_, t)| !super::offtrack::off_track_spans(t).iter().any(|(a, b)| *b >= apex_m - 150.0 && *a <= apex_m + 200.0))
+                .count();
+            GoalResult {
+                laps_evaluated: n,
+                laps_ok: ok,
+                achieved: n >= MIN_LAPS && ok as f32 >= n as f32 * target_rate,
+                summary: format!("{ok}/{n} passages sans sortie (objectif {:.0} %).", target_rate * 100.0),
+            }
+        }
         GoalMetric::BrakePoint { apex_m, .. } | GoalMetric::MinSpeed { apex_m, .. } | GoalMetric::ExitSpeed { apex_m, .. } | GoalMetric::ThrottleOn { apex_m, .. } => {
             let rs: Vec<_> = clean.iter().filter_map(|(_, t)| resample(t, length_m, 1.0).ok()).filter(|r| r.coverage > 0.95).collect();
             // Le virage est retrouvé par la position de son apex (numérotation indépendante de la session).

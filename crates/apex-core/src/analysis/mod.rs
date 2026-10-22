@@ -7,6 +7,7 @@ pub mod insights;
 pub mod offtrack;
 pub mod progress;
 pub mod resample;
+pub mod risk;
 pub mod session;
 
 pub use compare::{compare_laps, Comparison, LapInput};

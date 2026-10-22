@@ -96,6 +96,29 @@ export interface SessionDetail {
   off_tracks: OffTrackZone[];
   /** Libellé de la référence perso quand elle vient d'un autre pilote ou d'une autre session. */
   reference_label: string | null;
+  risk: CornerRisk[];
+  risk_headline: string | null;
+}
+
+export type RiskVerdict = "secure" | "cuts" | "push" | "fine" | "insufficient";
+
+export interface CornerRisk {
+  name: string;
+  apex_m: number;
+  entry_m: number;
+  exit_m: number;
+  passes: number;
+  offs: number;
+  off_rate: number;
+  mean_clean_s: number | null;
+  best_clean_s: number | null;
+  mean_off_s: number | null;
+  off_cost_s: number | null;
+  gain_available_s: number | null;
+  expected_cost_s: number;
+  verdict: RiskVerdict;
+  sessions: number;
+  message: string;
 }
 
 export interface OffTrackZone {
@@ -178,7 +201,8 @@ export type GoalMetric =
   | { kind: "exit_speed"; apex_m: number; target_kmh: number }
   | { kind: "throttle_on"; apex_m: number; target_m: number }
   | { kind: "consistency"; target_sd_s: number }
-  | { kind: "clean_laps"; target: number };
+  | { kind: "clean_laps"; target: number }
+  | { kind: "corner_clean"; apex_m: number; target_rate: number };
 
 export interface GoalSuggestion {
   title: string;

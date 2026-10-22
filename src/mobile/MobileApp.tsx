@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InsightCard } from "../components/InsightCard";
 import { OffTrackCard } from "../components/OffTrackCard";
+import { RiskCard } from "../components/RiskCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { TrackMap } from "../components/TrackMap";
@@ -186,6 +187,7 @@ function SessionScreen({ s, onLap }: { s: MobileSession; onLap: (id: number) => 
         <div className="card"><h2>Théorique</h2><div className="kpi best m-kpi">{lapTime(s.theoretical_best_s)}</div></div>
         <div className="card"><h2>Régularité</h2><div className="kpi m-kpi">{s.consistency ? `σ ${s.consistency.stddev_s.toFixed(2)}` : "—"}</div></div>
       </div>
+      <RiskCard risk={s.risk} headline={s.risk_headline} compact />
       <OffTrackCard zones={s.off_tracks} />
       {top.length > 0 && (
         <div className="card" style={{ marginBottom: 10 }}>

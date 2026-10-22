@@ -3,6 +3,7 @@ import type { Route } from "../App";
 import { InsightCard } from "../components/InsightCard";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { OffTrackCard } from "../components/OffTrackCard";
+import { RiskCard } from "../components/RiskCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap } from "../components/TrackMap";
 import { api } from "../lib/api";
@@ -151,7 +152,10 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
           {c && store && (
             <>
-              <OffTrackCard zones={d.off_tracks} />
+              <div className="grid cols-2" style={{ marginBottom: 14, alignItems: "start" }}>
+                <RiskCard risk={d.risk} headline={d.risk_headline} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
+                <OffTrackCard zones={d.off_tracks} />
+              </div>
               <div className="insights-strip">
                 <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 8px" }}>
                   {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}

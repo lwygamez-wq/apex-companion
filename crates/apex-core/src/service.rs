@@ -165,6 +165,9 @@ pub struct SessionDetail {
     pub off_tracks: Vec<crate::analysis::offtrack::OffTrackZone>,
     /// Libellé lisible de la référence personnelle quand elle vient d'ailleurs (autre pilote, autre session).
     pub reference_label: Option<String>,
+    /// Carte de risque par virage (toutes tes sessions sur ce circuit et cette voiture), la plus prioritaire d'abord.
+    pub risk: Vec<crate::analysis::risk::CornerRisk>,
+    pub risk_headline: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -207,6 +210,8 @@ pub struct AppService {
     connectors: Vec<Box<dyn SimulatorConnector>>,
     /// Catalogue Garage 61 (circuits, voitures), chargé une fois par lancement.
     g61_catalog: Mutex<Option<(Vec<crate::garage61_api::G61Track>, Vec<crate::garage61_api::G61Car>)>>,
+    /// Dernière carte de risque calculée : (clé combo + nb de tours + référence, résultat).
+    risk_cache: Mutex<Option<(String, Vec<crate::analysis::risk::CornerRisk>)>>,
 }
 
 const SETTINGS_KEY: &str = "app_settings";
@@ -243,6 +248,49 @@ pub fn export_file_name(m: &SessionMeta) -> String {
     format!("{}.apex.json.gz", clean.trim())
 }
 
+/// Remplace les conseils de vitesse des virages à sécuriser (ou coupés) par un conseil de sécurité,
+/// placé en tête : chercher du temps là où l'on sort une fois sur trois est contre-productif.
+pub(crate) fn apply_risk_to_insights(c: &mut Comparison, risk: &[crate::analysis::risk::CornerRisk]) {
+    use crate::analysis::insights::{Confidence, Evidence, Insight, Priority};
+    use crate::analysis::risk::RiskVerdict;
+    let mut front = vec![];
+    for r in risk.iter().filter(|r| matches!(r.verdict, RiskVerdict::Secure | RiskVerdict::Cuts)) {
+        c.insights.retain(|i| i.segment.as_deref() != Some(r.name.as_str()));
+        let cuts = r.verdict == RiskVerdict::Cuts;
+        front.push(Insight {
+            id: format!("risk-{}", r.apex_m as i64),
+            title: format!("{} : {}", r.name, if cuts { "tu coupes la piste" } else { "sécuriser avant d'attaquer" }),
+            priority: Priority::Critical,
+            est_gain_s: (!cuts && r.expected_cost_s > 0.02).then_some([r.expected_cost_s * 0.5, r.expected_cost_s]),
+            segment: Some(r.name.clone()),
+            segment_range_m: Some([r.entry_m, r.exit_m]),
+            explanation: r.message.clone(),
+            evidence: vec![
+                Evidence { label: "Sorties de piste".into(), reference: "0".into(), compared: format!("{} sur {} passages", r.offs, r.passes), delta: format!("{:.0} %", r.off_rate * 100.0) },
+                Evidence {
+                    label: "Temps de traversée".into(),
+                    reference: r.mean_clean_s.map_or("—".into(), |v| format!("{v:.2} s (propre)")),
+                    compared: r.mean_off_s.map_or("—".into(), |v| format!("{v:.2} s (sortie)")),
+                    delta: r.off_cost_s.map_or("—".into(), |v| format!("{v:+.2} s")),
+                },
+            ],
+            confidence: if r.passes >= 8 { Confidence::High } else { Confidence::Medium },
+            confidence_notes: vec![format!("mesuré sur {} passages, {} session(s)", r.passes, r.sessions)],
+            recommendation: if cuts {
+                format!("Reste dans les limites de piste à {} : vise la ligne blanche intérieure sans la dépasser, même si c'est plus lent. Un tour coupé ne compte pas et te coûte un incident.", r.name)
+            } else {
+                format!("Prochaine session à {} : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.", r.name)
+            },
+            goal: Some(crate::analysis::goals::GoalSuggestion {
+                title: format!("{} : 90 % de passages sans sortie", r.name),
+                metric: crate::analysis::goals::GoalMetric::CornerClean { apex_m: r.apex_m, target_rate: 0.9 },
+            }),
+        });
+    }
+    front.extend(std::mem::take(&mut c.insights));
+    c.insights = front;
+}
+
 pub fn fmt_lap(s: f64) -> String {
     let ms = (s * 1000.0).round() as i64;
     format!("{}:{:06.3}", ms / 60_000, (ms % 60_000) as f64 / 1000.0)
@@ -253,11 +301,11 @@ impl AppService {
         if let Some(dir) = db.parent() {
             std::fs::create_dir_all(dir).map_err(|e| ServiceError::User(format!("dossier de données : {e}")))?;
         }
-        Ok(Self { store: Mutex::new(Store::open(db)?), connectors: registry(), g61_catalog: Mutex::new(None) })
+        Ok(Self { store: Mutex::new(Store::open(db)?), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None) })
     }
 
     pub fn in_memory() -> Result<Self> {
-        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry(), g61_catalog: Mutex::new(None) })
+        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None) })
     }
 
     fn db(&self) -> std::sync::MutexGuard<'_, Store> {
@@ -781,29 +829,63 @@ impl AppService {
                 }
             }
         }
+        // Fenêtres de virage de la référence d'analyse (nom, entrée, apex, sortie).
+        let names = crate::tracks::corner_names_for(&meta, ref_trace.as_ref(), db.corner_names(&track_key(&meta))?);
+        let windows: Vec<crate::analysis::risk::CornerWindow> = match (&ref_trace, length) {
+            (Some(t), Some(len)) => crate::analysis::resample::resample(t, len, 1.0)
+                .map(|r| {
+                    let mut d = crate::analysis::corners::detect_corners(&r, &crate::analysis::corners::CornerConfig::default());
+                    crate::analysis::compare::apply_corner_names(&mut d, &names);
+                    let mut v: Vec<crate::analysis::risk::CornerWindow> = d.into_iter().map(|c| (c.name, c.entry_m, c.apex_m, c.exit_m)).collect();
+                    // Virages nommés non détectés (pris à fond) : fenêtre de ±60 m autour de l'apex.
+                    for (a, n) in &names {
+                        if !v.iter().any(|c| &c.0 == n) {
+                            v.push((n.clone(), a - 60.0, *a, a + 60.0));
+                        }
+                    }
+                    v.sort_by(|a, b| a.2.total_cmp(&b.2));
+                    v
+                })
+                .unwrap_or_default(),
+            _ => names.iter().map(|(a, n)| (n.clone(), a - 60.0, *a, a + 60.0)).collect(),
+        };
         let off_tracks = if spans.is_empty() {
             vec![]
         } else {
-            let names = crate::tracks::corner_names_for(&meta, ref_trace.as_ref(), db.corner_names(&track_key(&meta))?);
-            let corners: Vec<(String, f32, f32)> = match (ref_trace, length) {
-                (Some(t), Some(len)) => crate::analysis::resample::resample(&t, len, 1.0)
-                    .map(|r| {
-                        let mut d = crate::analysis::corners::detect_corners(&r, &crate::analysis::corners::CornerConfig::default());
-                        crate::analysis::compare::apply_corner_names(&mut d, &names);
-                        let mut v: Vec<(String, f32, f32)> = d.into_iter().map(|c| (c.name, c.entry_m, c.exit_m)).collect();
-                        // Virages nommés non détectés (pris à fond) : fenêtre de ±60 m autour de l'apex.
-                        for (a, n) in &names {
-                            if !v.iter().any(|c| &c.0 == n) {
-                                v.push((n.clone(), a - 60.0, a + 60.0));
-                            }
-                        }
-                        v
-                    })
-                    .unwrap_or_default(),
-                _ => names.iter().map(|(a, n)| (n.clone(), a - 60.0, a + 60.0)).collect(),
-            };
+            let corners: Vec<(String, f32, f32)> = windows.iter().map(|(n, e, _, x)| (n.clone(), *e, *x)).collect();
             crate::analysis::offtrack::off_track_zones(&spans, &corners)
         };
+        // Carte de risque : tous tes tours lancés sur ce circuit et cette voiture, toutes sessions confondues.
+        let risk = match (length, windows.is_empty()) {
+            (Some(len), false) => {
+                let combo = db.list_sessions(&SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() })?;
+                let combo: Vec<&SessionSummary> = combo.iter().filter(|s| s.track_config == meta.track_config).collect();
+                let n_laps: usize = combo.iter().map(|s| s.lap_count).sum();
+                let key = format!("{}|{}|{}|{:?}", track_key(&meta), meta.car, n_laps, analysis_ref);
+                let cached = self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()).as_ref().filter(|(k, _)| *k == key).map(|(_, r)| r.clone());
+                match cached {
+                    Some(r) => r,
+                    None => {
+                        let mut traces: Vec<(i64, LapTrace)> = vec![];
+                        for s in &combo {
+                            for l in db.laps(s.id)? {
+                                if l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some() {
+                                    if let Ok(t) = db.trace(l.id) {
+                                        traces.push((s.id, t));
+                                    }
+                                }
+                            }
+                        }
+                        let rl: Vec<crate::analysis::risk::RiskLap> = traces.iter().map(|(sid, t)| crate::analysis::risk::RiskLap { session_id: *sid, trace: t }).collect();
+                        let r = crate::analysis::risk::corner_risk(&windows, &rl, len);
+                        *self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()) = Some((key, r.clone()));
+                        r
+                    }
+                }
+            }
+            _ => vec![],
+        };
+        let risk_headline = crate::analysis::risk::risk_headline(&risk);
         let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
             Some(p) => {
                 let l = db.lap(p)?;
@@ -818,6 +900,8 @@ impl AppService {
         Ok(SessionDetail {
             id,
             reference_label,
+            risk,
+            risk_headline,
             best_lap_id: best_id,
             theoretical_best_s: theo,
             consistency: consistency(&metas),
@@ -862,6 +946,12 @@ impl AppService {
             &names,
         )
         .map_err(|e| ServiceError::User(format!("comparaison impossible : {e}")))?;
+        // Carte de risque : un virage à sécuriser passe avant tout conseil de vitesse sur ce virage.
+        if db.external_driver(lc.session_id)?.is_none() {
+            drop(db);
+            let detail = self.session_detail(lc.session_id)?;
+            apply_risk_to_insights(&mut c, &detail.risk);
+        }
         if let Some(d) = external {
             c.reference.driver = Some(d.clone());
             c.warnings.retain(|w| !w.starts_with("Météo inconnue"));
@@ -986,7 +1076,15 @@ impl AppService {
         } else {
             None
         };
-        let next_goal = beginner_goal.or(match (zones.first(), last.mean_clean_s) {
+        // Carte de risque : un virage à sécuriser prime sur toute zone de progrès chronométrique.
+        let risk_goal = detail.risk.iter().find(|r| matches!(r.verdict, crate::analysis::risk::RiskVerdict::Secure | crate::analysis::risk::RiskVerdict::Cuts)).map(|r| {
+            suggestion = Some(GoalSuggestion {
+                title: format!("{} : 90 % de passages sans sortie", r.name),
+                metric: GoalMetric::CornerClean { apex_m: r.apex_m, target_rate: 0.9 },
+            });
+            format!("{} : {}", r.name, r.message)
+        });
+        let next_goal = risk_goal.or(beginner_goal).or(match (zones.first(), last.mean_clean_s) {
             (Some(z), Some(mean)) => {
                 // Les pertes sont mesurées contre le meilleur tour : corriger ce défaut
                 // fait baisser la moyenne, pas le meilleur tour lui-même.
@@ -1120,6 +1218,8 @@ impl AppService {
             "best_lap_id": detail.best_lap_id,
             "reference_lap_id": ref_id,
             "reference_label": detail.reference_label,
+            "risk": detail.risk,
+            "risk_headline": detail.risk_headline,
             "fastest_lap_id": detail.fastest_lap_id,
             "off_tracks": detail.off_tracks,
             "theoretical_best_s": detail.theoretical_best_s,
@@ -1195,6 +1295,25 @@ mod tests {
         let q = dir.path().join("Garage 61 - X - Voiture - Monza Grand Prix - 01.40.000 - Z.csv");
         std::fs::write(&q, "Speed,LapDistPct,Brake,Throttle\n").unwrap();
         assert!(svc.import_garage61(&q).unwrap_err().to_string().contains("Monza"));
+    }
+
+    #[test]
+    fn risk_map_aggregates_all_sessions_of_the_combo() {
+        let svc = AppService::in_memory().unwrap();
+        let InsertOutcome::Inserted(a) = svc.load_demo().unwrap() else { panic!() };
+        let InsertOutcome::Inserted(b) = svc.load_demo().unwrap() else { panic!() };
+        let (da, db_) = (svc.session_detail(a).unwrap(), svc.session_detail(b).unwrap());
+        assert!(!da.risk.is_empty());
+        let flying = |d: &SessionDetail| d.laps.iter().filter(|l| l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some()).count();
+        assert_eq!(da.risk[0].passes, flying(&da) + flying(&db_), "les deux sessions comptent");
+        assert_eq!(da.risk[0].sessions, 2);
+        // Même session redemandée : le cache sert la seconde demande (résultat identique).
+        assert_eq!(da.risk, svc.session_detail(a).unwrap().risk);
+        assert_eq!(db_.risk[0].passes, da.risk[0].passes);
+        // Un objectif « passages sans sortie » s'évalue.
+        let r = svc.session_detail(a).unwrap();
+        let g = svc.create_goal(a, &GoalSuggestion { title: "test".into(), metric: GoalMetric::CornerClean { apex_m: r.risk[0].apex_m, target_rate: 0.9 } }).unwrap();
+        assert!(g.title.contains("test"));
     }
 
     #[test]

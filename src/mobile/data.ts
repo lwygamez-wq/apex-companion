@@ -1,5 +1,5 @@
 // Lecture des exports .apex.json.gz et mémorisation locale (IndexedDB, dans le téléphone uniquement).
-import type { Comparison, Consistency, LapRow, OffTrackZone, Resampled, SessionMeta } from "../lib/types";
+import type { Comparison, Consistency, CornerRisk, LapRow, OffTrackZone, Resampled, SessionMeta } from "../lib/types";
 
 export interface MobileSession {
   key: string;
@@ -10,6 +10,8 @@ export interface MobileSession {
   fastest_lap_id: number | null;
   reference_label: string | null;
   off_tracks: OffTrackZone[];
+  risk: CornerRisk[];
+  risk_headline: string | null;
   theoretical_best_s: number | null;
   consistency: Consistency | null;
   comparisons: Comparison[];
@@ -61,6 +63,8 @@ export async function parseExport(buf: ArrayBuffer): Promise<MobileSession> {
     fastest_lap_id: (doc.fastest_lap_id as number | null) ?? null,
     reference_label: (doc.reference_label as string | null) ?? null,
     off_tracks: (doc.off_tracks as OffTrackZone[] | undefined) ?? [],
+    risk: (doc.risk as CornerRisk[] | undefined) ?? [],
+    risk_headline: (doc.risk_headline as string | null) ?? null,
     theoretical_best_s: (doc.theoretical_best_s as number | null) ?? null,
     consistency: (doc.consistency as Consistency | null) ?? null,
     comparisons,
