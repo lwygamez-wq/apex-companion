@@ -50,6 +50,12 @@ pub struct AppSettings {
     /// Dossier où copier automatiquement chaque nouvelle session (ex. iCloud Drive) pour l'app mobile.
     /// Vide = désactivé. L'app n'envoie rien elle-même : c'est le dossier choisi qui synchronise.
     pub mobile_export_dir: Option<String>,
+    /// Jeton d'accès personnel Garage 61 (vide = fonction désactivée, aucune connexion).
+    pub garage61_token: Option<String>,
+    /// Après chaque nouvelle session, cherche sur Garage 61 un tour de référence plus rapide.
+    pub garage61_auto: bool,
+    /// Importe automatiquement les tours « Garage 61 - … .csv » qui arrivent dans Téléchargements.
+    pub watch_downloads: bool,
 }
 
 impl Default for AppSettings {
@@ -68,8 +74,17 @@ impl Default for AppSettings {
             beginner_mode: true,
             check_updates: true,
             mobile_export_dir: None,
+            garage61_token: None,
+            garage61_auto: true,
+            watch_downloads: true,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExternalImportReport {
+    pub file: String,
+    pub result: std::result::Result<ExternalImport, String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -124,6 +139,8 @@ pub struct SyncReport {
     /// Fichiers encore en cours d'écriture (session en cours).
     pub pending: usize,
     pub errors: Vec<String>,
+    /// Sessions nouvellement importées.
+    pub new_sessions: Vec<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -185,6 +202,8 @@ pub struct Diagnostics {
 pub struct AppService {
     store: Mutex<Store>,
     connectors: Vec<Box<dyn SimulatorConnector>>,
+    /// Catalogue Garage 61 (circuits, voitures), chargé une fois par lancement.
+    g61_catalog: Mutex<Option<(Vec<crate::garage61_api::G61Track>, Vec<crate::garage61_api::G61Car>)>>,
 }
 
 const SETTINGS_KEY: &str = "app_settings";
@@ -227,11 +246,11 @@ impl AppService {
         if let Some(dir) = db.parent() {
             std::fs::create_dir_all(dir).map_err(|e| ServiceError::User(format!("dossier de données : {e}")))?;
         }
-        Ok(Self { store: Mutex::new(Store::open(db)?), connectors: registry() })
+        Ok(Self { store: Mutex::new(Store::open(db)?), connectors: registry(), g61_catalog: Mutex::new(None) })
     }
 
     pub fn in_memory() -> Result<Self> {
-        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry() })
+        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry(), g61_catalog: Mutex::new(None) })
     }
 
     fn db(&self) -> std::sync::MutexGuard<'_, Store> {
@@ -360,6 +379,13 @@ impl AppService {
         let fname = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         let name = garage61::parse_file_name(&fname)
             .ok_or_else(|| ServiceError::User("nom de fichier non reconnu : garde le nom donné par Garage 61 (« Garage 61 - pilote - voiture - circuit - temps - … .csv »)".into()))?;
+        let text = std::fs::read_to_string(path).map_err(|e| ServiceError::User(format!("lecture du fichier : {e}")))?;
+        self.import_garage61_text(name, &text, fname)
+    }
+
+    /// Importe un tour Garage 61 (contenu CSV + nom), quelle que soit sa provenance (fichier, API).
+    pub fn import_garage61_text(&self, name: crate::ingest::garage61::G61Name, text: &str, fname: String) -> Result<ExternalImport> {
+        use crate::ingest::garage61;
         let fold = |s: &str| crate::tracks::fold_name(s);
         let g_track = fold(&name.track);
         let tokens = |s: &str| fold(s).split(|c: char| !c.is_alphanumeric()).filter(|t| !t.is_empty()).map(String::from).collect::<Vec<_>>();
@@ -380,8 +406,7 @@ impl AppService {
             .ok_or_else(|| ServiceError::User(format!("aucune de tes sessions iRacing n'est sur « {} » : roule d'abord une session sur ce circuit (il faut sa longueur exacte), puis réimporte le fichier", name.track)))?;
         let meta0 = self.db().session_meta(m.id)?;
         let length = meta0.track_length_m.ok_or_else(|| ServiceError::User("longueur du circuit inconnue".into()))?;
-        let text = std::fs::read_to_string(path).map_err(|e| ServiceError::User(format!("lecture du fichier : {e}")))?;
-        let lap = garage61::parse_csv(&text, length, name.lap_time_s).map_err(ServiceError::User)?;
+        let lap = garage61::parse_csv(text, length, name.lap_time_s).map_err(ServiceError::User)?;
         let car_matches = same_car(m);
         let meta = SessionMeta {
             sim: SimId::Iracing,
@@ -416,6 +441,133 @@ impl AppService {
             self.db().set_reference(lap_id)?;
         }
         Ok(ExternalImport { session_id: sid, lap_id, driver: name.driver, lap_time_s: name.lap_time_s, track: meta0.track, car_matches, set_as_reference: car_matches })
+    }
+
+    fn g61_api(&self) -> Result<crate::garage61_api::G61Api> {
+        let token = self.settings().garage61_token.filter(|t| !t.trim().is_empty()).ok_or_else(|| ServiceError::User("ajoute d'abord ton jeton Garage 61 dans les Réglages".into()))?;
+        Ok(crate::garage61_api::G61Api::new(&token))
+    }
+
+    /// Vérifie le jeton Garage 61 et renvoie un résumé lisible du compte.
+    pub fn garage61_check(&self) -> Result<String> {
+        let me = self.g61_api()?.me().map_err(ServiceError::User)?;
+        let name = format!("{} {}", me.first_name.unwrap_or_default(), me.last_name.unwrap_or_default());
+        Ok(format!(
+            "Connecté : {} (formule {}, {} équipe(s)).",
+            if name.trim().is_empty() { me.slug } else { name.trim().to_string() },
+            me.subscription_plan.unwrap_or_else(|| "inconnue".into()),
+            me.teams.len()
+        ))
+    }
+
+    /// Cherche sur Garage 61 le meilleur tour des pilotes que tu suis (et de tes coéquipiers) sur le
+    /// circuit et la voiture de cette session, et l'importe comme référence s'il est plus rapide que
+    /// la référence externe actuelle. Renvoie un message lisible.
+    pub fn find_garage61_reference(&self, session_id: i64) -> Result<String> {
+        use crate::garage61_api::{lap_name, match_car, match_track};
+        let api = self.g61_api()?;
+        let meta = self.db().session_meta(session_id)?;
+        if meta.sim != SimId::Iracing {
+            return Err(ServiceError::User("Garage 61 : seules les sessions iRacing sont prises en charge".into()));
+        }
+        let (track, car) = {
+            let mut cat = self.g61_catalog.lock().unwrap_or_else(|p| p.into_inner());
+            if cat.is_none() {
+                *cat = Some((api.tracks().map_err(ServiceError::User)?, api.cars().map_err(ServiceError::User)?));
+            }
+            let (tracks, cars) = cat.as_ref().unwrap();
+            (
+                match_track(tracks, &meta.track, meta.track_config.as_deref()).cloned().ok_or_else(|| ServiceError::User(format!("circuit introuvable sur Garage 61 : {}", meta.track)))?,
+                match_car(cars, &meta.car).cloned().ok_or_else(|| ServiceError::User(format!("voiture introuvable sur Garage 61 : {}", meta.car)))?,
+            )
+        };
+        let me = api.me().map_err(ServiceError::User)?;
+        let teams: Vec<String> = me.teams.iter().map(|t| t.slug.clone()).collect();
+        let mut laps: Vec<_> = api
+            .best_laps(track.id, car.id, &teams)
+            .map_err(ServiceError::User)?
+            .into_iter()
+            .filter(|l| l.driver.as_ref().is_none_or(|d| d.slug != me.slug))
+            .collect();
+        laps.sort_by(|a, b| a.lap_time.total_cmp(&b.lap_time));
+        if laps.is_empty() {
+            return Ok(format!(
+                "Aucun tour trouvé sur Garage 61 pour {} / {} parmi les pilotes que tu suis. Sur garage61.net, suis quelques pilotes rapides de cette voiture (bouton « Follow ») : leurs tours deviendront disponibles ici.",
+                meta.track, meta.car
+            ));
+        }
+        // Référence externe déjà présente sur ce combo : on ne la remplace que par plus rapide.
+        let current = self
+            .list_sessions(&SessionFilter { sim: Some(SimId::Iracing), track: Some(meta.track.clone()), external: Some(true), ..Default::default() })?
+            .into_iter()
+            .filter(|s| s.track_config == meta.track_config && s.car == meta.car)
+            .filter_map(|s| s.best_lap_s)
+            .fold(f64::INFINITY, f64::min);
+        let mut last_err = None;
+        for l in laps.iter().take(5) {
+            if l.lap_time >= current - 0.001 {
+                return Ok(format!("Ta référence externe actuelle ({}) est déjà la plus rapide disponible.", fmt_lap(current)));
+            }
+            match api.lap_csv(&l.id) {
+                Ok(csv) => {
+                    let name = lap_name(l);
+                    let fname = format!("Garage 61 (API) - {} - {} - {} - {}", name.driver, name.car, name.track, name.id);
+                    let r = self.import_garage61_text(name, &csv, fname)?;
+                    return Ok(format!("Nouvelle référence : {} en {} (Garage 61).", r.driver, fmt_lap(r.lap_time_s)));
+                }
+                Err(e) => last_err = Some(e),
+            }
+        }
+        Err(ServiceError::User(format!(
+            "tours trouvés sur Garage 61 mais télémétrie non accessible ({}). Son accès peut demander l'abonnement Pro.",
+            last_err.unwrap_or_default()
+        )))
+    }
+
+    /// Dossier Téléchargements de l'utilisateur.
+    fn downloads_dir() -> Option<PathBuf> {
+        let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))?;
+        let d = PathBuf::from(home).join("Downloads");
+        d.is_dir().then_some(d)
+    }
+
+    /// Importe les tours exportés de Garage 61 arrivés dans Téléchargements (une seule fois chacun).
+    pub fn sync_downloads(&self) -> Result<Vec<ExternalImportReport>> {
+        match Self::downloads_dir() {
+            Some(dir) => self.sync_downloads_in(&dir),
+            None => Ok(vec![]),
+        }
+    }
+
+    pub fn sync_downloads_in(&self, dir: &Path) -> Result<Vec<ExternalImportReport>> {
+        let mut out = vec![];
+        let entries = std::fs::read_dir(dir).map_err(|e| ServiceError::User(format!("Téléchargements : {e}")))?;
+        for e in entries.flatten() {
+            let p = e.path();
+            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            if !name.to_ascii_lowercase().ends_with(".csv") || crate::ingest::garage61::parse_file_name(&name).is_none() {
+                continue;
+            }
+            let Ok(meta) = std::fs::metadata(&p) else { continue };
+            let size = meta.len() as i64;
+            let mtime = meta.modified().ok().and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0);
+            let key = p.to_string_lossy().into_owned();
+            if self.db().file_state(&key)? == Some((size, mtime)) {
+                continue;
+            }
+            let (sid, err) = match self.import_garage61(&p) {
+                Ok(r) => {
+                    out.push(ExternalImportReport { file: name, result: Ok(r.clone()) });
+                    (Some(r.session_id), None)
+                }
+                Err(e) => {
+                    out.push(ExternalImportReport { file: name, result: Err(e.to_string()) });
+                    (None, Some(e.to_string()))
+                }
+            };
+            self.db().record_file(&key, size, mtime, sid, err.as_deref())?;
+        }
+        Ok(out)
     }
 
     /// Recalcule les sessions décodées par une ancienne version du décodeur, depuis leur
@@ -476,6 +628,7 @@ impl AppService {
             let sid = match r.outcome {
                 Some(InsertOutcome::Inserted(id)) => {
                     rep.imported += 1;
+                    rep.new_sessions.push(id);
                     if let Err(e) = self.export_to_mobile_dir(id) {
                         rep.errors.push(format!("copie pour le mobile : {e}"));
                     }
@@ -972,8 +1125,13 @@ mod tests {
         let car = s.meta.car.clone();
         let p = dir.path().join(format!("Garage 61 - Pilote Rapide - {car} - Circuit Démo Complet - 0{}.{:06.3} - ABC.csv", (t_end / 60.0) as u32, t_end % 60.0));
         std::fs::write(&p, csv).unwrap();
-        let rep = svc.import_paths(std::slice::from_ref(&p));
-        assert!(rep[0].error.is_none(), "{:?}", rep[0].error);
+        // Arrivée dans « Téléchargements » : importé une seule fois.
+        std::fs::write(dir.path().join("notes.csv"), "a,b\n").unwrap();
+        let rep = svc.sync_downloads_in(dir.path()).unwrap();
+        assert_eq!(rep.len(), 1, "seul le fichier Garage 61 est pris");
+        assert!(rep[0].result.is_ok(), "{:?}", rep[0].result);
+        assert!(svc.sync_downloads_in(dir.path()).unwrap().is_empty(), "pas de réimport");
+        let _ = &p;
         // Pas mélangé aux sessions du pilote, mais utilisé comme référence d'analyse.
         assert_eq!(svc.list_sessions(&SessionFilter::default()).unwrap().len(), 1);
         assert_eq!(svc.list_sessions(&SessionFilter { external: Some(true), ..Default::default() }).unwrap()[0].external_driver.as_deref(), Some("Pilote Rapide"));

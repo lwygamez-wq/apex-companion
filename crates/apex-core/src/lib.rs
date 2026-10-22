@@ -13,6 +13,7 @@ pub mod analysis;
 pub mod codec;
 pub mod connectors;
 pub mod detect;
+pub mod garage61_api;
 pub mod ingest;
 pub mod mock;
 pub mod service;

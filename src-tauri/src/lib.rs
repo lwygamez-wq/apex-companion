@@ -56,6 +56,8 @@ pub fn run() {
             commands::set_iracing_autolog,
             commands::export_session,
             commands::export_to_mobile,
+            commands::garage61_check,
+            commands::find_garage61_reference,
             commands::set_corner_name,
             commands::create_goal,
             commands::archive_goal,

@@ -76,6 +76,17 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
     return name ? c.insights.filter((i) => i.segment === name) : c.insights;
   }, [c, corner]);
 
+  const [g61Msg, setG61Msg] = useState<string | null>(null);
+  const findG61 = async () => {
+    if (!d) return;
+    setG61Msg("Recherche sur Garage 61…");
+    try {
+      setG61Msg(await api.findGarage61Reference(d.id));
+      detail.reload();
+    } catch (e) {
+      setG61Msg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const markReference = async (lapId: number) => {
     await api.setReference(lapId);
     detail.reload();
@@ -124,8 +135,14 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
                 </select>
               </div>
-              {c && <span className={`mono ${(c.delta_s[c.delta_s.length - 1] ?? 0) > 0 ? "pos" : "neg"}`} style={{ fontSize: 18 }}>{delta(c.delta_s[c.delta_s.length - 1])} s</span>}
+              <div className="row">
+                {settings.data?.garage61_token && d.meta.sim === "iracing" && (
+                  <button className="btn" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">Référence Garage 61</button>
+                )}
+                {c && <span className={`mono ${(c.delta_s[c.delta_s.length - 1] ?? 0) > 0 ? "pos" : "neg"}`} style={{ fontSize: 18 }}>{delta(c.delta_s[c.delta_s.length - 1])} s</span>}
+              </div>
             </div>
+            {g61Msg && <div className="muted" style={{ marginTop: 8 }}>{g61Msg}</div>}
           </div>
 
           {cmp.error && <div className="error">{cmp.error}</div>}

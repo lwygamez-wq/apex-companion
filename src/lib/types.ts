@@ -336,6 +336,9 @@ export interface AppSettings {
   beginner_mode: boolean;
   check_updates: boolean;
   mobile_export_dir: string | null;
+  garage61_token: string | null;
+  garage61_auto: boolean;
+  watch_downloads: boolean;
 }
 
 export interface SessionFilter {

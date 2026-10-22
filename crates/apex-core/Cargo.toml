@@ -17,6 +17,7 @@ log.workspace = true
 rusqlite = { version = "0.32", features = ["bundled"] }
 lz4_flex = { version = "0.11", default-features = false, features = ["std", "safe-encode", "safe-decode"] }
 flate2 = "1"
+ureq = { version = "3", features = ["json"] }
 sysinfo = { version = "0.33", default-features = false, features = ["system"] }
 
 [target.'cfg(windows)'.dependencies]

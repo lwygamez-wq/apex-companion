@@ -104,8 +104,43 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             let mut auto_msg = None;
             if settings.auto_import && Instant::now() >= next_sync {
                 next_sync = Instant::now() + Duration::from_secs(15);
+                // Tours Garage 61 téléchargés depuis le site : importés comme références.
+                if settings.watch_downloads {
+                    match svc.sync_downloads() {
+                        Ok(v) if !v.is_empty() => {
+                            let msgs: Vec<String> = v
+                                .iter()
+                                .map(|r| match &r.result {
+                                    Ok(x) => format!("référence {} ({}) importée", x.driver, apex_core::service::fmt_lap(x.lap_time_s)),
+                                    Err(e) => format!("{} : {e}", r.file),
+                                })
+                                .collect();
+                            auto_msg = Some(msgs.join(" ; "));
+                            let _ = app.emit("apex://sessions-changed", ());
+                        }
+                        Ok(_) => {}
+                        Err(e) => log::debug!("téléchargements : {e}"),
+                    }
+                }
                 match svc.sync_iracing_folder(Duration::from_secs(20)) {
                     Ok(r) if r.imported > 0 || !r.errors.is_empty() => {
+                        // Nouvelle session : recherche d'une référence plus rapide sur Garage 61, en arrière-plan.
+                        if settings.garage61_auto && settings.garage61_token.as_deref().is_some_and(|t| !t.trim().is_empty()) {
+                            let (svc2, app2, status2, ids) = (svc.clone(), app.clone(), status.clone(), r.new_sessions.clone());
+                            std::thread::spawn(move || {
+                                for id in ids {
+                                    let msg = match svc2.find_garage61_reference(id) {
+                                        Ok(m) => m,
+                                        Err(e) => format!("Garage 61 : {e}"),
+                                    };
+                                    log::info!("{msg}");
+                                    if let Ok(mut s) = status2.lock() {
+                                        s.last_auto_import = Some(msg);
+                                    }
+                                    let _ = app2.emit("apex://sessions-changed", ());
+                                }
+                            });
+                        }
                         let mut m = format!("{} session(s) importée(s) automatiquement", r.imported);
                         if !r.errors.is_empty() {
                             m += &format!(", {} fichier(s) illisible(s) : {}", r.errors.len(), r.errors.join(" ; "));

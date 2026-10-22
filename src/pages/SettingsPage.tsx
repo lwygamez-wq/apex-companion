@@ -49,6 +49,17 @@ export function SettingsPage() {
     }
   };
 
+  const [g61Msg, setG61Msg] = useState<string | null>(null);
+  const checkG61 = async () => {
+    if (!s) return;
+    setG61Msg("Vérification…");
+    try {
+      await api.saveSettings(s);
+      setG61Msg(await api.garage61Check());
+    } catch (e) {
+      setG61Msg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const upd = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => setS((x) => (x ? { ...x, [k]: v } : x));
   const saveAll = async () => {
     if (!s) return;
@@ -154,6 +165,36 @@ export function SettingsPage() {
               <option value="metric">Métriques (km/h, m)</option>
               <option value="imperial">Impériales (mph)</option>
             </select>
+          </div>
+        </div>
+      )}
+
+      {s && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h2>Tours de référence (Garage 61)</h2>
+          <div className="form-row">
+            <div>
+              Import depuis Téléchargements
+              <div className="hint">Chaque tour exporté de Garage 61 (« Export CSV » sur le site) est importé tout seul dès qu'il arrive dans ton dossier Téléchargements, et devient ta référence sur ce circuit.</div>
+            </div>
+            <input type="checkbox" checked={s.watch_downloads} onChange={(e) => upd("watch_downloads", e.target.checked)} />
+          </div>
+          <div className="form-row">
+            <div>
+              Jeton d'accès Garage 61
+              <div className="hint">
+                Facultatif, pour la recherche entièrement automatique. Crée un jeton personnel sur garage61.net (menu Developer, droit « driving data ») et colle-le ici. Il reste sur ce PC. Garage 61 ne donne accès qu'aux tours des pilotes que tu suis et de tes coéquipiers : suis quelques pilotes rapides de ta voiture.
+              </div>
+            </div>
+            <div className="row">
+              <input type="password" style={{ flex: 1, minWidth: 280 }} value={s.garage61_token ?? ""} placeholder="non configuré" onChange={(e) => upd("garage61_token", e.target.value || null)} />
+              <button className="btn" onClick={() => void checkG61()} disabled={!s.garage61_token}>Vérifier</button>
+            </div>
+          </div>
+          {g61Msg && <div className="muted" style={{ padding: "4px 0 8px" }}>{g61Msg}</div>}
+          <div className="form-row">
+            <div>Recherche automatique après chaque session<div className="hint">Après chaque nouvelle session iRacing, cherche le tour le plus rapide disponible (même circuit, même voiture) et le prend comme référence s'il bat la référence actuelle.</div></div>
+            <input type="checkbox" checked={s.garage61_auto} onChange={(e) => upd("garage61_auto", e.target.checked)} disabled={!s.garage61_token} />
           </div>
         </div>
       )}
