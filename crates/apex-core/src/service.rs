@@ -495,9 +495,19 @@ impl AppService {
             .collect();
         laps.sort_by(|a, b| a.lap_time.total_cmp(&b.lap_time));
         if laps.is_empty() {
+            // Diagnostic : ce que l'API voit sur ce circuit, selon les filtres.
+            let n = |car: Option<i64>, d: Option<&str>| api.count_laps(track.id, car, d).map(|v| v.to_string()).unwrap_or_else(|e| format!("erreur ({e})"));
             return Ok(format!(
-                "Aucun tour trouvé sur Garage 61 pour {} / {} parmi les pilotes que tu suis. Sur garage61.net, suis quelques pilotes rapides de cette voiture (bouton « Follow ») : leurs tours deviendront disponibles ici.",
-                meta.track, meta.car
+                "Aucun tour d'un pilote suivi trouvé. Diagnostic : circuit Garage 61 « {} {} » (n° {}), voiture « {} » (n° {}) ; tours visibles par l'API — pilotes suivis : {} (toutes voitures : {}), toi + coéquipiers : {}, toi seul : {}.",
+                track.name,
+                track.variant.clone().unwrap_or_default(),
+                track.id,
+                car.name,
+                car.id,
+                n(Some(car.id), Some("following")),
+                n(None, Some("following")),
+                n(Some(car.id), None),
+                n(Some(car.id), Some("me")),
             ));
         }
         // Référence externe déjà présente sur ce combo : on ne la remplace que par plus rapide.

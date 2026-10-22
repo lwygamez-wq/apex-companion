@@ -147,6 +147,18 @@ impl G61Api {
         Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items)
     }
 
+    /// Recherche brute pour le diagnostic : `drivers` = "following", "me" ou vide (toi + coéquipiers).
+    pub fn count_laps(&self, track_id: i64, car_id: Option<i64>, drivers: Option<&str>) -> Result<usize, String> {
+        let mut q = vec![("tracks", track_id.to_string()), ("group", "driver".to_string()), ("limit", "100".to_string())];
+        if let Some(c) = car_id {
+            q.push(("cars", c.to_string()));
+        }
+        if let Some(d) = drivers {
+            q.push(("drivers", d.to_string()));
+        }
+        Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items.len())
+    }
+
     pub fn lap_csv(&self, lap_id: &str) -> Result<String, String> {
         self.get(&format!("/laps/{lap_id}/csv"), &[])
     }
