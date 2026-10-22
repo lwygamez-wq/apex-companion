@@ -214,6 +214,10 @@ pub fn track_key(m: &SessionMeta) -> String {
 }
 
 /// 66.052 → « 1:06.052 »
+fn now_secs() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
+}
+
 /// Date civile (UTC) d'un horodatage Unix : (année, mois, jour).
 fn civil_date(unix: i64) -> (i64, u32, u32) {
     let z = unix.div_euclid(86_400) + 719_468;
@@ -522,6 +526,34 @@ impl AppService {
             "tours trouvés sur Garage 61 mais télémétrie non accessible ({}). Son accès peut demander l'abonnement Pro.",
             last_err.unwrap_or_default()
         )))
+    }
+
+    /// Cherche une référence Garage 61 pour chaque combinaison circuit/voiture déjà roulée
+    /// (une recherche par combinaison, sur la session la plus récente). Renvoie un message par combinaison.
+    pub fn find_garage61_references_all(&self) -> Result<Vec<String>> {
+        self.g61_api()?;
+        let sessions = self.list_sessions(&SessionFilter { sim: Some(SimId::Iracing), ..Default::default() })?;
+        let mut seen = std::collections::HashSet::new();
+        let mut out = vec![];
+        // list_sessions est trié du plus récent au plus ancien.
+        for s in sessions {
+            if !seen.insert((s.track.clone(), s.track_config.clone(), s.car.clone())) {
+                continue;
+            }
+            let label = format!("{} / {}", s.track, s.car);
+            out.push(match self.find_garage61_reference(s.id) {
+                Ok(m) => format!("{label} : {m}"),
+                Err(e) => format!("{label} : {e}"),
+            });
+        }
+        self.db().set_setting("garage61_last_full_scan", &now_secs().to_string())?;
+        Ok(out)
+    }
+
+    /// Vrai si la dernière recherche complète Garage 61 date de plus de `hours` heures (ou n'a jamais eu lieu).
+    pub fn garage61_full_scan_due(&self, hours: i64) -> bool {
+        let last = self.db().get_setting("garage61_last_full_scan").ok().flatten().and_then(|v| v.parse::<i64>().ok()).unwrap_or(0);
+        now_secs() - last >= hours * 3600
     }
 
     /// Dossier Téléchargements de l'utilisateur.

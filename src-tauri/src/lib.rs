@@ -58,6 +58,7 @@ pub fn run() {
             commands::export_to_mobile,
             commands::garage61_check,
             commands::find_garage61_reference,
+            commands::find_garage61_references_all,
             commands::set_corner_name,
             commands::create_goal,
             commands::archive_goal,

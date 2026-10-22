@@ -139,6 +139,11 @@ pub async fn garage61_check(state: State<'_, AppState>) -> R<String> {
 }
 
 #[tauri::command]
+pub async fn find_garage61_references_all(state: State<'_, AppState>) -> R<Vec<String>> {
+    blocking(state.svc.clone(), |s| s.find_garage61_references_all()).await
+}
+
+#[tauri::command]
 pub async fn find_garage61_reference(state: State<'_, AppState>, session_id: i64) -> R<String> {
     blocking(state.svc.clone(), move |s| s.find_garage61_reference(session_id)).await
 }

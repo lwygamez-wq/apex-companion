@@ -55,7 +55,10 @@ export function SettingsPage() {
     setG61Msg("Vérification…");
     try {
       await api.saveSettings(s);
-      setG61Msg(await api.garage61Check());
+      const who = await api.garage61Check();
+      setG61Msg(`${who} Recherche des références pour tes sessions déjà roulées…`);
+      const res = await api.findGarage61ReferencesAll();
+      setG61Msg([who, ...res].join("\n"));
     } catch (e) {
       setG61Msg(e instanceof Error ? e.message : String(e));
     }
@@ -188,12 +191,12 @@ export function SettingsPage() {
             </div>
             <div className="row">
               <input type="password" style={{ flex: 1, minWidth: 280 }} value={s.garage61_token ?? ""} placeholder="non configuré" onChange={(e) => upd("garage61_token", e.target.value || null)} />
-              <button className="btn" onClick={() => void checkG61()} disabled={!s.garage61_token}>Vérifier</button>
+              <button className="btn" onClick={() => void checkG61()} disabled={!s.garage61_token} title="Vérifie le jeton puis cherche une référence pour chaque circuit/voiture déjà roulé">Vérifier et chercher</button>
             </div>
           </div>
-          {g61Msg && <div className="muted" style={{ padding: "4px 0 8px" }}>{g61Msg}</div>}
+          {g61Msg && <div className="muted" style={{ padding: "4px 0 8px", whiteSpace: "pre-line" }}>{g61Msg}</div>}
           <div className="form-row">
-            <div>Recherche automatique après chaque session<div className="hint">Après chaque nouvelle session iRacing, cherche le tour le plus rapide disponible (même circuit, même voiture) et le prend comme référence s'il bat la référence actuelle.</div></div>
+            <div>Recherche automatique<div className="hint">Après chaque nouvelle session iRacing, et une fois par jour pour toutes tes sessions déjà roulées : cherche le tour le plus rapide disponible (même circuit, même voiture) et le prend comme référence s'il bat la référence actuelle.</div></div>
             <input type="checkbox" checked={s.garage61_auto} onChange={(e) => upd("garage61_auto", e.target.checked)} disabled={!s.garage61_token} />
           </div>
         </div>

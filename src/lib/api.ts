@@ -54,6 +54,7 @@ export const api = {
   setIracingAutolog: (enable: boolean) => call<AutoLogStatus>("set_iracing_autolog", { enable }),
   exportSession: (id: number, path: string) => call<ExportSummary>("export_session", { id, path }),
   garage61Check: () => call<string>("garage61_check"),
+  findGarage61ReferencesAll: () => call<string[]>("find_garage61_references_all"),
   findGarage61Reference: (sessionId: number) => call<string>("find_garage61_reference", { sessionId }),
   exportToMobile: (id: number) => call<string | null>("export_to_mobile", { id }),
   setCornerName: (sessionId: number, apexM: number, name: string) => call<void>("set_corner_name", { sessionId, apexM, name }),
