@@ -96,6 +96,9 @@ CREATE TABLE goals (
 "#, r#"
 -- v5 : version du décodeur ayant produit les tours (permet de les recalculer après une correction).
 ALTER TABLE sessions ADD COLUMN parser_version INTEGER NOT NULL DEFAULT 1;
+"#, r#"
+-- v6 : tours de référence d'autres pilotes (Garage 61…), tenus à l'écart des statistiques du pilote.
+ALTER TABLE sessions ADD COLUMN external_driver TEXT;
 "#];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
@@ -137,6 +140,8 @@ pub struct SessionSummary {
     pub stddev_clean_s: Option<f64>,
     pub incident_laps: usize,
     pub fuel_per_lap_l: Option<f32>,
+    /// Pilote d'un tour de référence externe ; `None` pour les sessions du pilote.
+    pub external_driver: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -157,6 +162,8 @@ pub struct SessionFilter {
     pub kind: Option<SessionKind>,
     pub from_unix: Option<i64>,
     pub to_unix: Option<i64>,
+    /// `Some(true)` : uniquement les références externes. Par défaut : uniquement les sessions du pilote.
+    pub external: Option<bool>,
 }
 
 fn now_unix() -> i64 {
@@ -240,10 +247,21 @@ impl Store {
         Ok(())
     }
 
+    /// Marque une session comme tour de référence d'un autre pilote.
+    pub fn set_external_driver(&self, id: i64, driver: &str) -> Result<(), StoreError> {
+        self.conn.execute("UPDATE sessions SET external_driver = ?1 WHERE id = ?2", params![driver, id])?;
+        Ok(())
+    }
+
+    /// Pilote de la session si c'est une référence externe.
+    pub fn external_driver(&self, id: i64) -> Result<Option<String>, StoreError> {
+        Ok(self.conn.query_row("SELECT external_driver FROM sessions WHERE id = ?1", [id], |r| r.get(0)).optional()?.flatten())
+    }
+
     /// Sessions iRacing décodées par une version antérieure du décodeur : (id, fichier source).
     pub fn outdated_sessions(&self) -> Result<Vec<(i64, String)>, StoreError> {
         let mut st = self.conn.prepare(
-            "SELECT id, source_path FROM sessions WHERE parser_version < ?1 AND sim = 'iracing' AND source_path IS NOT NULL ORDER BY id",
+            "SELECT id, source_path FROM sessions WHERE parser_version < ?1 AND sim = 'iracing' AND source_path IS NOT NULL AND external_driver IS NULL ORDER BY id",
         )?;
         let rows = st.query_map([PARSER_VERSION], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
@@ -355,7 +373,7 @@ impl Store {
     }
 
     pub fn list_sessions(&self, f: &SessionFilter) -> Result<Vec<SessionSummary>, StoreError> {
-        let mut sql = String::from("SELECT * FROM sessions WHERE 1=1");
+        let mut sql = String::from(if f.external == Some(true) { "SELECT * FROM sessions WHERE external_driver IS NOT NULL" } else { "SELECT * FROM sessions WHERE external_driver IS NULL" });
         let mut args: Vec<Box<dyn rusqlite::ToSql>> = vec![];
         if let Some(s) = f.sim {
             sql += " AND sim = ?";
@@ -383,12 +401,12 @@ impl Store {
         }
         sql += " ORDER BY started_at DESC";
         let mut st = self.conn.prepare(&sql)?;
-        let metas: Vec<(i64, SessionMeta)> = st
-            .query_map(rusqlite::params_from_iter(args.iter().map(|b| b.as_ref())), |r| Ok((r.get("id")?, Self::row_to_meta(r)?)))?
+        let metas: Vec<(i64, SessionMeta, Option<String>)> = st
+            .query_map(rusqlite::params_from_iter(args.iter().map(|b| b.as_ref())), |r| Ok((r.get("id")?, Self::row_to_meta(r)?, r.get("external_driver")?)))?
             .collect::<Result<_, _>>()?;
         metas
             .into_iter()
-            .map(|(id, m)| {
+            .map(|(id, m, external_driver)| {
                 let laps = self.laps(id)?;
                 let metas: Vec<LapMeta> = laps.iter().map(|l| l.meta.clone()).collect();
                 let best = best_clean_lap(&metas).and_then(|i| metas[i].lap_time_s);
@@ -411,6 +429,7 @@ impl Store {
                     stddev_clean_s: cons.as_ref().map(|c| c.stddev_s),
                     incident_laps: metas.iter().filter(|l| l.flags.incident || l.flags.off_track).count(),
                     fuel_per_lap_l: (!fuel.is_empty()).then(|| fuel.iter().sum::<f32>() / fuel.len() as f32),
+                    external_driver,
                 })
             })
             .collect()

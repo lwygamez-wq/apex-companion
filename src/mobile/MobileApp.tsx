@@ -195,7 +195,7 @@ function SessionScreen({ s, onLap }: { s: MobileSession; onLap: (id: number) => 
           ))}
         </div>
       )}
-      <h2 className="m-h2">Tours <span className="muted">· comparés au tour {ref?.number ?? "de référence"}</span></h2>
+      <h2 className="m-h2">Tours <span className="muted">· comparés {s.reference_label ? `à ${s.reference_label}` : `au tour ${ref?.number ?? "de référence"}`}</span></h2>
       <div className="m-laps">
         {s.laps.filter((l) => l.lap_time_s != null).map((l) => {
           const c = byLap.get(l.id);
@@ -238,7 +238,7 @@ function LapScreen({ s, lapId }: { s: MobileSession; lapId: number }) {
     <>
       <div className="m-lapbar">
         <span>Tour <b>{c.compared.number}</b> · {lapTime(c.compared.lap_time_s)}</span>
-        <span className={`mono ${total > 0 ? "pos" : "neg"}`}>{delta(total)} s vs tour {c.reference.number}</span>
+        <span className={`mono ${total > 0 ? "pos" : "neg"}`}>{delta(total)} s vs {s.reference_label ? s.reference_label.split(" (")[0] : `tour ${c.reference.number}`}</span>
       </div>
       <div className="seg m-tabs">
         {(["conseils", "relecture", "courbes", "virages"] as const).map((t) => (

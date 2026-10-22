@@ -385,7 +385,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
         </div>
       </div>
       <div className="trackmap-legend">
-        <span><i style={{ background: REF_LINE }} />Référence (tour {cmp.reference.number}) · cercle vide = fantôme</span>
+        <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · cercle vide = fantôme</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
         {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
         {mode === "delta" && <span><i style={{ background: "#2bd576" }} />gain <i style={{ background: "#ffd400", marginLeft: 6 }} />perte</span>}

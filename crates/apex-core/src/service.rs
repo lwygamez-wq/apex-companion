@@ -73,6 +73,18 @@ impl Default for AppSettings {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct ExternalImport {
+    pub session_id: i64,
+    pub lap_id: i64,
+    pub driver: String,
+    pub lap_time_s: f64,
+    pub track: String,
+    /// La voiture du fichier correspond à celle de tes sessions sur ce circuit.
+    pub car_matches: bool,
+    pub set_as_reference: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ConnectorInfo {
     pub id: SimId,
     pub name: String,
@@ -131,6 +143,8 @@ pub struct SessionDetail {
     pub analysis_reference_lap_id: Option<i64>,
     /// Sorties de piste regroupées par endroit.
     pub off_tracks: Vec<crate::analysis::offtrack::OffTrackZone>,
+    /// Libellé lisible de la référence personnelle quand elle vient d'ailleurs (autre pilote, autre session).
+    pub reference_label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -294,6 +308,14 @@ impl AppService {
             .iter()
             .map(|p| {
                 let ext = p.extension().and_then(|x| x.to_str()).unwrap_or("").to_ascii_lowercase();
+                let fname = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                if ext == "csv" && crate::ingest::garage61::parse_file_name(&fname).is_some() {
+                    let path = p.to_string_lossy().into_owned();
+                    return match self.import_garage61(p) {
+                        Ok(r) => ImportReport { path, outcome: Some(InsertOutcome::Inserted(r.session_id)), laps: 1, error: None },
+                        Err(e) => ImportReport { path, outcome: None, laps: 0, error: Some(e.to_string()) },
+                    };
+                }
                 let importer = self.connectors.iter().filter_map(|c| c.importer()).find(|i| i.extensions().contains(&ext.as_str()));
                 let path = p.to_string_lossy().into_owned();
                 let Some(imp) = importer else {
@@ -328,6 +350,72 @@ impl AppService {
     fn ibt_files(&self, dir: &Path) -> Result<Vec<PathBuf>> {
         let c = self.connectors.iter().find(|c| c.id() == SimId::Iracing).expect("connecteur iRacing");
         c.importer().expect("import iRacing").scan(dir).map_err(|e| ServiceError::User(e.to_string()))
+    }
+
+    /// Importe un tour exporté de Garage 61 comme référence externe et le définit comme référence
+    /// personnelle pour ce circuit et cette voiture. Le circuit doit déjà exister dans tes sessions
+    /// (sa longueur exacte sert à convertir la position en distance).
+    pub fn import_garage61(&self, path: &Path) -> Result<ExternalImport> {
+        use crate::ingest::garage61;
+        let fname = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = garage61::parse_file_name(&fname)
+            .ok_or_else(|| ServiceError::User("nom de fichier non reconnu : garde le nom donné par Garage 61 (« Garage 61 - pilote - voiture - circuit - temps - … .csv »)".into()))?;
+        let fold = |s: &str| crate::tracks::fold_name(s);
+        let g_track = fold(&name.track);
+        let tokens = |s: &str| fold(s).split(|c: char| !c.is_alphanumeric()).filter(|t| !t.is_empty()).map(String::from).collect::<Vec<_>>();
+        let g_car = tokens(&name.car);
+        let own = self.list_sessions(&SessionFilter { sim: Some(SimId::Iracing), ..Default::default() })?;
+        let same_track = |s: &SessionSummary| {
+            let full = fold(&format!("{} {}", s.track, s.track_config.clone().unwrap_or_default()));
+            g_track == full.trim() || g_track == fold(&s.track)
+        };
+        let same_car = |s: &SessionSummary| {
+            let c = tokens(&s.car);
+            g_car.iter().all(|t| c.contains(t)) || c.iter().all(|t| g_car.contains(t))
+        };
+        let m = own
+            .iter()
+            .find(|s| same_track(s) && same_car(s))
+            .or_else(|| own.iter().find(|s| same_track(s)))
+            .ok_or_else(|| ServiceError::User(format!("aucune de tes sessions iRacing n'est sur « {} » : roule d'abord une session sur ce circuit (il faut sa longueur exacte), puis réimporte le fichier", name.track)))?;
+        let meta0 = self.db().session_meta(m.id)?;
+        let length = meta0.track_length_m.ok_or_else(|| ServiceError::User("longueur du circuit inconnue".into()))?;
+        let text = std::fs::read_to_string(path).map_err(|e| ServiceError::User(format!("lecture du fichier : {e}")))?;
+        let lap = garage61::parse_csv(&text, length, name.lap_time_s).map_err(ServiceError::User)?;
+        let car_matches = same_car(m);
+        let meta = SessionMeta {
+            sim: SimId::Iracing,
+            track: meta0.track.clone(),
+            track_config: meta0.track_config.clone(),
+            track_length_m: Some(length),
+            car: if car_matches { meta0.car.clone() } else { name.car.clone() },
+            kind: SessionKind::Unknown,
+            started_at_unix: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0),
+            weather: Weather::default(),
+            source_fingerprint: format!("garage61:{}", name.id),
+            source_path: Some(fname.clone()),
+        };
+        let lm = LapMeta {
+            number: 1,
+            kind: LapKind::Flying,
+            lap_time_s: Some(name.lap_time_s),
+            sector_times_s: vec![],
+            flags: LapFlags { off_track: lap.off_track, ..Default::default() },
+            validity: if lap.off_track { Validity::Invalid } else { Validity::Valid },
+            validity_source: ValiditySource::Derived,
+            fuel_start_l: None,
+            fuel_used_l: None,
+        };
+        let s = ImportedSession { meta, laps: vec![ImportedLap { meta: lm, trace: lap.trace }], sample_rate_hz: Some(60.0) };
+        let sid = match self.db().insert_session(&s)? {
+            InsertOutcome::Inserted(id) | InsertOutcome::Duplicate(id) => id,
+        };
+        self.db().set_external_driver(sid, &name.driver)?;
+        let lap_id = self.db().laps(sid)?.first().map(|l| l.id).ok_or_else(|| ServiceError::User("tour absent".into()))?;
+        if car_matches {
+            self.db().set_reference(lap_id)?;
+        }
+        Ok(ExternalImport { session_id: sid, lap_id, driver: name.driver, lap_time_s: name.lap_time_s, track: meta0.track, car_matches, set_as_reference: car_matches })
     }
 
     /// Recalcule les sessions décodées par une ancienne version du décodeur, depuis leur
@@ -511,8 +599,20 @@ impl AppService {
             };
             crate::analysis::offtrack::off_track_zones(&spans, &corners)
         };
+        let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
+            Some(p) => {
+                let l = db.lap(p)?;
+                let time = l.meta.lap_time_s.map(fmt_lap).unwrap_or_default();
+                Some(match db.external_driver(l.session_id)? {
+                    Some(d) => format!("{d} (référence externe), {time}"),
+                    None => format!("Ta référence perso (autre session), {time}"),
+                })
+            }
+            None => None,
+        };
         Ok(SessionDetail {
             id,
+            reference_label,
             best_lap_id: best_id,
             theoretical_best_s: theo,
             consistency: consistency(&metas),
@@ -527,7 +627,8 @@ impl AppService {
 
     fn personal_reference(db: &Store, meta: &SessionMeta) -> Result<Option<i64>> {
         let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() };
-        for s in db.list_sessions(&f)? {
+        let ext = SessionFilter { external: Some(true), ..f.clone() };
+        for s in db.list_sessions(&f)?.into_iter().chain(db.list_sessions(&ext)?) {
             if s.track_config != meta.track_config {
                 continue;
             }
@@ -548,13 +649,20 @@ impl AppService {
         let (mr, mc) = (db.session_meta(lr.session_id)?, db.session_meta(lc.session_id)?);
         let (tr, tc) = (db.trace(ref_lap)?, db.trace(cmp_lap)?);
         let names = crate::tracks::corner_names_for(&mr, Some(&tr), db.corner_names(&track_key(&mr))?);
-        compare_laps_named(
+        let external = db.external_driver(lr.session_id)?;
+        let mut c = compare_laps_named(
             &LapInput { lap_id: ref_lap, session: &mr, lap: &lr.meta, trace: &tr },
             &LapInput { lap_id: cmp_lap, session: &mc, lap: &lc.meta, trace: &tc },
             step_m,
             &names,
         )
-        .map_err(|e| ServiceError::User(format!("comparaison impossible : {e}")))
+        .map_err(|e| ServiceError::User(format!("comparaison impossible : {e}")))?;
+        if let Some(d) = external {
+            c.reference.driver = Some(d.clone());
+            c.warnings.retain(|w| !w.starts_with("Météo inconnue"));
+            c.warnings.insert(0, format!("Référence : tour de {d}. Son setup, son carburant et la météo ne sont pas connus : un écart peut aussi venir de là."));
+        }
+        Ok(c)
     }
 
     /// Fixe l'objectif de session à partir d'une suggestion (conseil ou tableau de bord).
@@ -775,11 +883,7 @@ impl AppService {
         };
         // Analyses précalculées (mêmes calculs que sur le PC) : l'app mobile se contente de les afficher.
         // La trace de référence n'est écrite qu'une fois pour toute la session.
-        let ref_id = detail
-            .personal_reference_lap_id
-            .filter(|r| detail.laps.iter().any(|l| l.id == *r))
-            .or(detail.best_lap_id)
-            .or(detail.fastest_lap_id);
+        let ref_id = detail.analysis_reference_lap_id;
         let mut reference_trace = serde_json::Value::Null;
         let comparisons: Vec<serde_json::Value> = match ref_id {
             Some(rid) => detail
@@ -810,6 +914,7 @@ impl AppService {
             "session": meta,
             "best_lap_id": detail.best_lap_id,
             "reference_lap_id": ref_id,
+            "reference_label": detail.reference_label,
             "fastest_lap_id": detail.fastest_lap_id,
             "off_tracks": detail.off_tracks,
             "theoretical_best_s": detail.theoretical_best_s,
@@ -845,6 +950,42 @@ impl AppService {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn garage61_reference_is_kept_apart_and_used_as_reference() {
+        let svc = AppService::in_memory().unwrap();
+        let mut s = demo_session(5, 1_760_000_000);
+        s.meta.sim = SimId::Iracing;
+        let InsertOutcome::Inserted(sid) = svc.insert_imported(&s).unwrap() else { panic!() };
+        let len = s.meta.track_length_m.unwrap();
+        // Tour « externe » fabriqué à partir d'un tour de la démo, au format CSV de Garage 61.
+        let lap = &s.laps.iter().find(|l| l.meta.is_clean()).unwrap().trace;
+        let mut csv = String::from("Speed,LapDistPct,Brake,Throttle,Gear,PositionType\n");
+        let t_end = *lap.time_s.last().unwrap();
+        let mut t = 0.0f32;
+        while t < t_end {
+            let i = lap.time_s.partition_point(|x| *x < t).min(lap.len() - 1);
+            csv += &format!("{},{},{},{},{},3\n", lap.speed_mps[i], (lap.dist_m[i] / len).min(0.99999), lap.brake[i], lap.throttle[i], lap.gear.as_ref().map_or(3.0, |g| g[i]));
+            t += 1.0 / 60.0;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let car = s.meta.car.clone();
+        let p = dir.path().join(format!("Garage 61 - Pilote Rapide - {car} - Circuit Démo Complet - 0{}.{:06.3} - ABC.csv", (t_end / 60.0) as u32, t_end % 60.0));
+        std::fs::write(&p, csv).unwrap();
+        let rep = svc.import_paths(std::slice::from_ref(&p));
+        assert!(rep[0].error.is_none(), "{:?}", rep[0].error);
+        // Pas mélangé aux sessions du pilote, mais utilisé comme référence d'analyse.
+        assert_eq!(svc.list_sessions(&SessionFilter::default()).unwrap().len(), 1);
+        assert_eq!(svc.list_sessions(&SessionFilter { external: Some(true), ..Default::default() }).unwrap()[0].external_driver.as_deref(), Some("Pilote Rapide"));
+        let d = svc.session_detail(sid).unwrap();
+        assert!(d.reference_label.unwrap().starts_with("Pilote Rapide"));
+        let c = svc.compare(d.analysis_reference_lap_id.unwrap(), d.laps[1].id, 1.0).unwrap();
+        assert!(c.warnings[0].contains("Pilote Rapide"));
+        // Fichier hors circuit connu : refus explicite.
+        let q = dir.path().join("Garage 61 - X - Voiture - Monza Grand Prix - 01.40.000 - Z.csv");
+        std::fs::write(&q, "Speed,LapDistPct,Brake,Throttle\n").unwrap();
+        assert!(svc.import_garage61(&q).unwrap_err().to_string().contains("Monza"));
+    }
 
     #[test]
     fn export_file_name_is_readable() {

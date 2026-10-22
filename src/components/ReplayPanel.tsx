@@ -91,7 +91,7 @@ export function ReplayPanel({ cmp, store, compact = false }: { cmp: Comparison; 
       {!compact && <>
       <table className="rp-table">
         <thead>
-          <tr><th /><th className="num">Réf. ({cmp.reference.number})</th><th className="num">Tour {cmp.compared.number}</th></tr>
+          <tr><th /><th className="num">{cmp.reference.driver ?? `Réf. (${cmp.reference.number})`}</th><th className="num">Tour {cmp.compared.number}</th></tr>
         </thead>
         <tbody>
           {row("Vitesse", num(r.speed_kmh, 0, " km/h"), num(c.speed_kmh, 0, " km/h"))}

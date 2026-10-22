@@ -115,7 +115,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 <span className="muted">Référence</span>
                 <select value={refId ?? ""} onChange={(e) => setRefId(Number(e.target.value))}>
                   {d.personal_reference_lap_id != null && !d.laps.some((l) => l.id === d.personal_reference_lap_id) && (
-                    <option value={d.personal_reference_lap_id}>Référence personnelle (autre session)</option>
+                    <option value={d.personal_reference_lap_id}>{d.reference_label ?? "Référence personnelle (autre session)"}</option>
                   )}
                   {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
                 </select>

@@ -8,6 +8,7 @@ export interface MobileSession {
   best_lap_id: number | null;
   reference_lap_id: number | null;
   fastest_lap_id: number | null;
+  reference_label: string | null;
   off_tracks: OffTrackZone[];
   theoretical_best_s: number | null;
   consistency: Consistency | null;
@@ -58,6 +59,7 @@ export async function parseExport(buf: ArrayBuffer): Promise<MobileSession> {
     best_lap_id: (doc.best_lap_id as number | null) ?? null,
     reference_lap_id: (doc.reference_lap_id as number | null) ?? null,
     fastest_lap_id: (doc.fastest_lap_id as number | null) ?? null,
+    reference_label: (doc.reference_label as string | null) ?? null,
     off_tracks: (doc.off_tracks as OffTrackZone[] | undefined) ?? [],
     theoretical_best_s: (doc.theoretical_best_s as number | null) ?? null,
     consistency: (doc.consistency as Consistency | null) ?? null,

@@ -610,6 +610,11 @@ pub fn corner_names_for(m: &SessionMeta, reference: Option<&crate::model::LapTra
     merge_names(base, user)
 }
 
+/// Nom normalisé (minuscules, sans accents) pour comparer des noms de circuits ou de voitures.
+pub fn fold_name(s: &str) -> String {
+    fold(s)
+}
+
 fn fold(s: &str) -> String {
     s.to_lowercase()
         .chars()

@@ -46,6 +46,8 @@ export interface SessionSummary {
   stddev_clean_s: number | null;
   incident_laps: number;
   fuel_per_lap_l: number | null;
+  /** Pilote d'un tour de référence externe (Garage 61…) ; null pour tes sessions. */
+  external_driver: string | null;
 }
 
 export interface LapFlags {
@@ -92,6 +94,8 @@ export interface SessionDetail {
   /** Référence par défaut : perso, sinon meilleur tour propre, sinon le plus rapide. */
   analysis_reference_lap_id: number | null;
   off_tracks: OffTrackZone[];
+  /** Libellé de la référence perso quand elle vient d'un autre pilote ou d'une autre session. */
+  reference_label: string | null;
 }
 
 export interface OffTrackZone {
@@ -214,6 +218,7 @@ export interface LapSummary {
   lap_time_s: number | null;
   clean: boolean;
   coverage: number;
+  driver?: string | null;
 }
 
 export interface Comparison {
@@ -340,4 +345,6 @@ export interface SessionFilter {
   kind?: SessionKind;
   from_unix?: number;
   to_unix?: number;
+  /** true : uniquement les références externes. */
+  external?: boolean;
 }

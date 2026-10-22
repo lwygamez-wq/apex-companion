@@ -473,8 +473,7 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
                 // circuit) : coin de la maille de 0,1° contenant le premier point GPS valide.
                 // Une origine par tour décalerait les trajectoires de ~1 m entre elles.
                 let first = la.iter().zip(lo.iter()).find(|(a, _)| **a != 0.0).map(|(a, o)| (*a, *o)).unwrap_or((la[a], lo[a]));
-                let (lat0, lon0) = ((first.0 * 10.0).floor() / 10.0, (first.1 * 10.0).floor() / 10.0);
-                let k = lat0.to_radians().cos();
+                let origin = super::grid_origin(first.0, first.1);
                 // Position inconnue (0,0 : menus, remorquage) : on garde le dernier point valide.
                 let valid = |i: usize| la[i] != 0.0 || lo[i] != 0.0;
                 let mut cur = (a..b).find(|&i| valid(i)).map(|i| (la[i], lo[i])).unwrap_or(first);
@@ -486,8 +485,7 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
                         cur
                     })
                     .collect();
-                let x = pts.iter().map(|p| ((p.1 - lon0) * 111_320.0 * k) as f32).collect();
-                let y = pts.iter().map(|p| ((p.0 - lat0) * 110_540.0) as f32).collect();
+                let (x, y): (Vec<f32>, Vec<f32>) = pts.iter().map(|p| super::latlon_to_xy(p.0, p.1, origin)).unzip();
                 (Some(x), Some(y))
             }
             _ => (None, None),

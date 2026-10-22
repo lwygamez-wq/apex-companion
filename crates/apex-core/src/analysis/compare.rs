@@ -30,6 +30,8 @@ pub struct LapSummary {
     pub lap_time_s: Option<f64>,
     pub clean: bool,
     pub coverage: f32,
+    /// Pilote du tour quand il ne s'agit pas d'un tour du pilote (référence externe).
+    pub driver: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -225,6 +227,7 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
         lap_time_s: i.lap.lap_time_s,
         clean: i.lap.is_clean(),
         coverage: rs.coverage,
+        driver: None,
     };
     Ok(Comparison {
         step_m,

@@ -219,7 +219,7 @@ export function TelemetryCharts({ cmp, onCursor, simple = false, store }: { cmp:
     <div className="charts">
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
         <div className="legend">
-          <span><i style={{ background: REF }} />Référence (tour {cmp.reference.number})</span>
+          <span><i style={{ background: REF }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`})</span>
           <span><i style={{ background: CMP }} />Tour analysé ({cmp.compared.number})</span>
         </div>
         {missing.length > 0 && !simple && <span className="muted" style={{ fontSize: 12 }}>Canaux non disponibles : {missing.join(", ")}</span>}

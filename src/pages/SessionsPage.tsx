@@ -25,6 +25,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
     [sim, kind, track, car, from],
   );
   const list = useAsync(() => api.sessions(filter), [filter]);
+  const refs = useAsync(() => api.sessions({ external: true }), []);
   const uniq = (f: (s: SessionSummary) => string) => [...new Set((all.data ?? []).map(f))].sort();
 
   const [msg, setMsg] = useState<string | null>(null);
@@ -60,8 +61,30 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
     <>
       <div className="page-title"><h1>Sessions</h1></div>
       <div className="card" style={{ marginBottom: 14 }}>
-        <ImportActions onDone={() => (list.reload(), all.reload())} />
+        <ImportActions onDone={() => (list.reload(), all.reload(), refs.reload())} />
       </div>
+      {(refs.data?.length ?? 0) > 0 && (
+        <div className="card" style={{ marginBottom: 14, padding: 0 }}>
+          <h2 style={{ padding: "12px 14px 0" }}>Références d'autres pilotes</h2>
+          <table>
+            <thead><tr><th>Pilote</th><th>Circuit</th><th>Voiture</th><th className="num">Temps</th><th /></tr></thead>
+            <tbody>
+              {refs.data!.map((r) => (
+                <tr key={r.id}>
+                  <td><b>{r.external_driver}</b></td>
+                  <td>{r.track}{r.track_config ? <span className="muted">, {r.track_config}</span> : null}</td>
+                  <td>{r.car}</td>
+                  <td className="num">{lapTime(r.best_lap_s ?? null)}</td>
+                  <td><button className="btn danger" onClick={() => void api.deleteSession(r.id).then(() => refs.reload())}>Retirer</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="muted" style={{ padding: "8px 14px 12px", fontSize: 12 }}>
+            Ces tours servent de référence dans l'analyse de tes sessions sur le même circuit et la même voiture. Ils ne comptent pas dans tes statistiques.
+          </div>
+        </div>
+      )}
       <div className="row" style={{ marginBottom: 12 }}>
         <select value={sim} onChange={(e) => setSim(e.target.value as SimId | "")}>
           <option value="">Tous les simulateurs</option>
