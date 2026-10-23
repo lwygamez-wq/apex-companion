@@ -3,6 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AppSettings,
+  CircuitOverview,
+  HistoryLap,
+  SimId,
   AutoLogStatus,
   ExportSummary,
   GoalSuggestion,
@@ -53,6 +56,8 @@ export const api = {
   iracingAutolog: () => call<AutoLogStatus>("get_iracing_autolog"),
   setIracingAutolog: (enable: boolean) => call<AutoLogStatus>("set_iracing_autolog", { enable }),
   exportSession: (id: number, path: string) => call<ExportSummary>("export_session", { id, path }),
+  circuits: () => call<CircuitOverview[]>("list_circuits"),
+  lapHistory: (sim: SimId, track: string, trackConfig: string | null, car: string) => call<HistoryLap[]>("lap_history", { sim, track, trackConfig, car }),
   garage61Check: () => call<string>("garage61_check"),
   findGarage61ReferencesAll: () => call<string[]>("find_garage61_references_all"),
   findGarage61Reference: (sessionId: number) => call<string>("find_garage61_reference", { sessionId }),

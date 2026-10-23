@@ -377,3 +377,37 @@ export interface SessionFilter {
   /** true : uniquement les références externes. */
   external?: boolean;
 }
+
+export interface CircuitOverview {
+  sim: SimId;
+  track: string;
+  track_config: string | null;
+  car: string;
+  track_length_m: number | null;
+  sessions: number;
+  laps: number;
+  timed_laps: number;
+  clean_laps: number;
+  best_clean_s: number | null;
+  best_any_s: number | null;
+  first_unix: number;
+  last_unix: number;
+  corner_names: "exact" | "aligned" | "none";
+  external_reference: [string, number] | null;
+}
+
+export interface HistoryLap {
+  lap_id: number;
+  session_id: number;
+  session_kind: SessionKind;
+  started_at_unix: number;
+  number: number;
+  kind: LapKind;
+  lap_time_s: number | null;
+  clean: boolean;
+  off_track: boolean;
+  incident: boolean;
+  is_reference: boolean;
+  delta_to_best_s: number | null;
+  personal_best_at_time: boolean;
+}

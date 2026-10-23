@@ -57,6 +57,8 @@ pub fn run() {
             commands::export_session,
             commands::export_to_mobile,
             commands::garage61_check,
+            commands::list_circuits,
+            commands::lap_history,
             commands::find_garage61_reference,
             commands::find_garage61_references_all,
             commands::set_corner_name,

@@ -207,6 +207,16 @@ impl Store {
         {
             return Ok(InsertOutcome::Duplicate(id));
         }
+        // Même fichier déjà importé (empreinte différente : ancienne version du décodeur) : pas de doublon.
+        if let Some(path) = &s.meta.source_path {
+            if let Some(id) = self
+                .conn
+                .query_row("SELECT id FROM sessions WHERE source_path = ?1 AND external_driver IS NULL AND sim = ?2", params![path, s.meta.sim.as_str()], |r| r.get(0))
+                .optional()?
+            {
+                return Ok(InsertOutcome::Duplicate(id));
+            }
+        }
         for l in &s.laps {
             l.trace.validate().map_err(|e| StoreError::Invalid(format!("tour {} : {e}", l.meta.number)))?;
         }
@@ -465,6 +475,51 @@ impl Store {
     }
 
     /// Taille et date du fichier lors de son dernier traitement par la synchro.
+    /// Taille, date et erreur éventuelle du dernier traitement d'un fichier par la synchro.
+    pub fn file_record(&self, path: &str) -> Result<Option<(i64, i64, Option<String>)>, StoreError> {
+        Ok(self
+            .conn
+            .query_row("SELECT size, mtime, error FROM imported_files WHERE path = ?1", [path], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .optional()?)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn conn_for_tests(&self) -> &Connection {
+        &self.conn
+    }
+
+    /// Supprime les sessions importées plusieurs fois depuis le même fichier (empreinte modifiée par une
+    /// ancienne version du décodeur). Garde la plus ancienne ; la référence personnelle est reportée.
+    /// Renvoie le nombre de doublons supprimés.
+    pub fn dedupe_sessions(&mut self) -> Result<usize, StoreError> {
+        let groups: Vec<(String, String)> = {
+            let mut st = self.conn.prepare(
+                "SELECT source_path, GROUP_CONCAT(id) FROM sessions WHERE source_path IS NOT NULL AND external_driver IS NULL
+                 GROUP BY source_path HAVING COUNT(*) > 1",
+            )?;
+            let v = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+            v
+        };
+        let mut removed = 0;
+        for (_, ids) in groups {
+            let mut ids: Vec<i64> = ids.split(',').filter_map(|x| x.parse().ok()).collect();
+            ids.sort_unstable();
+            let keep = ids[0];
+            let tx = self.conn.transaction()?;
+            for dup in &ids[1..] {
+                tx.execute(
+                    "UPDATE laps SET is_reference = 1 WHERE session_id = ?1 AND number IN (SELECT number FROM laps WHERE session_id = ?2 AND is_reference = 1)",
+                    params![keep, dup],
+                )?;
+                tx.execute("UPDATE imported_files SET session_id = ?1 WHERE session_id = ?2", params![keep, dup])?;
+                tx.execute("DELETE FROM sessions WHERE id = ?1", [dup])?;
+                removed += 1;
+            }
+            tx.commit()?;
+        }
+        Ok(removed)
+    }
+
     pub fn file_state(&self, path: &str) -> Result<Option<(i64, i64)>, StoreError> {
         Ok(self
             .conn

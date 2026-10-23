@@ -4,6 +4,7 @@ import { StatusBadge } from "./components/StatusBadge";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { isTauri } from "./lib/api";
 import { useStatus } from "./lib/hooks";
+import { HistoryPage } from "./pages/HistoryPage";
 import { ComparisonPage } from "./pages/ComparisonPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LapAnalysisPage } from "./pages/LapAnalysisPage";
@@ -16,6 +17,7 @@ export type Route =
   | { page: "sessions" }
   | { page: "analysis"; sessionId?: number; refLapId?: number; cmpLapId?: number }
   | { page: "comparison" }
+  | { page: "history" }
   | { page: "live" }
   | { page: "settings" };
 
@@ -23,6 +25,7 @@ const NAV: { page: Route["page"]; label: string }[] = [
   { page: "dashboard", label: "Tableau de bord" },
   { page: "sessions", label: "Sessions" },
   { page: "analysis", label: "Analyse de tour" },
+  { page: "history", label: "Historique" },
   { page: "comparison", label: "Comparaison" },
   { page: "live", label: "Live Coach" },
   { page: "settings", label: "Réglages" },
@@ -57,6 +60,7 @@ export function App() {
         {route.page === "sessions" && <SessionsPage navigate={setRoute} />}
         {route.page === "analysis" && <LapAnalysisPage route={route} navigate={setRoute} />}
         {route.page === "comparison" && <ComparisonPage navigate={setRoute} />}
+        {route.page === "history" && <HistoryPage navigate={setRoute} />}
         {route.page === "live" && <LiveCoachPage status={status} />}
         {route.page === "settings" && <SettingsPage />}
       </main>

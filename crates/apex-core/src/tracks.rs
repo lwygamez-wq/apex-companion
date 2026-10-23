@@ -602,6 +602,12 @@ pub fn aligned_corner_names(m: &SessionMeta, reference: &crate::model::LapTrace)
         .collect()
 }
 
+/// Le circuit a-t-il une géométrie publique intégrée (noms placés par alignement) ?
+pub fn has_geometry(m: &SessionMeta) -> bool {
+    let track = fold(&m.track);
+    SEQ_TRACKS.iter().any(|t| t.name_contains.iter().any(|n| track.contains(n)))
+}
+
 /// Noms à appliquer pour une session : relevé exact s'il existe, sinon alignement sur la géométrie
 /// publique (calculé sur `reference`), puis noms du pilote par-dessus.
 pub fn corner_names_for(m: &SessionMeta, reference: Option<&crate::model::LapTrace>, user: Vec<(f32, String)>) -> Vec<(f32, String)> {

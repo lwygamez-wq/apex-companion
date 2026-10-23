@@ -208,3 +208,18 @@ td.num, th.num { text-align: right; }
 .risk-bar i { display: block; height: 100%; background: #ff5a4e; }
 .risk-msg { margin-top: 6px; font-size: 13px; color: #e6e6ee; line-height: 1.4; }
 @media (max-width: 1250px) { .grid.cols-2 { grid-template-columns: 1fr; } }
+
+/* Historique */
+.history { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 14px; align-items: start; }
+.history-list { display: flex; flex-direction: column; gap: 6px; position: sticky; top: 0; }
+.history-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; background: var(--panel); border: 0; border-left: 3px solid transparent; border-radius: var(--radius); padding: 10px 12px; color: var(--text); cursor: pointer; }
+.history-item:hover { background: var(--panel-2); }
+.history-item.on { border-left-color: var(--red); background: var(--panel-2); }
+.history-item b { font-style: italic; font-size: 14px; }
+.history-item .muted { font-size: 12px; }
+.history-item-row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; gap: 8px; margin-top: 4px; }
+.history-kpi { font-size: 18px; }
+.history-chart { width: 100%; height: auto; display: block; margin: 6px 0; }
+.history-time { font-variant-numeric: tabular-nums; font-weight: 700; }
+.history-time.kpi { font-size: 15px; }
+@media (max-width: 1100px) { .history { grid-template-columns: 1fr; } .history-list { position: static; } }

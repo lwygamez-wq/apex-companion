@@ -134,6 +134,16 @@ pub async fn export_session(state: State<'_, AppState>, id: i64, path: String) -
 }
 
 #[tauri::command]
+pub async fn list_circuits(state: State<'_, AppState>) -> R<Vec<apex_core::service::CircuitOverview>> {
+    blocking(state.svc.clone(), |s| s.circuits()).await
+}
+
+#[tauri::command]
+pub async fn lap_history(state: State<'_, AppState>, sim: apex_core::model::SimId, track: String, track_config: Option<String>, car: String) -> R<Vec<apex_core::service::HistoryLap>> {
+    blocking(state.svc.clone(), move |s| s.lap_history(sim, &track, track_config.as_deref(), &car)).await
+}
+
+#[tauri::command]
 pub async fn garage61_check(state: State<'_, AppState>) -> R<String> {
     blocking(state.svc.clone(), |s| s.garage61_check()).await
 }

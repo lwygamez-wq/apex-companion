@@ -87,6 +87,49 @@ impl Default for AppSettings {
     }
 }
 
+/// Un circuit roulé (circuit + configuration + voiture), vu sur tout l'historique.
+#[derive(Debug, Clone, Serialize)]
+pub struct CircuitOverview {
+    pub sim: SimId,
+    pub track: String,
+    pub track_config: Option<String>,
+    pub car: String,
+    pub track_length_m: Option<f32>,
+    pub sessions: usize,
+    pub laps: usize,
+    /// Tours lancés complets (valides ou non).
+    pub timed_laps: usize,
+    pub clean_laps: usize,
+    pub best_clean_s: Option<f64>,
+    pub best_any_s: Option<f64>,
+    pub first_unix: i64,
+    pub last_unix: i64,
+    /// Noms de virages : "exact" (relevé), "aligned" (géométrie publique), "none".
+    pub corner_names: String,
+    /// Référence externe (pilote, temps) si une est importée pour ce circuit et cette voiture.
+    pub external_reference: Option<(String, f64)>,
+}
+
+/// Un tour de l'historique d'un circuit.
+#[derive(Debug, Clone, Serialize)]
+pub struct HistoryLap {
+    pub lap_id: i64,
+    pub session_id: i64,
+    pub session_kind: SessionKind,
+    pub started_at_unix: i64,
+    pub number: i32,
+    pub kind: LapKind,
+    pub lap_time_s: Option<f64>,
+    pub clean: bool,
+    pub off_track: bool,
+    pub incident: bool,
+    pub is_reference: bool,
+    /// Écart au meilleur tour propre du circuit (s).
+    pub delta_to_best_s: Option<f64>,
+    /// Ce tour était le meilleur tour propre au moment où il a été roulé (progression).
+    pub personal_best_at_time: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct ExternalImportReport {
     pub file: String,
@@ -214,7 +257,10 @@ pub struct AppService {
     /// Catalogue Garage 61 (circuits, voitures), chargé une fois par lancement.
     g61_catalog: Mutex<Option<(Vec<crate::garage61_api::G61Track>, Vec<crate::garage61_api::G61Car>)>>,
     /// Dernière carte de risque calculée : (clé combo + nb de tours + référence, résultat).
-    risk_cache: Mutex<Option<(String, Vec<crate::analysis::risk::CornerRisk>)>>,
+    risk_cache: Mutex<Option<(String, Vec<crate::analysis::risk::CornerRisk>, crate::analysis::risk::RiskTotals)>>,
+    /// Fichiers en erreur déjà réessayés pendant ce lancement (on retente une fois par lancement,
+    /// et à chaque passage si l'erreur est passagère : fichier verrouillé par un autre programme).
+    retried: Mutex<std::collections::HashSet<String>>,
 }
 
 const SETTINGS_KEY: &str = "app_settings";
@@ -339,11 +385,40 @@ impl AppService {
         if let Some(dir) = db.parent() {
             std::fs::create_dir_all(dir).map_err(|e| ServiceError::User(format!("dossier de données : {e}")))?;
         }
-        Ok(Self { store: Mutex::new(Store::open(db)?), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None) })
+        let mut store = Store::open(db)?;
+        match store.dedupe_sessions() {
+            Ok(n) if n > 0 => log::info!("{n} session(s) en double supprimée(s)"),
+            Ok(_) => {}
+            Err(e) => log::warn!("dédoublonnage des sessions : {e}"),
+        }
+        Ok(Self { store: Mutex::new(store), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None), retried: Mutex::new(Default::default()) })
     }
 
     pub fn in_memory() -> Result<Self> {
-        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None) })
+        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None), retried: Mutex::new(Default::default()) })
+    }
+
+    /// Faut-il (re)traiter ce fichier ? Nouveau ou modifié : oui. Déjà traité sans erreur : non.
+    /// En erreur : une fois par lancement, ou à chaque passage si l'erreur est passagère.
+    fn should_process(&self, key: &str, size: i64, mtime: i64) -> Result<bool> {
+        let mark = || self.retried.lock().unwrap_or_else(|p| p.into_inner()).insert(key.to_string());
+        match self.db().file_record(key)? {
+            None => {
+                mark();
+                Ok(true)
+            }
+            Some((s, m, _)) if (s, m) != (size, mtime) => {
+                mark();
+                Ok(true)
+            }
+            Some((_, _, None)) => Ok(false),
+            Some((_, _, Some(err))) => {
+                let transient = err.contains("os error 32") || err.contains("os error 33") || err.contains("utilisé par un autre processus");
+                // Déjà tenté pendant ce lancement : on ne réessaie que si l'erreur est passagère.
+                let first_retry = mark();
+                Ok(transient || first_retry)
+            }
+        }
     }
 
     fn db(&self) -> std::sync::MutexGuard<'_, Store> {
@@ -693,7 +768,7 @@ impl AppService {
             let size = meta.len() as i64;
             let mtime = meta.modified().ok().and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0);
             let key = p.to_string_lossy().into_owned();
-            if self.db().file_state(&key)? == Some((size, mtime)) {
+            if !self.should_process(&key, size, mtime)? {
                 continue;
             }
             let (sid, err) = match self.import_garage61(&p) {
@@ -707,6 +782,120 @@ impl AppService {
                 }
             };
             self.db().record_file(&key, size, mtime, sid, err.as_deref())?;
+        }
+        Ok(out)
+    }
+
+    /// Tous les circuits roulés (circuit + configuration + voiture), du plus récent au plus ancien.
+    pub fn circuits(&self) -> Result<Vec<CircuitOverview>> {
+        let sessions = self.list_sessions(&SessionFilter::default())?;
+        let externals = self.list_sessions(&SessionFilter { external: Some(true), ..Default::default() })?;
+        let mut map: std::collections::BTreeMap<(String, String, Option<String>, String), Vec<&SessionSummary>> = Default::default();
+        for s in &sessions {
+            map.entry((s.sim.as_str().to_string(), s.track.clone(), s.track_config.clone(), s.car.clone())).or_default().push(s);
+        }
+        let db = self.db();
+        let mut out = vec![];
+        for ((_, track, config, car), ss) in map {
+            let first = ss[0];
+            let meta = db.session_meta(first.id)?;
+            let mut laps = 0;
+            let mut timed = 0;
+            let mut clean = 0;
+            let mut best_clean: Option<f64> = None;
+            let mut best_any: Option<f64> = None;
+            for s in &ss {
+                for l in db.laps(s.id)? {
+                    laps += 1;
+                    if l.meta.kind == LapKind::Flying {
+                        if let Some(t) = l.meta.lap_time_s {
+                            timed += 1;
+                            best_any = Some(best_any.map_or(t, |b| b.min(t)));
+                            if l.clean {
+                                clean += 1;
+                                best_clean = Some(best_clean.map_or(t, |b| b.min(t)));
+                            }
+                        }
+                    }
+                }
+            }
+            let names = if !crate::tracks::builtin_corner_names(&meta).is_empty() {
+                "exact"
+            } else if crate::tracks::has_geometry(&meta) {
+                "aligned"
+            } else {
+                "none"
+            };
+            let ext = externals
+                .iter()
+                .filter(|e| e.sim == first.sim && e.track == track && e.track_config == config && e.car == car)
+                .filter_map(|e| Some((e.external_driver.clone()?, e.best_lap_s?)))
+                .min_by(|a, b| a.1.total_cmp(&b.1));
+            out.push(CircuitOverview {
+                sim: first.sim,
+                track,
+                track_config: config,
+                car,
+                track_length_m: meta.track_length_m,
+                sessions: ss.len(),
+                laps,
+                timed_laps: timed,
+                clean_laps: clean,
+                best_clean_s: best_clean,
+                best_any_s: best_any,
+                first_unix: ss.iter().map(|s| s.started_at_unix).min().unwrap_or(0),
+                last_unix: ss.iter().map(|s| s.started_at_unix).max().unwrap_or(0),
+                corner_names: names.into(),
+                external_reference: ext,
+            });
+        }
+        out.sort_by_key(|c| std::cmp::Reverse(c.last_unix));
+        Ok(out)
+    }
+
+    /// Tous les tours d'un circuit (circuit + configuration + voiture), du plus ancien au plus récent.
+    pub fn lap_history(&self, sim: SimId, track: &str, track_config: Option<&str>, car: &str) -> Result<Vec<HistoryLap>> {
+        let mut sessions: Vec<SessionSummary> = self
+            .list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), car: Some(car.to_string()), ..Default::default() })?
+            .into_iter()
+            .filter(|s| s.track_config.as_deref() == track_config)
+            .collect();
+        sessions.sort_by_key(|s| s.started_at_unix);
+        let db = self.db();
+        let mut out = vec![];
+        for s in &sessions {
+            for l in db.laps(s.id)? {
+                out.push(HistoryLap {
+                    lap_id: l.id,
+                    session_id: s.id,
+                    session_kind: s.kind,
+                    started_at_unix: s.started_at_unix,
+                    number: l.meta.number,
+                    kind: l.meta.kind,
+                    lap_time_s: l.meta.lap_time_s,
+                    clean: l.clean,
+                    off_track: l.meta.flags.off_track,
+                    incident: l.meta.flags.incident,
+                    is_reference: l.is_reference,
+                    delta_to_best_s: None,
+                    personal_best_at_time: false,
+                });
+            }
+        }
+        let best = out.iter().filter(|l| l.clean && l.kind == LapKind::Flying).filter_map(|l| l.lap_time_s).fold(f64::INFINITY, f64::min);
+        let mut running = f64::INFINITY;
+        for l in &mut out {
+            if l.kind == LapKind::Flying {
+                if let Some(t) = l.lap_time_s {
+                    if best.is_finite() {
+                        l.delta_to_best_s = Some(t - best);
+                    }
+                    if l.clean && t < running {
+                        running = t;
+                        l.personal_best_at_time = true;
+                    }
+                }
+            }
         }
         Ok(out)
     }
@@ -762,7 +951,7 @@ impl AppService {
                 rep.pending += 1;
                 continue;
             }
-            if self.db().file_state(&key)? == Some((size, mtime)) {
+            if !self.should_process(&key, size, mtime)? {
                 continue;
             }
             let r = self.import_paths(std::slice::from_ref(&p)).remove(0);
@@ -897,15 +1086,15 @@ impl AppService {
             crate::analysis::offtrack::off_track_zones(&spans, &corners)
         };
         // Carte de risque : tous tes tours lancés sur ce circuit et cette voiture, toutes sessions confondues.
-        let risk = match (length, windows.is_empty()) {
+        let (risk, totals) = match (length, windows.is_empty()) {
             (Some(len), false) => {
                 let combo = db.list_sessions(&SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() })?;
                 let combo: Vec<&SessionSummary> = combo.iter().filter(|s| s.track_config == meta.track_config).collect();
                 let n_laps: usize = combo.iter().map(|s| s.lap_count).sum();
                 let key = format!("{}|{}|{}|{:?}", track_key(&meta), meta.car, n_laps, analysis_ref);
-                let cached = self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()).as_ref().filter(|(k, _)| *k == key).map(|(_, r)| r.clone());
+                let cached = self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()).as_ref().filter(|(k, _, _)| *k == key).map(|(_, r, t)| (r.clone(), *t));
                 match cached {
-                    Some(r) => r,
+                    Some(v) => v,
                     None => {
                         let mut traces: Vec<(i64, LapTrace)> = vec![];
                         for s in &combo {
@@ -919,14 +1108,15 @@ impl AppService {
                         }
                         let rl: Vec<crate::analysis::risk::RiskLap> = traces.iter().map(|(sid, t)| crate::analysis::risk::RiskLap { session_id: *sid, trace: t }).collect();
                         let r = crate::analysis::risk::corner_risk(&windows, &rl, len);
-                        *self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()) = Some((key, r.clone()));
-                        r
+                        let t = crate::analysis::risk::lap_totals(&rl);
+                        *self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()) = Some((key, r.clone(), t));
+                        (r, t)
                     }
                 }
             }
-            _ => vec![],
+            _ => (vec![], Default::default()),
         };
-        let risk_headline = crate::analysis::risk::risk_headline(&risk);
+        let risk_headline = crate::analysis::risk::risk_headline(&risk, totals);
         let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
             Some(p) => {
                 let l = db.lap(p)?;
@@ -1390,6 +1580,47 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_sessions_from_same_file_are_merged() {
+        let mut st = Store::open_in_memory().unwrap();
+        let mut s = demo_session(3, 1_760_000_000);
+        s.meta.sim = SimId::Iracing;
+        s.meta.source_path = Some("C:/telemetry/a.ibt".into());
+        let InsertOutcome::Inserted(a) = st.insert_session(&s).unwrap() else { panic!() };
+        // Même fichier, empreinte différente (ancienne version du décodeur) : refusé comme doublon.
+        let mut s2 = s.clone();
+        s2.meta.source_fingerprint = "autre".into();
+        assert_eq!(st.insert_session(&s2).unwrap(), InsertOutcome::Duplicate(a));
+        // Doublon déjà présent en base (cas réel : sessions 1/7, 2/8… d'Interlagos) : fusionné au démarrage.
+        st.conn_for_tests().execute("UPDATE sessions SET source_path = 'x' WHERE id = ?1", [a]).unwrap();
+        let InsertOutcome::Inserted(b) = st.insert_session(&s2).unwrap() else { panic!() };
+        st.conn_for_tests().execute("UPDATE sessions SET source_path = 'C:/telemetry/a.ibt' WHERE id = ?1", [a]).unwrap();
+        let lap = st.laps(b).unwrap()[2].id;
+        st.set_reference(lap).unwrap();
+        assert_eq!(st.dedupe_sessions().unwrap(), 1);
+        assert!(st.session_meta(b).is_err());
+        assert!(st.laps(a).unwrap()[2].is_reference, "la référence est reportée sur la session gardée");
+    }
+
+    #[test]
+    fn history_and_circuits_overview() {
+        let svc = AppService::in_memory().unwrap();
+        svc.load_demo().unwrap();
+        svc.load_demo().unwrap();
+        let c = svc.circuits().unwrap();
+        assert_eq!(c.len(), 1);
+        assert_eq!(c[0].sessions, 2);
+        let h = svc.lap_history(c[0].sim, &c[0].track, c[0].track_config.as_deref(), &c[0].car).unwrap();
+        assert_eq!(h.len(), c[0].laps);
+        let best = h.iter().filter(|l| l.clean && l.lap_time_s.is_some()).map(|l| l.lap_time_s.unwrap()).fold(f64::INFINITY, f64::min);
+        assert!((c[0].best_clean_s.unwrap() - best).abs() < 1e-9);
+        assert!(h.iter().any(|l| l.personal_best_at_time));
+        assert!(h.iter().filter(|l| l.clean).all(|l| l.delta_to_best_s.unwrap() >= -1e-9));
+        // Records successifs strictement décroissants.
+        let pbs: Vec<f64> = h.iter().filter(|l| l.personal_best_at_time).map(|l| l.lap_time_s.unwrap()).collect();
+        assert!(pbs.windows(2).all(|w| w[1] < w[0]));
+    }
+
+    #[test]
     fn risk_map_aggregates_all_sessions_of_the_combo() {
         let svc = AppService::in_memory().unwrap();
         let InsertOutcome::Inserted(a) = svc.load_demo().unwrap() else { panic!() };
@@ -1491,6 +1722,18 @@ mod tests {
         let r = svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap();
         assert_eq!(r, SyncReport::default());
         assert_eq!(svc.list_sessions(&SessionFilter::default()).unwrap().len(), 1);
+        // Nouveau lancement (mémoire des essais vidée) : le fichier en erreur est retenté une fois, le bon non.
+        svc.retried.lock().unwrap().clear();
+        let r = svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap();
+        assert_eq!((r.imported, r.errors.len()), (0, 1));
+        assert_eq!(svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap(), SyncReport::default());
+        // Erreur passagère (fichier verrouillé par un autre programme, cas réel du 22/10) : retentée à chaque passage.
+        let key = dir.path().join("casse.ibt").to_string_lossy().into_owned();
+        let meta = std::fs::metadata(dir.path().join("casse.ibt")).unwrap();
+        let mtime = meta.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+        svc.db().record_file(&key, meta.len() as i64, mtime, None, Some("import : lecture fichier : (os error 32)")).unwrap();
+        assert!(svc.should_process(&key, meta.len() as i64, mtime).unwrap());
+        assert!(svc.should_process(&key, meta.len() as i64, mtime).unwrap());
     }
 
     #[test]
