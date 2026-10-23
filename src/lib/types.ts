@@ -447,6 +447,8 @@ export interface AppSettings {
   coach_callouts: boolean;
   /** Bips de freinage sur le virage du focus. */
   coach_brake_beeps: boolean;
+  azure_tts_key: string | null;
+  azure_tts_region: string | null;
   /** Commandes vocales au volant. */
   voice_commands: boolean;
   ptt_binding: PttBinding | null;

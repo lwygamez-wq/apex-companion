@@ -254,3 +254,5 @@ td.num, th.num { text-align: right; }
 .radio-msg.callout { border-left-color: var(--yellow); }
 .plan { border-left: 4px solid var(--green); }
 .plan-list { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.azure-box { margin-top: 10px; background: var(--panel-2); border-radius: var(--radius); padding: 8px 10px; }
+.azure-box summary { cursor: pointer; font-weight: 700; }

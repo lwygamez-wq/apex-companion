@@ -63,6 +63,7 @@ npm run tauri build
 - **Aucune donnée de conduite n'est envoyée.** Connexions sortantes, toutes déclenchées par l'application elle-même :
   - mises à jour : lecture de `latest.json` sur GitHub (désactivable dans Réglages) ;
   - Garage 61, seulement si tu saisis un jeton : recherche de tours de référence et de tes propres sessions (critères envoyés : circuit, voiture) ;
+  - voix Azure, seulement si tu saisis une clé Azure AI Speech : le texte des messages radio est envoyé à Azure pour être prononcé (rien d'autre) ;
   - téléchargements à la demande, une seule fois : moteur vocal Piper (GitHub), voix françaises (Hugging Face), reconnaissance vocale Vosk (GitHub) et son modèle français (alphacephei.com).
 - Le micro n'est ouvert que pendant l'appui sur le bouton radio ; l'audio est analysé sur le PC puis jeté.
 - Le CSP bloque toute connexion sortante de l'interface. Réglages → export JSON complet, suppression totale des données, diagnostic sans données personnelles.

@@ -69,6 +69,9 @@ pub struct AppSettings {
     /// Annonce courte juste avant le virage du focus.
     #[serde(default = "default_true")]
     pub coach_callouts: bool,
+    /// Clé et région de la ressource Azure AI Speech (voix en ligne Azure).
+    pub azure_tts_key: Option<String>,
+    pub azure_tts_region: Option<String>,
     /// Bips de freinage sur le virage du focus (point de freinage de la référence).
     #[serde(default = "default_true")]
     pub coach_brake_beeps: bool,
@@ -115,6 +118,8 @@ impl Default for AppSettings {
             coach_volume: default_volume(),
             coach_callouts: true,
             coach_brake_beeps: true,
+            azure_tts_key: None,
+            azure_tts_region: None,
             voice_commands: false,
             ptt_binding: None,
         }
@@ -417,6 +422,8 @@ pub struct AppService {
     keep_dir: Option<PathBuf>,
     /// Voix naturelles du coach (moteur et voix téléchargés à la demande).
     tts: Option<crate::tts::Tts>,
+    /// Messages déjà synthétisés par Azure (voix|texte → WAV).
+    tts_cache: Mutex<std::collections::HashMap<String, Vec<u8>>>,
     /// Reconnaissance des commandes vocales (téléchargée à la demande).
     voice: Option<crate::voice_cmd::VoiceRecognizer>,
     /// Fichiers déjà gardés (ou déjà importés) pendant ce lancement : évite de retoucher la base à chaque tour de boucle.
@@ -575,6 +582,7 @@ impl AppService {
             retried: Mutex::new(Default::default()),
             keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
             tts: db.parent().map(|d| crate::tts::Tts::new(d.join("voix"))),
+            tts_cache: Mutex::new(Default::default()),
             voice: db.parent().map(|d| crate::voice_cmd::VoiceRecognizer::new(d.join("voix"))),
             guarded: Mutex::new(Default::default()),
         })
@@ -589,6 +597,7 @@ impl AppService {
             retried: Mutex::new(Default::default()),
             keep_dir: None,
             tts: None,
+            tts_cache: Mutex::new(Default::default()),
             voice: None,
             guarded: Mutex::new(Default::default()),
         })
@@ -1543,7 +1552,13 @@ impl AppService {
 
     /// Voix naturelles disponibles : (identifiant, libellé, installée).
     pub fn tts_voices(&self) -> Vec<(String, String, bool)> {
-        crate::tts::VOICES.iter().map(|v| (v.id.to_string(), v.label.to_string(), self.tts.as_ref().is_some_and(|t| t.installed(v.id)))).collect()
+        let st = self.settings();
+        let azure_ready = st.azure_tts_key.as_deref().is_some_and(|k| !k.trim().is_empty()) && st.azure_tts_region.as_deref().is_some_and(|r| !r.trim().is_empty());
+        crate::tts::AZURE_VOICES
+            .iter()
+            .map(|(id, _, label)| (id.to_string(), label.to_string(), azure_ready))
+            .chain(crate::tts::VOICES.iter().map(|v| (v.id.to_string(), v.label.to_string(), self.tts.as_ref().is_some_and(|t| t.installed(v.id)))))
+            .collect()
     }
 
     /// Télécharge le moteur vocal et la voix si besoin.
@@ -1554,6 +1569,21 @@ impl AppService {
 
     /// Message prononcé par une voix naturelle (fichier WAV).
     pub fn tts_speak(&self, id: &str, text: &str) -> Result<Vec<u8>> {
+        if let Some((_, name, _)) = crate::tts::AZURE_VOICES.iter().find(|v| v.0 == id) {
+            // Les phrases reviennent souvent (« Toujours virage 19… ») : cache en mémoire, quota préservé.
+            let key = format!("{id}|{text}");
+            if let Some(w) = self.tts_cache.lock().unwrap_or_else(|p| p.into_inner()).get(&key) {
+                return Ok(w.clone());
+            }
+            let st = self.settings();
+            let wav = crate::tts::azure_synthesize(st.azure_tts_key.as_deref().unwrap_or(""), st.azure_tts_region.as_deref().unwrap_or(""), name, text).map_err(|e| ServiceError::User(e.to_string()))?;
+            let mut c = self.tts_cache.lock().unwrap_or_else(|p| p.into_inner());
+            if c.len() > 300 {
+                c.clear();
+            }
+            c.insert(key, wav.clone());
+            return Ok(wav);
+        }
         let t = self.tts.as_ref().ok_or_else(|| ServiceError::User("voix naturelles indisponibles".into()))?;
         t.synthesize(id, text).map_err(|e| ServiceError::User(e.to_string()))
     }

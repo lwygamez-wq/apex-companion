@@ -177,6 +177,52 @@ impl Tts {
     }
 }
 
+/// Voix neuronales Azure (en ligne, très naturelles) : (identifiant dans l'app, nom Azure, libellé).
+pub const AZURE_VOICES: &[(&str, &str, &str)] = &[
+    ("azure:fr-FR-RemyMultilingualNeural", "fr-FR-RemyMultilingualNeural", "Rémy (homme, Azure)"),
+    ("azure:fr-FR-HenriNeural", "fr-FR-HenriNeural", "Henri (homme, Azure)"),
+    ("azure:fr-FR-VivienneMultilingualNeural", "fr-FR-VivienneMultilingualNeural", "Vivienne (femme, Azure)"),
+    ("azure:fr-FR-DeniseNeural", "fr-FR-DeniseNeural", "Denise (femme, Azure)"),
+];
+
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&apos;")
+}
+
+/// Document SSML d'un message radio (débit un peu plus vif qu'en lecture).
+pub fn azure_ssml(voice: &str, text: &str) -> String {
+    format!(
+        "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='fr-FR'><voice name='{}'><prosody rate='+8%'>{}</prosody></voice></speak>",
+        xml_escape(voice),
+        xml_escape(text)
+    )
+}
+
+/// Synthèse par le service Azure AI Speech (clé et région de la ressource Speech de l'utilisateur).
+pub fn azure_synthesize(key: &str, region: &str, voice: &str, text: &str) -> Result<Vec<u8>, TtsError> {
+    let region: String = region.trim().to_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+    if region.is_empty() || key.trim().is_empty() {
+        return Err(TtsError::Synth("clé ou région Azure manquante".into()));
+    }
+    let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(std::time::Duration::from_secs(10))).build().into();
+    let url = format!("https://{region}.tts.speech.microsoft.com/cognitiveservices/v1");
+    let r = agent
+        .post(&url)
+        .header("Ocp-Apim-Subscription-Key", key.trim())
+        .header("Content-Type", "application/ssml+xml")
+        .header("X-Microsoft-OutputFormat", "riff-24khz-16bit-mono-pcm")
+        .header("User-Agent", "apex-companion")
+        .send(azure_ssml(voice, text).as_bytes());
+    let mut resp = match r {
+        Ok(r) => r,
+        Err(ureq::Error::StatusCode(401)) => return Err(TtsError::Synth("clé Azure refusée : vérifie la clé et la région de ta ressource Speech".into())),
+        Err(ureq::Error::StatusCode(429)) => return Err(TtsError::Synth("quota Azure atteint pour le moment".into())),
+        Err(ureq::Error::StatusCode(c)) => return Err(TtsError::Synth(format!("Azure a répondu {c}"))),
+        Err(e) => return Err(TtsError::Download(e.to_string())),
+    };
+    resp.body_mut().with_config().limit(20 * 1024 * 1024).read_to_vec().map_err(|e| TtsError::Download(e.to_string()))
+}
+
 /// Extraction d'une archive .zip avec tar.exe, fourni par Windows depuis Windows 10.
 pub fn extract_zip(zip: &Path, dest: &Path) -> Result<(), TtsError> {
     let mut cmd = std::process::Command::new("tar");
@@ -205,6 +251,15 @@ fn no_window(cmd: &mut std::process::Command) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn azure_request_is_safe_xml() {
+        let x = azure_ssml("fr-FR-HenriNeural", "Virage 16 : freine <10> mètres & \"plus\" tard");
+        assert!(x.contains("<voice name='fr-FR-HenriNeural'>"));
+        assert!(x.contains("freine &lt;10&gt; mètres &amp; &quot;plus&quot; tard"));
+        assert!(AZURE_VOICES.iter().all(|v| v.0 == format!("azure:{}", v.1)));
+        assert!(azure_synthesize("", "francecentral", "fr-FR-HenriNeural", "x").is_err());
+    }
 
     #[test]
     fn catalog_and_command_line() {

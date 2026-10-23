@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { delta, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
@@ -40,7 +40,41 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
       setBusy(e instanceof Error ? e.message : String(e));
     }
   };
+  const [azKey, setAzKey] = useState("");
+  const [azRegion, setAzRegion] = useState("francecentral");
+  useEffect(() => {
+    api.settings().then((s) => {
+      setAzKey(s.azure_tts_key ?? "");
+      setAzRegion(s.azure_tts_region ?? "francecentral");
+    }).catch(() => undefined);
+  }, []);
+  const saveAzure = async () => {
+    try {
+      const s = await api.settings();
+      await api.saveSettings({ ...s, azure_tts_key: azKey.trim() || null, azure_tts_region: azRegion });
+      voices.reload();
+      setBusy("Clé Azure enregistrée. Choisis une voix Azure puis « Tester la voix ».");
+    } catch (e) {
+      setBusy(e instanceof Error ? e.message : String(e));
+    }
+  };
   const test = async () => {
+    if (sel.startsWith("azure:")) {
+      if (!voices.data?.find((v) => v.id === sel)?.installed) {
+        setBusy("Saisis d'abord ta clé et ta région Azure ci-dessous.");
+        return;
+      }
+      setBusy(null);
+      try {
+        const wav = await api.ttsSpeak(sel, SAMPLE);
+        const a = new Audio(URL.createObjectURL(new Blob([wav], { type: "audio/wav" })));
+        a.volume = coachVolume() / 100;
+        await a.play();
+      } catch (e) {
+        setBusy(e instanceof Error ? e.message : String(e));
+      }
+      return;
+    }
     if (sel !== "windows" && !voices.data?.find((v) => v.id === sel)?.installed) {
       setBusy("Téléchargement de la voix (environ 80 Mo la première fois)…");
       try {
@@ -84,7 +118,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
                 <label key={v.id} className={`voice-opt ${sel === v.id ? "on" : ""}`}>
                   <input type="radio" name="voice" checked={sel === v.id} onChange={() => void choose(v.id)} />
                   <span>{v.label}</span>
-                  <span className="muted" style={{ fontSize: 12 }}>{v.id === "windows" ? (winVoice ?? "voix par défaut") : v.installed ? "installée" : "naturelle · à télécharger"}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>{v.id === "windows" ? (winVoice ?? "voix par défaut") : v.id.startsWith("azure:") ? (v.installed ? "en ligne, prête" : "en ligne · clé Azure requise") : v.installed ? "installée" : "hors ligne · à télécharger"}</span>
                 </label>
               ))}
             </div>
@@ -107,7 +141,20 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               />
               <span className="mono" style={{ width: 44, textAlign: "right" }}>{vol} %</span>
             </div>
-            <button className="btn primary" onClick={() => void test()} style={{ marginTop: 8 }}>{sel !== "windows" && !voices.data?.find((v) => v.id === sel)?.installed ? "Télécharger et tester" : "Tester la voix"}</button>
+            <button className="btn primary" onClick={() => void test()} style={{ marginTop: 8 }}>{sel !== "windows" && !sel.startsWith("azure:") && !voices.data?.find((v) => v.id === sel)?.installed ? "Télécharger et tester" : "Tester la voix"}</button>
+            <details className="azure-box" open={sel.startsWith("azure:") && !voices.data?.find((v) => v.id === sel)?.installed}>
+              <summary>Voix Azure (les plus naturelles) : clé et région</summary>
+              <div className="muted" style={{ fontSize: 12, margin: "6px 0" }}>
+                portal.azure.com → Créer une ressource → « Speech » → niveau tarifaire <b>Free F0</b> (500 000 caractères gratuits par mois) → région France Central → « Clés et point de terminaison » : copie la Clé 1 et la région. Seul le texte des messages radio est envoyé à Azure.
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <input type="password" placeholder="Clé 1" value={azKey} onChange={(e) => setAzKey(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
+                <select value={azRegion} onChange={(e) => setAzRegion(e.target.value)}>
+                  {["francecentral", "westeurope", "northeurope", "swedencentral", "uksouth", "switzerlandnorth", "eastus", "westus2"].map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <button className="btn" onClick={() => void saveAzure()}>Enregistrer</button>
+              </div>
+            </details>
             {busy && <div className="muted" style={{ marginTop: 8 }}>{busy}</div>}
             {!voiceAvailable() && sel === "windows" && <div className="warning">Synthèse vocale Windows indisponible sur ce poste.</div>}
             <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
