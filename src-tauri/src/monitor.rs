@@ -3,6 +3,8 @@
 
 use apex_core::connectors::{LiveSnapshot, LiveSource};
 use apex_core::detect::{MonitorState, Observation, ProcessScanner, SessionMonitor};
+use apex_core::live_coach::{session_meta_from_yaml, CoachMessage, LiveCoach};
+use apex_core::model::SessionKind;
 use apex_core::model::SimId;
 use apex_core::service::AppService;
 use serde::Serialize;
@@ -18,6 +20,15 @@ pub struct StatusPayload {
     pub live: Option<LiveSnapshot>,
     pub importing: Option<String>,
     pub last_auto_import: Option<String>,
+    /// Derniers messages radio du coach en direct (le plus récent en dernier).
+    pub coach: Vec<CoachMessage>,
+}
+
+/// Message radio envoyé à l'interface, qui le prononce si `speak`.
+#[derive(Debug, Clone, Serialize)]
+pub struct CoachEvent {
+    pub message: CoachMessage,
+    pub speak: bool,
 }
 
 impl Default for StatusPayload {
@@ -29,8 +40,22 @@ impl Default for StatusPayload {
             live: None,
             importing: None,
             last_auto_import: None,
+            coach: vec![],
         }
     }
+}
+
+/// Diffuse un message du coach (journal, état, voix).
+fn radio(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message: CoachMessage, speak: bool) {
+    log::info!("coach : {}", message.text);
+    if let Ok(mut s) = status.lock() {
+        s.coach.push(message.clone());
+        let n = s.coach.len();
+        if n > 12 {
+            s.coach.drain(..n - 12);
+        }
+    }
+    let _ = app.emit("apex://coach", CoachEvent { message, speak });
 }
 
 pub fn set_importing(status: &Arc<Mutex<StatusPayload>>, v: Option<String>) {
@@ -45,6 +70,8 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         let mut monitor = SessionMonitor::default();
         let mut live: Option<(SimId, Box<dyn LiveSource>)> = None;
         let mut last_snap: Option<LiveSnapshot> = None;
+        // Coach en direct : (circuit|configuration|voiture, coach).
+        let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
         let mut next_sync = Instant::now();
         // Sessions décodées par une ancienne version : recalculées depuis leurs fichiers .ibt.
@@ -100,6 +127,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             if live.as_ref().is_some_and(|(sim, _)| !running.contains(sim) || !settings.live_enabled) {
                 live = None;
                 last_snap = None;
+                coach = None;
             }
             if live.is_none() && settings.live_enabled {
                 for sim in &running {
@@ -113,7 +141,45 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 }
             }
             let mut live_obs = vec![];
-            let polled = live.as_mut().map(|(sim, src)| (*sim, src.poll(50)));
+            // Lecture continue (~60 Hz) pendant ~0,9 s : le coach a besoin de chaque échantillon pour
+            // reconstituer le tour ; le reste de la boucle (processus, synchro) garde sa cadence.
+            let polled = live.as_mut().map(|(sim, src)| {
+                let until = Instant::now() + Duration::from_millis(900);
+                let mut latest: Result<Option<LiveSnapshot>, apex_core::connectors::ConnectorError> = Ok(None);
+                while Instant::now() < until {
+                    match src.poll(20) {
+                        Ok(Some(snap)) => {
+                            if let Some(yaml) = &snap.session_info {
+                                let meta = session_meta_from_yaml(yaml);
+                                let key = format!("{}|{}|{}", meta.track, meta.track_config.clone().unwrap_or_default(), meta.car);
+                                if coach.as_ref().is_none_or(|(k, _)| *k != key) && meta.track != "Circuit inconnu" {
+                                    let reference = svc.live_reference(&meta).unwrap_or_else(|e| {
+                                        log::warn!("référence du coach : {e}");
+                                        None
+                                    });
+                                    let (c, hello) = LiveCoach::new(yaml, reference, svc.user_corner_names(&meta));
+                                    coach = Some((key, c));
+                                    radio(&app, &status, hello, settings.coach_audio);
+                                }
+                            }
+                            if let (Some(row), Some((_, c))) = (snap.channels, coach.as_mut()) {
+                                if let Some(m) = c.push(row) {
+                                    let mute = c.current_kind() == SessionKind::Race && !settings.coach_in_race;
+                                    radio(&app, &status, m, settings.coach_audio && !mute);
+                                }
+                            }
+                            latest = Ok(Some(snap));
+                        }
+                        // Pas de donnée neuve : courte pause (évite une boucle active si l'événement iRacing est absent).
+                        Ok(None) => std::thread::sleep(Duration::from_millis(4)),
+                        Err(e) => {
+                            latest = Err(e);
+                            break;
+                        }
+                    }
+                }
+                (*sim, latest)
+            });
             match polled {
                 Some((sim, Ok(snap))) => {
                     if snap.is_some() {
@@ -127,6 +193,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                     log::warn!("source live perdue : {e}");
                     live = None;
                     last_snap = None;
+                    coach = None;
                 }
                 None => {}
             }
@@ -215,7 +282,8 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 s.clone()
             };
             let _ = app.emit("apex://status", payload);
-            std::thread::sleep(Duration::from_millis(if live.is_some() { 1000 } else { 2000 }));
+            // Avec une source live, la lecture continue ci-dessus occupe déjà ~0,9 s par tour de boucle.
+            std::thread::sleep(Duration::from_millis(if live.is_some() { 20 } else { 2000 }));
         }
     });
     if let Err(e) = r {

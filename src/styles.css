@@ -236,3 +236,10 @@ td.num, th.num { text-align: right; }
 .race-insight.danger { border-left-color: #ff5a4e; }
 .race-insight.warning { border-left-color: #ff8a00; }
 .race-insight.good { border-left-color: var(--green); }
+
+/* Live Coach : radio */
+.radio-msg { background: var(--panel-2); border-radius: var(--radius); padding: 9px 12px; margin-bottom: 6px; border-left: 3px solid transparent; opacity: 0.75; }
+.radio-msg.latest { opacity: 1; border-left-color: var(--red); }
+.radio-msg.invalid { border-left-color: #ff8a00; }
+.radio-text { font-size: 15px; line-height: 1.4; margin-top: 4px; }
+.radio-msg.latest .radio-text { font-size: 18px; font-weight: 700; }

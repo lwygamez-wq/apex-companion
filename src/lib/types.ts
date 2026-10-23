@@ -340,6 +340,23 @@ export interface StatusPayload {
   live: LiveSnapshot | null;
   importing: string | null;
   last_auto_import: string | null;
+  /** Derniers messages radio du coach en direct (le plus récent en dernier). */
+  coach: CoachMessage[];
+}
+
+export interface CoachMessage {
+  kind: "info" | "focus" | "invalid";
+  lap: number;
+  text: string;
+  focus: string | null;
+  focus_loss_s: number | null;
+  lap_delta_s: number | null;
+  lap_time_s: number | null;
+}
+
+export interface CoachEvent {
+  message: CoachMessage;
+  speak: boolean;
 }
 
 export interface Capabilities {

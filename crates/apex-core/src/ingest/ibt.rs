@@ -71,6 +71,8 @@ pub struct Header {
     pub ver: i32,
     pub status: i32,
     pub tick_rate: i32,
+    /// Incrémenté par iRacing à chaque mise à jour du YAML de session.
+    pub session_info_update: i32,
     pub session_info_len: usize,
     pub session_info_offset: usize,
     pub num_vars: usize,
@@ -121,6 +123,7 @@ pub fn parse_header(b: &[u8]) -> Result<Header, IbtError> {
         ver: rd_i32(b, 0)?,
         status: rd_i32(b, 4)?,
         tick_rate: rd_i32(b, 8)?,
+        session_info_update: rd_i32(b, 12)?,
         session_info_len: rd_i32(b, 16)?.max(0) as usize,
         session_info_offset: rd_i32(b, 20)?.max(0) as usize,
         num_vars: rd_i32(b, 24)?.max(0) as usize,
@@ -520,6 +523,102 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         sample_rate_hz: (h.tick_rate > 0).then_some(h.tick_rate as f32),
         race,
     })
+}
+
+/// Canaux lus en direct (mémoire partagée iRacing), dans cet ordre : ce sont ceux du décodage des
+/// .ibt, pour que les tours enregistrés en direct soient traités exactement comme les tours importés.
+pub const LIVE_CHANNELS: [&str; 19] = [
+    "SessionTime", "LapDist", "LapDistPct", "Speed", "Throttle", "Brake", "Lap", "Gear", "RPM", "SteeringWheelAngle",
+    "Lat", "Lon", "FuelLevel", "OnPitRoad", "PlayerTrackSurface", "PlayerCarMyIncidentCount", "SessionFlags", "SessionNum", "YawRate",
+];
+
+/// Reconstitution des tours en direct : on empile les échantillons et, à chaque passage de la
+/// ligne, le tour qui vient de se terminer est découpé par le même code que les fichiers .ibt.
+pub struct LiveLapBuilder {
+    si: SessionInfo,
+    rows: Vec<[f64; 19]>,
+}
+
+impl LiveLapBuilder {
+    pub fn new(session_yaml: &str) -> Self {
+        Self { si: parse_session_info(session_yaml), rows: Vec::new() }
+    }
+
+    pub fn session_info(&self) -> &SessionInfo {
+        &self.si
+    }
+
+    /// Ajoute un échantillon (valeurs dans l'ordre de `LIVE_CHANNELS`). Renvoie le tour qui vient
+    /// de se terminer quand l'échantillon suit un passage de la ligne.
+    pub fn push(&mut self, v: [f64; 19]) -> Option<ImportedLap> {
+        let crossed = self.rows.last().is_some_and(|p| p[2] > 0.9 && (-0.01..0.1).contains(&v[2]));
+        // Échantillon identique (même temps de session) : ignoré.
+        if self.rows.last().is_some_and(|p| p[0] == v[0]) {
+            return None;
+        }
+        self.rows.push(v);
+        // Sans passage de ligne depuis longtemps (aux stands, menus) : on borne la mémoire.
+        if self.rows.len() > 60 * 60 * 10 {
+            self.rows.drain(..self.rows.len() - 60 * 60 * 5);
+        }
+        if !crossed {
+            return None;
+        }
+        let col = |k: usize| self.rows.iter().map(|r| r[k]).collect::<Vec<f64>>();
+        let ch = Channels {
+            session_time: col(0),
+            lap_dist: col(1),
+            lap_dist_pct: col(2),
+            speed: col(3),
+            throttle: col(4),
+            brake: col(5),
+            lap: Some(col(6)),
+            gear: Some(col(7)),
+            rpm: Some(col(8)),
+            steer: Some(col(9)),
+            lat: Some(col(10)),
+            lon: Some(col(11)),
+            fuel: Some(col(12)),
+            on_pit_road: Some(col(13)),
+            track_surface: Some(col(14)),
+            incidents: Some(col(15)),
+            session_flags: Some(col(16)),
+            session_num: Some(col(17)),
+            yaw_rate: Some(col(18)),
+            position: None,
+            player_incidents: None,
+            session_state: None,
+        };
+        let lap = split_laps(&ch, &self.si).into_iter().rev().find(|l| l.meta.lap_time_s.is_some());
+        // On ne garde que le début du tour en cours (le passage de ligne reste visible pour le prochain découpage).
+        let keep = self.rows.len().saturating_sub(2);
+        self.rows.drain(..keep);
+        lap
+    }
+}
+
+/// Échantillons d'un .ibt dans l'ordre de `LIVE_CHANNELS` (0 si canal absent), plus le YAML :
+/// permet de rejouer un vrai fichier comme une session en direct (tests du coach).
+pub fn ibt_live_rows(b: &[u8]) -> Result<(String, Vec<[f64; 19]>), IbtError> {
+    let h = parse_header(b)?;
+    let vars = parse_var_headers(b, &h)?;
+    let yaml = b.get(h.session_info_offset..h.session_info_offset + h.session_info_len).map(cstr).unwrap_or_default();
+    let record_count = rd_i32(b, HEADER_LEN + 28)?.max(0) as usize;
+    let data_off = h.var_bufs[0].1;
+    let available = b.len().saturating_sub(data_off) / h.buf_len;
+    let n = if record_count == 0 { available } else { record_count.min(available) };
+    let idx: Vec<Option<&VarHeader>> = LIVE_CHANNELS.iter().map(|c| vars.iter().find(|v| v.name == *c)).collect();
+    let rows = (0..n)
+        .map(|i| {
+            let rec = &b[data_off + i * h.buf_len..data_off + (i + 1) * h.buf_len];
+            let mut r = [0.0; 19];
+            for (k, v) in idx.iter().enumerate() {
+                r[k] = v.map(|v| read_value(rec, v)).unwrap_or(0.0);
+            }
+            r
+        })
+        .collect();
+    Ok((yaml, rows))
 }
 
 /// Découpe en tours sur les franchissements de ligne (LapDistPct 1→0), temps interpolé.
@@ -925,6 +1024,23 @@ mod tests {
         assert_eq!(r.qualify.get(&10), Some(&86.0543), "temps de course ignoré");
         assert!(!r.qualify.contains_key(&2), "pas de temps : ignoré");
         assert_eq!(r.drivers.values().filter(|d| !d.2).count(), 2, "voiture de sécurité exclue");
+    }
+
+    #[test]
+    fn live_builder_gives_the_same_laps_as_the_file() {
+        let b = writer::synthetic();
+        let file = import_ibt_bytes(&b).unwrap();
+        let (yaml, rows) = ibt_live_rows(&b).unwrap();
+        let mut lb = LiveLapBuilder::new(&yaml);
+        let live: Vec<ImportedLap> = rows.into_iter().filter_map(|r| lb.push(r)).collect();
+        let timed: Vec<&ImportedLap> = file.laps.iter().filter(|l| l.meta.lap_time_s.is_some()).collect();
+        assert_eq!(live.len(), timed.len());
+        for (a, b) in live.iter().zip(timed) {
+            assert_eq!(a.meta.number, b.meta.number);
+            assert!((a.meta.lap_time_s.unwrap() - b.meta.lap_time_s.unwrap()).abs() < 1e-9);
+            assert_eq!(a.meta.kind, b.meta.kind);
+            assert_eq!(a.trace.len(), b.trace.len());
+        }
     }
 
     #[test]

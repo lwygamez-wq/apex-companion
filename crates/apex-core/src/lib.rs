@@ -15,6 +15,7 @@ pub mod connectors;
 pub mod detect;
 pub mod garage61_api;
 pub mod ingest;
+pub mod live_coach;
 pub mod mock;
 pub mod service;
 pub mod model;

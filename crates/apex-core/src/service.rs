@@ -367,6 +367,22 @@ pub struct AppService {
 const SETTINGS_KEY: &str = "app_settings";
 
 /// Clé de circuit pour les noms de virages : simulateur + circuit + configuration.
+/// Temps au tour pour la voix : « 1 minute 56 point 5 ».
+fn spoken_lap(t: Option<f64>) -> String {
+    match t {
+        Some(t) => {
+            let m = (t / 60.0).floor() as i64;
+            let s = t - m as f64 * 60.0;
+            if m > 0 {
+                format!("{m} minute {} point {}", s.floor() as i64, ((s - s.floor()) * 10.0).floor() as i64)
+            } else {
+                format!("{} secondes point {}", s.floor() as i64, ((s - s.floor()) * 10.0).floor() as i64)
+            }
+        }
+        None => String::new(),
+    }
+}
+
 pub fn track_key(m: &SessionMeta) -> String {
     format!("{}|{}|{}", m.sim.as_str(), m.track, m.track_config.as_deref().unwrap_or(""))
 }
@@ -1460,6 +1476,44 @@ impl AppService {
             meta,
             laps,
         })
+    }
+
+    /// Noms de virages donnés par le pilote pour ce circuit.
+    pub fn user_corner_names(&self, meta: &SessionMeta) -> Vec<(f32, String)> {
+        self.db().corner_names(&track_key(meta)).unwrap_or_default()
+    }
+
+    /// Référence du coach en direct pour ce circuit et cette voiture : ta référence perso (externe ou
+    /// à toi), sinon ton meilleur tour propre ici. `None` si tu n'as jamais roulé cette combinaison.
+    pub fn live_reference(&self, meta: &SessionMeta) -> Result<Option<crate::live_coach::ReferenceLap>> {
+        let db = self.db();
+        let lap_id = match Self::personal_reference(&db, meta)? {
+            Some(id) => Some(id),
+            None => {
+                let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() };
+                let mut best: Option<(f64, i64)> = None;
+                for s in db.list_sessions(&f)?.into_iter().filter(|s| s.track_config == meta.track_config) {
+                    for l in db.laps(s.id)? {
+                        if let (true, Some(t)) = (l.clean, l.meta.lap_time_s) {
+                            if best.is_none_or(|(b, _)| t < b) {
+                                best = Some((t, l.id));
+                            }
+                        }
+                    }
+                }
+                best.map(|b| b.1)
+            }
+        };
+        let Some(id) = lap_id else { return Ok(None) };
+        let l = db.lap(id)?;
+        let trace = db.trace(id)?;
+        let label = match db.external_driver(l.session_id)? {
+            Some(d) => format!("{d}, {}", spoken_lap(l.meta.lap_time_s)),
+            None if l.is_reference => format!("ta référence perso, {}", spoken_lap(l.meta.lap_time_s)),
+            None => format!("ton meilleur tour ici, {}", spoken_lap(l.meta.lap_time_s)),
+        };
+        let names = crate::tracks::corner_names_for(meta, Some(&trace), db.corner_names(&track_key(meta))?);
+        Ok(Some(crate::live_coach::ReferenceLap { label, meta: l.meta, trace, names }))
     }
 
     fn personal_reference(db: &Store, meta: &SessionMeta) -> Result<Option<i64>> {

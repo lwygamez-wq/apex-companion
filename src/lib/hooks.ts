@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, onStatus } from "./api";
+import { api, onCoach, onStatus } from "./api";
+import { speak } from "./voice";
 import type { StatusPayload } from "./types";
 
 export interface Async<T> {
@@ -29,6 +30,18 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): Async<T> {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick]);
   return { data, error, loading, reload };
+}
+
+/** Voix du coach : active tant que l'application est ouverte, quelle que soit la page affichée. */
+export function useCoachVoice(): void {
+  useEffect(() => {
+    const un = onCoach((e) => {
+      if (e.speak) speak(e.message.text);
+    });
+    return () => {
+      void un.then((f) => f());
+    };
+  }, []);
 }
 
 export function useStatus(): StatusPayload | null {

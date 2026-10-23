@@ -107,6 +107,12 @@ pub struct LiveSnapshot {
     pub tick: i64,
     /// iRacing : la télémétrie est-elle en cours d'enregistrement sur disque (.ibt) ?
     pub disk_logging: Option<bool>,
+    /// Échantillon complet pour le coach en direct (ordre de `ingest::ibt::LIVE_CHANNELS`).
+    #[serde(skip)]
+    pub channels: Option<[f64; 19]>,
+    /// YAML de session, seulement quand iRacing l'a mis à jour depuis la lecture précédente.
+    #[serde(skip)]
+    pub session_info: Option<String>,
 }
 
 pub trait LiveSource: Send {

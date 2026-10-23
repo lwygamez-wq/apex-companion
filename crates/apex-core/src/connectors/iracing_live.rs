@@ -26,6 +26,8 @@ pub struct IrsdkLive {
     event: HANDLE,
     vars: HashMap<String, VarHeader>,
     last_tick: i32,
+    /// Dernière version du YAML de session transmise (-1 = jamais).
+    last_session_info: i32,
 }
 
 // Les handles Win32 sont utilisables depuis n'importe quel thread.
@@ -44,7 +46,7 @@ impl IrsdkLive {
                 return Err(ConnectorError::Import("MapViewOfFile a échoué".into()));
             }
             let event = OpenEventW(SYNCHRONIZE, 0, wide("Local\\IRSDKDataValidEvent").as_ptr());
-            Ok(Self { mapping, view, event, vars: HashMap::new(), last_tick: -1 })
+            Ok(Self { mapping, view, event, vars: HashMap::new(), last_tick: -1, last_session_info: -1 })
         }
     }
 
@@ -71,7 +73,7 @@ impl LiveSource for IrsdkLive {
         let hdr_bytes = self.copy(0, HEADER_LEN);
         let h = parse_header(&hdr_bytes).map_err(|e| ConnectorError::Import(e.to_string()))?;
         if h.status & STATUS_CONNECTED == 0 {
-            return Ok(Some(LiveSnapshot { connected: false, on_track: false, session_time_s: 0.0, lap: 0, lap_dist_pct: 0.0, speed_kmh: 0.0, gear: 0, throttle: 0.0, brake: 0.0, tick: 0, disk_logging: None }));
+            return Ok(Some(LiveSnapshot { connected: false, on_track: false, session_time_s: 0.0, lap: 0, lap_dist_pct: 0.0, speed_kmh: 0.0, gear: 0, throttle: 0.0, brake: 0.0, tick: 0, disk_logging: None, channels: None, session_info: None }));
         }
         if self.vars.is_empty() {
             let len = h.var_header_offset + h.num_vars * crate::ingest::ibt::VAR_HEADER_LEN;
@@ -89,7 +91,20 @@ impl LiveSource for IrsdkLive {
             let h2 = parse_header(&self.copy(0, HEADER_LEN)).map_err(|e| ConnectorError::Import(e.to_string()))?;
             if h2.var_bufs.iter().any(|b| b.1 == off && b.0 == tick) {
                 self.last_tick = tick;
+                // YAML de session : relu seulement quand iRacing l'a modifié (il fait ~60 ko).
+                let session_info = if h2.session_info_update != self.last_session_info && h2.session_info_len > 0 {
+                    self.last_session_info = h2.session_info_update;
+                    let raw = self.copy(h2.session_info_offset, h2.session_info_len);
+                    let end = raw.iter().position(|&c| c == 0).unwrap_or(raw.len());
+                    Some(crate::ingest::ibt::decode_text(&raw[..end]))
+                } else {
+                    None
+                };
                 let g = |n: &str| self.vars.get(n).map(|v| read_value(&rec, v)).unwrap_or(0.0);
+                let mut channels = [0.0f64; 19];
+                for (k, name) in crate::ingest::ibt::LIVE_CHANNELS.iter().enumerate() {
+                    channels[k] = g(name);
+                }
                 return Ok(Some(LiveSnapshot {
                     connected: true,
                     on_track: g("IsOnTrack") > 0.5,
@@ -102,6 +117,8 @@ impl LiveSource for IrsdkLive {
                     brake: g("Brake") as f32,
                     tick: tick as i64,
                     disk_logging: self.vars.get("IsDiskLoggingActive").map(|v| read_value(&rec, v) > 0.5),
+                    channels: Some(channels),
+                    session_info,
                 }));
             }
         }

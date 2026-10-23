@@ -5,6 +5,7 @@ import type {
   AppSettings,
   CircuitOverview,
   HistoryLap,
+  CoachEvent,
   RecoverReport,
   SimId,
   AutoLogStatus,
@@ -72,6 +73,11 @@ export const api = {
 export function onStatus(cb: (s: StatusPayload) => void): Promise<UnlistenFn> {
   if (!isTauri()) return Promise.resolve(() => undefined);
   return listen<StatusPayload>("apex://status", (e) => cb(e.payload));
+}
+
+export function onCoach(cb: (e: CoachEvent) => void): Promise<UnlistenFn> {
+  if (!isTauri()) return Promise.resolve(() => undefined);
+  return listen<CoachEvent>("apex://coach", (e) => cb(e.payload));
 }
 
 export function onSessionsChanged(cb: () => void): Promise<UnlistenFn> {

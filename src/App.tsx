@@ -3,7 +3,7 @@ import { RecordingAlert } from "./components/RecordingAlert";
 import { StatusBadge } from "./components/StatusBadge";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { isTauri } from "./lib/api";
-import { useStatus } from "./lib/hooks";
+import { useCoachVoice, useStatus } from "./lib/hooks";
 import { HistoryPage } from "./pages/HistoryPage";
 import { ComparisonPage } from "./pages/ComparisonPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -34,6 +34,7 @@ const NAV: { page: Route["page"]; label: string }[] = [
 export function App() {
   const [route, setRoute] = useState<Route>({ page: "dashboard" });
   const status = useStatus();
+  useCoachVoice();
 
   return (
     <div className="app">
