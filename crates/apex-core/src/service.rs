@@ -271,6 +271,7 @@ fn recovered_session(meta0: &SessionMeta, length: f32, setup: Option<SetupType>,
         laps: out_laps,
         sample_rate_hz: Some(60.0),
         race: None,
+        profile: None,
     }))
 }
 
@@ -357,6 +358,10 @@ pub struct SyncReport {
 pub struct SessionDetail {
     pub id: i64,
     pub meta: SessionMeta,
+    /// Fiche voiture / circuit (session, ou dernière connue pour ce circuit et cette voiture).
+    pub profile: Option<SessionProfile>,
+    /// Circuit et configuration reconnus dans la banque OpenStreetMap.
+    pub bank: Option<crate::trackdb::BankMatch>,
     pub laps: Vec<LapRow>,
     pub best_lap_id: Option<i64>,
     pub theoretical_best_s: Option<f64>,
@@ -442,6 +447,10 @@ pub struct AppService {
     g61_catalog: Mutex<Option<(Vec<crate::garage61_api::G61Track>, Vec<crate::garage61_api::G61Car>)>>,
     /// Dernière carte de risque calculée : (clé combo + nb de tours + référence, résultat).
     risk_cache: Mutex<Option<(String, Vec<crate::analysis::risk::CornerRisk>, crate::analysis::risk::RiskTotals)>>,
+    /// Circuit reconnu dans la banque OpenStreetMap, par circuit + configuration.
+    bank_cache: Mutex<std::collections::HashMap<String, Option<crate::trackdb::BankMatch>>>,
+    /// Dernier relevé de piste calculé (clé : circuit, tour de référence, nombre de tours).
+    overlay_cache: Mutex<Option<(String, crate::analysis::surface::TrackOverlay)>>,
     /// Fichiers en erreur déjà réessayés pendant ce lancement (on retente une fois par lancement,
     /// et à chaque passage si l'erreur est passagère : fichier verrouillé par un autre programme).
     retried: Mutex<std::collections::HashSet<String>>,
@@ -608,6 +617,8 @@ impl AppService {
             connectors: registry(),
             g61_catalog: Mutex::new(None),
             risk_cache: Mutex::new(None),
+            bank_cache: Mutex::new(Default::default()),
+            overlay_cache: Mutex::new(None),
             retried: Mutex::new(Default::default()),
             keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
             tts: db.parent().map(|d| crate::tts::Tts::new(d.join("voix"))),
@@ -623,6 +634,8 @@ impl AppService {
             connectors: registry(),
             g61_catalog: Mutex::new(None),
             risk_cache: Mutex::new(None),
+            bank_cache: Mutex::new(Default::default()),
+            overlay_cache: Mutex::new(None),
             retried: Mutex::new(Default::default()),
             keep_dir: None,
             tts: None,
@@ -835,7 +848,7 @@ impl AppService {
             fuel_start_l: None,
             fuel_used_l: None,
         };
-        let s = ImportedSession { meta, laps: vec![ImportedLap { meta: lm, trace: lap.trace }], sample_rate_hz: Some(60.0), race: None };
+        let s = ImportedSession { meta, laps: vec![ImportedLap { meta: lm, trace: lap.trace }], sample_rate_hz: Some(60.0), race: None, profile: None };
         let sid = match self.db().insert_session(&s)? {
             InsertOutcome::Inserted(id) | InsertOutcome::Duplicate(id) => id,
         };
@@ -1227,6 +1240,15 @@ impl AppService {
                 "exact"
             } else if crate::tracks::has_geometry(&meta) {
                 "aligned"
+            } else if db
+                .laps(first.id)?
+                .into_iter()
+                .find(|l| l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some())
+                .and_then(|l| db.trace(l.id).ok())
+                .and_then(|t| self.bank_for(&db, &meta, &t))
+                .is_some()
+            {
+                "bank"
             } else {
                 "none"
             };
@@ -1527,7 +1549,7 @@ impl AppService {
             }
         }
         // Fenêtres de virage de la référence d'analyse (nom, entrée, apex, sortie).
-        let names = crate::tracks::corner_names_for(&meta, ref_trace.as_ref(), db.corner_names(&track_key(&meta))?);
+        let names = self.names_for(&db, &meta, ref_trace.as_ref(), db.corner_names(&track_key(&meta))?);
         let windows: Vec<crate::analysis::risk::CornerWindow> = match (&ref_trace, length) {
             (Some(t), Some(len)) => crate::analysis::resample::resample(t, len, 1.0)
                 .map(|r| {
@@ -1603,8 +1625,15 @@ impl AppService {
             }
             None => None,
         };
+        let bank = ref_trace.as_ref().and_then(|t| self.bank_for(&db, &meta, t));
+        let profile = match db.session_profile(id)? {
+            Some(p) => Some(p),
+            None => db.latest_profile(&meta.track, &meta.car)?,
+        };
         Ok(SessionDetail {
             id,
+            bank,
+            profile,
             race,
             reference_label,
             risk,
@@ -1619,6 +1648,113 @@ impl AppService {
             meta,
             laps,
         })
+    }
+
+    /// Télémétrie brute d'un tour.
+    pub fn lap_trace(&self, lap_id: i64) -> Result<LapTrace> {
+        Ok(self.db().trace(lap_id)?)
+    }
+
+    /// Circuit et configuration reconnus dans la banque OpenStreetMap, d'après la position du circuit
+    /// (fiche de session) et la forme de `reference`. Mémorisé par circuit.
+    fn bank_for(&self, db: &Store, meta: &SessionMeta, reference: &LapTrace) -> Option<crate::trackdb::BankMatch> {
+        let key = format!("{}|{}", meta.track, meta.track_config.clone().unwrap_or_default());
+        if let Some(v) = self.bank_cache.lock().unwrap_or_else(|p| p.into_inner()).get(&key) {
+            return v.clone();
+        }
+        let found = (|| {
+            let p = db.latest_track_profile(&meta.track).ok()??;
+            let (lat, lon, origin) = (p.track.lat?, p.track.lon?, p.track.origin?);
+            let len = meta.track_length_m.filter(|l| *l > 100.0).unwrap_or_else(|| reference.max_dist());
+            let r = crate::analysis::resample::resample(reference, len, 2.0).ok()?;
+            let spine: Vec<[f32; 2]> = r.x?.into_iter().zip(r.y?).map(|(a, b)| [a, b]).collect();
+            crate::trackdb::bank_match((lat, lon), origin, &spine)
+        })();
+        self.bank_cache.lock().unwrap_or_else(|p| p.into_inner()).insert(key, found.clone());
+        found
+    }
+
+    /// Noms des virages : relevé exact, sinon noms placés par alignement sur la géométrie intégrée,
+    /// sinon numéros d'après le vrai tracé (banque OpenStreetMap) ; noms du pilote par-dessus.
+    fn names_for(&self, db: &Store, meta: &SessionMeta, reference: Option<&LapTrace>, user: Vec<(f32, String)>) -> Vec<(f32, String)> {
+        let base = crate::tracks::corner_names_for(meta, reference, vec![]);
+        if !base.is_empty() {
+            return crate::tracks::merge_names(base, user);
+        }
+        let Some(r) = reference else { return user };
+        let Some(bank) = self.bank_for(db, meta, r) else { return user };
+        let numbered = (|| {
+            let len = meta.track_length_m.filter(|l| *l > 100.0).unwrap_or_else(|| r.max_dist());
+            let rs = crate::analysis::resample::resample(r, len, 1.0).ok()?;
+            let xy: Vec<[f32; 2]> = rs.x.clone()?.into_iter().zip(rs.y.clone()?).map(|(a, b)| [a, b]).collect();
+            let official = db.latest_track_profile(&meta.track).ok().flatten().and_then(|p| p.track.turns);
+            let turns = crate::trackdb::bank_turns_on_lap(&bank, &xy, &rs.dist, official);
+            let defs = crate::analysis::corners::detect_corners(&rs, &crate::analysis::corners::CornerConfig::default());
+            // Chaque virage détecté prend le numéro du virage du tracé le plus proche (40 m au plus).
+            Some(
+                defs.iter()
+                    .filter_map(|d| {
+                        let (at, k) = turns.iter().min_by(|a, b| (a.0 - d.apex_m).abs().total_cmp(&(b.0 - d.apex_m).abs()))?;
+                        ((at - d.apex_m).abs() <= 40.0).then(|| (d.apex_m, format!("Virage {k}")))
+                    })
+                    .collect::<Vec<_>>(),
+            )
+        })()
+        .unwrap_or_default();
+        crate::tracks::merge_names(numbered, user)
+    }
+
+    /// Relevé de la piste pour la carte : vibreurs, lignes, hors-piste et bords, à partir de tous tes
+    /// tours (et des références) sur ce circuit et cette configuration, toutes voitures confondues.
+    /// `spine_lap` : tour qui sert de trajectoire de référence pour les bords (celui de la carte).
+    pub fn track_overlay(&self, session_id: i64, spine_lap: Option<i64>) -> Result<crate::analysis::surface::TrackOverlay> {
+        use crate::analysis::surface::{combine_edges, surface_points, SurfaceLap, TrackOverlay};
+        let db = self.db();
+        let meta = db.session_meta(session_id)?;
+        let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), ..Default::default() };
+        let ext = SessionFilter { external: Some(true), ..f.clone() };
+        let all: Vec<SessionSummary> = db.list_sessions(&f)?.into_iter().chain(db.list_sessions(&ext)?).filter(|s| s.track_config == meta.track_config).collect();
+        let key = format!("{}|{:?}|{:?}|{}|{}", meta.track, meta.track_config, spine_lap, all.len(), all.iter().map(|s| s.lap_count).sum::<usize>());
+        if let Some((k, ov)) = self.overlay_cache.lock().unwrap_or_else(|p| p.into_inner()).as_ref() {
+            if *k == key {
+                return Ok(ov.clone());
+            }
+        }
+        let mut traces = vec![];
+        let mut sessions = 0;
+        for s in all {
+            let before = traces.len();
+            for l in db.laps(s.id)? {
+                if l.meta.lap_time_s.is_none() {
+                    continue;
+                }
+                if let Ok(t) = db.trace(l.id) {
+                    if t.pos_x.is_some() {
+                        traces.push(t);
+                    }
+                }
+            }
+            if traces.len() > before {
+                sessions += 1;
+            }
+        }
+        let laps: Vec<SurfaceLap> = traces.iter().map(|t| SurfaceLap { trace: t }).collect();
+        let (kerbs, lines, off) = surface_points(&laps);
+        // Trajectoire de référence : tour demandé, sinon meilleur tour de la session ; points tous les 2 m.
+        let spine_id = spine_lap.or_else(|| db.laps(session_id).ok()?.into_iter().filter(|l| l.clean).min_by(|a, b| a.meta.lap_time_s.unwrap_or(f64::MAX).total_cmp(&b.meta.lap_time_s.unwrap_or(f64::MAX))).map(|l| l.id));
+        let edges = spine_id.and_then(|id| {
+            let t = db.trace(id).ok()?;
+            let len = meta.track_length_m?;
+            let r = crate::analysis::resample::resample(&t, len, 2.0).ok()?;
+            let (x, y) = (r.x?, r.y?);
+            let spine: Vec<[f32; 2]> = x.iter().zip(y.iter()).map(|(a, b)| [*a, *b]).collect();
+            // Largeur mesurée (base TUM) si le circuit y est et que le tracé colle, sinon bords estimés.
+            let measured = crate::trackdb::measured_edges(&meta.track, &spine);
+            combine_edges(&spine, &laps, 3.min(laps.len()).max(1), measured.as_ref())
+        });
+        let ov = TrackOverlay { kerbs, lines, off, edges, laps: laps.len(), sessions };
+        *self.overlay_cache.lock().unwrap_or_else(|p| p.into_inner()) = Some((key, ov.clone()));
+        Ok(ov)
     }
 
     /// Voix naturelles disponibles : (identifiant, libellé, installée).
@@ -1711,7 +1847,7 @@ impl AppService {
             None if l.is_reference => format!("ta référence perso, {}", spoken_lap(l.meta.lap_time_s)),
             None => format!("ton meilleur tour ici, {}", spoken_lap(l.meta.lap_time_s)),
         };
-        let names = crate::tracks::corner_names_for(meta, Some(&trace), db.corner_names(&track_key(meta))?);
+        let names = self.names_for(&db, meta, Some(&trace), db.corner_names(&track_key(meta))?);
         Ok(Some(crate::live_coach::ReferenceLap { label, meta: l.meta, trace, names }))
     }
 
@@ -1745,7 +1881,7 @@ impl AppService {
         let (lr, lc) = (db.lap(ref_lap)?, db.lap(cmp_lap)?);
         let (mr, mc) = (db.session_meta(lr.session_id)?, db.session_meta(lc.session_id)?);
         let (tr, tc) = (db.trace(ref_lap)?, db.trace(cmp_lap)?);
-        let names = crate::tracks::corner_names_for(&mr, Some(&tr), db.corner_names(&track_key(&mr))?);
+        let names = self.names_for(&db, &mr, Some(&tr), db.corner_names(&track_key(&mr))?);
         let external = db.external_driver(lr.session_id)?;
         let mut c = compare_laps_named(
             &LapInput { lap_id: ref_lap, session: &mr, lap: &lr.meta, trace: &tr },
@@ -1852,11 +1988,15 @@ impl AppService {
             .filter(|l| l.clean)
             .filter_map(|l| db.trace(l.id).ok().map(|t| (l.id, l.meta.clone(), t)))
             .collect();
+        let names = detail
+            .best_lap_id
+            .and_then(|b| traces.iter().find(|t| t.0 == b))
+            .map(|t| self.names_for(&db, &detail.meta, Some(&t.2), user_names.clone()))
+            .unwrap_or_default();
         drop(db);
         let laps: Vec<SessionLap> = traces.iter().map(|(id, m, t)| SessionLap { lap_id: *id, meta: m, trace: t }).collect();
         Ok(match detail.best_lap_id.and_then(|b| laps.iter().position(|l| l.lap_id == b)) {
             Some(bi) => {
-                let names = crate::tracks::corner_names_for(&detail.meta, Some(laps[bi].trace), user_names.clone());
                 progress_zones_named(&detail.meta, &laps[bi], &laps, 2.0, &names)
             }
             None => vec![],

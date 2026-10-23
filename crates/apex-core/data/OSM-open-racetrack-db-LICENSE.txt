@@ -1,0 +1,5 @@
+osm_tracks.json.gz : tracés de circuits dérivés de open-racetrack-db (https://github.com/markthebault/open-racetrack-db), lui-même
+dérivé d'OpenStreetMap. © contributeurs OpenStreetMap. Base de données sous licence
+Open Database License 1.0 (ODbL) : https://opendatacommons.org/licenses/odbl/1-0/
+Attribution : https://www.openstreetmap.org/copyright
+Transformation appliquée : simplification des tracés (Douglas-Peucker, 0,8 m), encodage compact.

@@ -189,6 +189,7 @@ pub struct SessionInfo {
     pub session_types: Vec<(i32, String)>,
     /// `WeekendOptions.IsFixedSetup` : série à setup imposé.
     pub fixed_setup: Option<bool>,
+    pub profile: SessionProfile,
 }
 
 impl SessionInfo {
@@ -212,6 +213,8 @@ pub fn parse_session_info(yaml: &str) -> SessionInfo {
     let mut driver_car_idx: Option<i32> = None;
     let mut cur_car_idx: Option<i32> = None;
     let mut cars: HashMap<i32, String> = HashMap::new();
+    let mut car_ids: HashMap<i32, i64> = HashMap::new();
+    let mut classes: HashMap<i32, String> = HashMap::new();
     let mut cur_session_num: Option<i32> = None;
     for line in yaml.lines() {
         if let Some(v) = yaml_val(line, "TrackDisplayName") {
@@ -239,6 +242,44 @@ pub fn parse_session_info(yaml: &str) -> SessionInfo {
             if let Some(i) = cur_car_idx {
                 cars.insert(i, v.to_string());
             }
+        } else if let Some(v) = yaml_val(line, "TrackID") {
+            si.profile.track.track_id = v.parse().ok();
+        } else if let Some(v) = yaml_val(line, "TrackDisplayShortName") {
+            si.profile.track.short_name = Some(v.to_string()).filter(|x| !x.is_empty());
+        } else if let Some(v) = yaml_val(line, "TrackCity") {
+            si.profile.track.city = Some(v.to_string()).filter(|x| !x.is_empty());
+        } else if let Some(v) = yaml_val(line, "TrackCountry") {
+            si.profile.track.country = Some(v.to_string()).filter(|x| !x.is_empty());
+        } else if let Some(v) = yaml_val(line, "TrackNumTurns") {
+            si.profile.track.turns = v.parse().ok();
+        } else if let Some(v) = yaml_val(line, "TrackLatitude") {
+            si.profile.track.lat = leading_f32(v).map(f64::from).and(v.split_whitespace().next().and_then(|x| x.parse().ok()));
+        } else if let Some(v) = yaml_val(line, "TrackLongitude") {
+            si.profile.track.lon = v.split_whitespace().next().and_then(|x| x.parse().ok());
+        } else if let Some(v) = yaml_val(line, "TrackType") {
+            si.profile.track.kind = Some(v.to_string()).filter(|x| !x.is_empty());
+        } else if let Some(v) = yaml_val(line, "DriverCarFuelMaxLtr") {
+            si.profile.car.fuel_max_l = leading_f32(v);
+        } else if let Some(v) = yaml_val(line, "DriverCarMaxFuelPct") {
+            si.profile.car.max_fuel_pct = leading_f32(v);
+        } else if let Some(v) = yaml_val(line, "DriverCarRedLine") {
+            si.profile.car.redline_rpm = leading_f32(v);
+        } else if let Some(v) = yaml_val(line, "DriverCarSLShiftRPM") {
+            si.profile.car.shift_rpm = leading_f32(v).filter(|x| *x > 0.0);
+        } else if let Some(v) = yaml_val(line, "DriverCarGearNumForward") {
+            si.profile.car.gears = v.parse().ok();
+        } else if let Some(v) = yaml_val(line, "DriverCarIsElectric") {
+            si.profile.car.electric = v.parse::<i32>().ok().map(|x| x != 0);
+        } else if let Some(v) = yaml_val(line, "DriverCarEstLapTime") {
+            si.profile.car.est_lap_s = leading_f32(v).filter(|x| *x > 0.0);
+        } else if let Some(v) = yaml_val(line, "CarID") {
+            if let Some(i) = cur_car_idx {
+                car_ids.insert(i, v.parse::<i64>().unwrap_or(0));
+            }
+        } else if let Some(v) = yaml_val(line, "CarClassShortName") {
+            if let Some(i) = cur_car_idx {
+                classes.insert(i, v.to_string());
+            }
         } else if let Some(v) = yaml_val(line, "IsFixedSetup") {
             si.fixed_setup = v.parse::<i32>().ok().map(|x| x != 0);
         } else if let Some(v) = yaml_val(line, "SessionNum") {
@@ -250,6 +291,8 @@ pub fn parse_session_info(yaml: &str) -> SessionInfo {
         }
     }
     si.car_screen_name = driver_car_idx.and_then(|i| cars.get(&i).cloned());
+    si.profile.car.car_id = driver_car_idx.and_then(|i| car_ids.get(&i).copied()).filter(|x| *x > 0);
+    si.profile.car.class = driver_car_idx.and_then(|i| classes.get(&i).cloned()).filter(|x| !x.is_empty());
     si
 }
 
@@ -423,6 +466,8 @@ struct Channels {
     yaw_rate: Option<Vec<f64>>,
     position: Option<Vec<f64>>,
     player_incidents: Option<Vec<f64>>,
+    /// Matière sous la voiture (irsdk_TrkSurf) : asphalte, vibreur, peinture, herbe…
+    surface_material: Option<Vec<f64>>,
     session_state: Option<Vec<f64>>,
 }
 
@@ -495,10 +540,19 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         yaw_rate: read("YawRate"),
         position: read("PlayerCarPosition"),
         player_incidents: read("PlayerIncidents"),
+        surface_material: read("PlayerTrackSurfaceMaterial"),
         session_state: read("SessionState"),
     };
 
     let laps = split_laps(&ch, &si);
+    let mut si = si;
+    // Origine du repère des trajectoires (même règle que split_laps) : premier point GPS valide.
+    if let (Some(la), Some(lo)) = (&ch.lat, &ch.lon) {
+        si.profile.track.origin = la.iter().zip(lo.iter()).find(|(a, _)| **a != 0.0).map(|(a, o)| {
+            let g = super::grid_origin(*a, *o);
+            [g.0, g.1]
+        });
+    }
     let session_label = ch
         .session_num
         .as_ref()
@@ -533,21 +587,25 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         laps,
         sample_rate_hz: (h.tick_rate > 0).then_some(h.tick_rate as f32),
         race,
+        profile: Some(si.profile.clone()).filter(|p| *p != SessionProfile::default()),
     })
 }
 
 /// Canaux lus en direct (mémoire partagée iRacing), dans cet ordre : ce sont ceux du décodage des
 /// .ibt, pour que les tours enregistrés en direct soient traités exactement comme les tours importés.
-pub const LIVE_CHANNELS: [&str; 19] = [
+pub const LIVE_CHANNELS: [&str; LIVE_N] = [
     "SessionTime", "LapDist", "LapDistPct", "Speed", "Throttle", "Brake", "Lap", "Gear", "RPM", "SteeringWheelAngle",
     "Lat", "Lon", "FuelLevel", "OnPitRoad", "PlayerTrackSurface", "PlayerCarMyIncidentCount", "SessionFlags", "SessionNum", "YawRate",
+    "PlayerTrackSurfaceMaterial",
 ];
+/// Nombre de canaux lus en direct.
+pub const LIVE_N: usize = 20;
 
 /// Reconstitution des tours en direct : on empile les échantillons et, à chaque passage de la
 /// ligne, le tour qui vient de se terminer est découpé par le même code que les fichiers .ibt.
 pub struct LiveLapBuilder {
     si: SessionInfo,
-    rows: Vec<[f64; 19]>,
+    rows: Vec<[f64; LIVE_N]>,
 }
 
 impl LiveLapBuilder {
@@ -561,7 +619,7 @@ impl LiveLapBuilder {
 
     /// Ajoute un échantillon (valeurs dans l'ordre de `LIVE_CHANNELS`). Renvoie le tour qui vient
     /// de se terminer quand l'échantillon suit un passage de la ligne.
-    pub fn push(&mut self, v: [f64; 19]) -> Option<ImportedLap> {
+    pub fn push(&mut self, v: [f64; LIVE_N]) -> Option<ImportedLap> {
         let crossed = self.rows.last().is_some_and(|p| p[2] > 0.9 && (-0.01..0.1).contains(&v[2]));
         // Échantillon identique (même temps de session) : ignoré.
         if self.rows.last().is_some_and(|p| p[0] == v[0]) {
@@ -596,6 +654,7 @@ impl LiveLapBuilder {
             session_flags: Some(col(16)),
             session_num: Some(col(17)),
             yaw_rate: Some(col(18)),
+            surface_material: Some(col(19)),
             position: None,
             player_incidents: None,
             session_state: None,
@@ -610,7 +669,7 @@ impl LiveLapBuilder {
 
 /// Échantillons d'un .ibt dans l'ordre de `LIVE_CHANNELS` (0 si canal absent), plus le YAML :
 /// permet de rejouer un vrai fichier comme une session en direct (tests du coach).
-pub fn ibt_live_rows(b: &[u8]) -> Result<(String, Vec<[f64; 19]>), IbtError> {
+pub fn ibt_live_rows(b: &[u8]) -> Result<(String, Vec<[f64; LIVE_N]>), IbtError> {
     let h = parse_header(b)?;
     let vars = parse_var_headers(b, &h)?;
     let yaml = b.get(h.session_info_offset..h.session_info_offset + h.session_info_len).map(cstr).unwrap_or_default();
@@ -622,7 +681,7 @@ pub fn ibt_live_rows(b: &[u8]) -> Result<(String, Vec<[f64; 19]>), IbtError> {
     let rows = (0..n)
         .map(|i| {
             let rec = &b[data_off + i * h.buf_len..data_off + (i + 1) * h.buf_len];
-            let mut r = [0.0; 19];
+            let mut r = [0.0; LIVE_N];
             for (k, v) in idx.iter().enumerate() {
                 r[k] = v.map(|v| read_value(rec, v)).unwrap_or(0.0);
             }
@@ -771,7 +830,16 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
             fuel_l: fuel.clone(),
             yaw_rate: ch.yaw_rate.as_ref().map(|v| f(v)),
             // Surface sous la voiture (irsdk_TrkLoc : 0 = hors piste) : localise les sorties de piste.
-            extra: ch.track_surface.as_ref().map(|v| std::collections::BTreeMap::from([("track_surface".to_string(), f(v))])).unwrap_or_default(),
+            extra: {
+                let mut m = std::collections::BTreeMap::new();
+                if let Some(v) = &ch.track_surface {
+                    m.insert("track_surface".to_string(), f(v));
+                }
+                if let Some(v) = ch.surface_material.as_ref().filter(|v| v[a..b].iter().any(|x| *x > 0.0)) {
+                    m.insert("surface_material".to_string(), f(v));
+                }
+                m
+            },
         };
         let number = ch.lap.as_ref().map(|l| l[half] as i32).unwrap_or(seg_i as i32);
         laps.push(ImportedLap {
@@ -895,6 +963,22 @@ pub mod writer {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn car_and_track_profile_are_read_from_yaml() {
+        let y = "WeekendInfo:\n TrackID: 212\n TrackDisplayShortName: Interlagos\n TrackCity: São Paulo\n TrackCountry: Brazil\n TrackNumTurns: 15\n TrackType: road course\n\
+DriverInfo:\n DriverCarIdx: 1\n DriverCarRedLine: 7300.000\n DriverCarFuelMaxLtr: 46.000\n DriverCarMaxFuelPct: 0.800\n DriverCarGearNumForward: 6\n DriverCarSLShiftRPM: 6550.000\n DriverCarIsElectric: 0\n DriverCarEstLapTime: 83.8389\n\
+ Drivers:\n - CarIdx: 0\n   CarScreenName: Safety\n   CarID: 108\n   CarClassShortName: \n - CarIdx: 1\n   CarScreenName: Super Formula Lights 324\n   CarID: 178\n   CarClassShortName: SF Lights\n";
+        let p = parse_session_info(y).profile;
+        assert_eq!(p.track.track_id, Some(212));
+        assert_eq!(p.track.turns, Some(15));
+        assert_eq!(p.track.city.as_deref(), Some("São Paulo"));
+        assert_eq!(p.car.car_id, Some(178));
+        assert_eq!(p.car.class.as_deref(), Some("SF Lights"));
+        assert_eq!(p.car.gears, Some(6));
+        assert_eq!(p.car.shift_rpm, Some(6550.0));
+        assert!((p.usable_tank_l().unwrap() - 36.8).abs() < 0.01);
+    }
 
     #[test]
     fn fixed_setup_flag_is_read_from_weekend_options() {

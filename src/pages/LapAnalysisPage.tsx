@@ -12,7 +12,7 @@ import { api } from "../lib/api";
 import { dateTime, LAP_KIND_FR, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { ReplayStore, replayBounds } from "../lib/replay";
-import type { LapRow, SessionDetail } from "../lib/types";
+import type { LapRow, SessionDetail, SessionProfile } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
 import { CornerList } from "../components/CornerList";
 import { finalGap, fmtGap, type Axis, type GapUnit } from "../lib/compareView";
@@ -56,6 +56,19 @@ function Segmented<T extends string>({ label, value, options, onChange, title }:
       ))}
     </div>
   );
+}
+
+/** Fiche voiture en quelques repères lisibles. */
+function carFacts(p: SessionProfile): string[] {
+  const c = p.car;
+  const tank = c.fuel_max_l != null ? Math.round(c.fuel_max_l * (c.max_fuel_pct ?? 1)) : null;
+  return [
+    c.class,
+    tank != null && !c.electric ? `réservoir ${tank} L` : null,
+    c.gears ? `${c.gears} rapports` : null,
+    c.shift_rpm ? `passage ${Math.round(c.shift_rpm)} tr/min` : null,
+    c.redline_rpm ? `rupteur ${Math.round(c.redline_rpm)}` : null,
+  ].filter((x): x is string => !!x);
 }
 
 function lapFlags(l: LapRow): string {
@@ -117,6 +130,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
   const d = detail.data;
   const c = cmp.data;
+  const overlay = useAsync(() => (d && refId != null ? api.trackOverlay(d.id, refId).catch(() => null) : Promise.resolve(null)), [d?.id, refId]);
   const store = useMemo(() => (c ? new ReplayStore(...replayBounds(c)) : null), [c]);
   useEffect(() => () => store?.dispose(), [store]);
   const onChartCursor = (t: number | null) => {
@@ -164,7 +178,18 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
       {d && (
         <>
           <div className="grid cols-4" style={{ marginBottom: 14 }}>
-            <div className="card"><h2>Session</h2><div style={{ fontWeight: 600 }}>{d.meta.track}</div><div className="kpi-sub">{d.meta.car} <SetupChip setup={d.meta.setup} /></div></div>
+            <div className="card">
+              <h2>Session</h2>
+              <div style={{ fontWeight: 600 }}>{d.meta.track}</div>
+              {d.profile && (d.profile.track.city || d.profile.track.turns) && (
+                <div className="kpi-sub" style={{ marginTop: 2 }}>
+                  {[d.profile.track.city && d.profile.track.country ? `${d.profile.track.city}, ${d.profile.track.country}` : d.profile.track.country, d.profile.track.turns ? `${d.profile.track.turns} virages` : null].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              <div className="kpi-sub">{d.meta.car} <SetupChip setup={d.meta.setup} /></div>
+              {d.profile && <div className="profile-facts">{carFacts(d.profile).map((f) => <span key={f}>{f}</span>)}</div>}
+              {d.bank && <div className="kpi-sub" style={{ fontSize: 11 }} title={`Tracé OpenStreetMap, écart moyen ${d.bank.fit_m.toFixed(1)} m avec ta trajectoire`}>Base circuits : {d.bank.venue}{d.bank.layout && d.bank.layout !== d.bank.venue ? ` · ${d.bank.layout}` : ""}</div>}
+            </div>
             {d.best_lap_id != null || d.fastest_lap_id == null ? (
               <div className="card"><h2>Meilleur tour</h2><div className="kpi best">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
             ) : (
@@ -233,11 +258,11 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               </div>
               {mapSize === "half" && (
                 <div className="replay-big">
-                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
+                  <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
                   <ReplayPanel cmp={c} store={store} />
                 </div>
               )}
-              {mapSize === "full" && <ReplayStudio cmp={c} store={store} title={`${d.meta.track} · ${d.meta.car}`} onClose={() => setMapSize("normal")} />}
+              {mapSize === "full" && <ReplayStudio overlay={overlay.data} cmp={c} store={store} title={`${d.meta.track} · ${d.meta.car}`} onClose={() => setMapSize("normal")} />}
               <div className={bigMap ? "" : "grid analysis"}>
                 <div>
                   <div className="card charts-card">
@@ -258,7 +283,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 </div>
                 {!bigMap && (
                   <div className="analysis-side">
-                    <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
+                    <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
                     <ReplayPanel cmp={c} store={store} />
                   </div>
                 )}

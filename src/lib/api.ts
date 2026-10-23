@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   SetupType,
+  TrackOverlay,
   AppSettings,
   CircuitOverview,
   HistoryLap,
@@ -54,6 +55,7 @@ export const api = {
     call<Comparison>("compare_laps", { referenceLapId, comparedLapId, stepM }),
   setReference: (lapId: number) => call<void>("set_reference", { lapId }),
   setSessionSetup: (id: number, setup: SetupType | null) => call<void>("set_session_setup", { id, setup }),
+  trackOverlay: (sessionId: number, spineLapId: number | null) => call<TrackOverlay>("track_overlay", { sessionId, spineLapId }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),
   deleteAll: () => call<void>("delete_all_data"),
   exportData: (path: string) => call<number>("export_data", { path }),

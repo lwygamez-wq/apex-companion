@@ -152,6 +152,11 @@ pub async fn set_reference(state: State<'_, AppState>, lap_id: i64) -> R<()> {
 }
 
 #[tauri::command]
+pub async fn track_overlay(state: State<'_, AppState>, session_id: i64, spine_lap_id: Option<i64>) -> R<apex_core::analysis::surface::TrackOverlay> {
+    blocking(state.svc.clone(), move |s| s.track_overlay(session_id, spine_lap_id)).await
+}
+
+#[tauri::command]
 pub async fn set_session_setup(state: State<'_, AppState>, id: i64, setup: Option<apex_core::model::SetupType>) -> R<()> {
     blocking(state.svc.clone(), move |s| s.set_session_setup(id, setup)).await
 }

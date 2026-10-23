@@ -86,7 +86,60 @@ export interface Consistency {
   cv_percent: number;
 }
 
+export interface TrackEdges {
+  left: [number, number][];
+  right: [number, number][];
+  /** « laps » : estimés d'après tes tours ; « tum » : largeur mesurée. */
+  source: string;
+}
+
+/** Relevé de la piste d'après tes tours : vibreurs, peinture, hors-piste, bords. */
+export interface TrackOverlay {
+  kerbs: [number, number][];
+  lines: [number, number][];
+  off: [number, number][];
+  edges: TrackEdges | null;
+  laps: number;
+  sessions: number;
+}
+
+export interface CarProfile {
+  car_id: number | null;
+  class: string | null;
+  fuel_max_l: number | null;
+  max_fuel_pct: number | null;
+  redline_rpm: number | null;
+  shift_rpm: number | null;
+  gears: number | null;
+  electric: boolean | null;
+  est_lap_s: number | null;
+}
+
+export interface TrackProfile {
+  track_id: number | null;
+  short_name: string | null;
+  city: string | null;
+  country: string | null;
+  turns: number | null;
+  kind: string | null;
+}
+
+export interface SessionProfile {
+  car: CarProfile;
+  track: TrackProfile;
+}
+
+export interface BankMatch {
+  venue: string;
+  layout: string;
+  country: string;
+  length_m: number;
+  fit_m: number;
+}
+
 export interface SessionDetail {
+  profile: SessionProfile | null;
+  bank: BankMatch | null;
   id: number;
   meta: SessionMeta;
   laps: LapRow[];
@@ -485,7 +538,7 @@ export interface CircuitOverview {
   best_any_s: number | null;
   first_unix: number;
   last_unix: number;
-  corner_names: "exact" | "aligned" | "none";
+  corner_names: "exact" | "aligned" | "bank" | "none";
   external_reference: [string, number] | null;
 }
 

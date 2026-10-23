@@ -7,6 +7,7 @@ import type { CircuitOverview, HistoryLap } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
 
 const NAMES_FR: Record<CircuitOverview["corner_names"], string> = {
+  bank: "virages numérotés d\'après le tracé réel (banque OpenStreetMap)",
   exact: "virages nommés (relevé)",
   aligned: "virages nommés",
   none: "virages numérotés",

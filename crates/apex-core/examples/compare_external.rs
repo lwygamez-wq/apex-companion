@@ -16,7 +16,7 @@ fn main() {
         .map(|l| ImportedLap { meta: serde_json::from_value::<LapMeta>(l.clone()).unwrap(), trace: serde_json::from_value::<LapTrace>(l["trace"].clone()).unwrap() })
         .collect();
     let svc = AppService::in_memory().unwrap();
-    let InsertOutcome::Inserted(sid) = svc.insert_imported(&ImportedSession { meta, laps, sample_rate_hz: Some(60.0), race: None }).unwrap() else { panic!() };
+    let InsertOutcome::Inserted(sid) = svc.insert_imported(&ImportedSession { meta, laps, sample_rate_hz: Some(60.0), race: None, profile: None }).unwrap() else { panic!() };
     let r = svc.import_garage61(std::path::Path::new(&csv)).unwrap();
     println!("{:?}\n", r);
     let d = svc.session_detail(sid).unwrap();

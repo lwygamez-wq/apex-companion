@@ -22,7 +22,7 @@ fn main() {
     if let Ok(out) = std::env::var("APEX_MOBILE") {
         use apex_core::model::{ImportedLap, ImportedSession};
         let svc = apex_core::service::AppService::in_memory().unwrap();
-        let s = ImportedSession { meta: meta.clone(), laps: laps.iter().map(|l| ImportedLap { meta: l.1.clone(), trace: l.2.clone() }).collect(), sample_rate_hz: Some(60.0), race: None };
+        let s = ImportedSession { meta: meta.clone(), laps: laps.iter().map(|l| ImportedLap { meta: l.1.clone(), trace: l.2.clone() }).collect(), sample_rate_hz: Some(60.0), race: None, profile: None };
         let id = match svc.insert_imported(&s).unwrap() {
             apex_core::storage::InsertOutcome::Inserted(id) | apex_core::storage::InsertOutcome::Duplicate(id) => id,
         };

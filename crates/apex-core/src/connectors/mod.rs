@@ -109,7 +109,7 @@ pub struct LiveSnapshot {
     pub disk_logging: Option<bool>,
     /// Échantillon complet pour le coach en direct (ordre de `ingest::ibt::LIVE_CHANNELS`).
     #[serde(skip)]
-    pub channels: Option<[f64; 19]>,
+    pub channels: Option<[f64; crate::ingest::ibt::LIVE_N]>,
     /// YAML de session, seulement quand iRacing l'a mis à jour depuis la lecture précédente.
     #[serde(skip)]
     pub session_info: Option<String>,

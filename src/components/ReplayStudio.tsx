@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { gapMeters, interp, type Axis, type GapUnit } from "../lib/compareView";
 import { lapTime } from "../lib/format";
 import { at, positionsAt, useReplay, type ReplayStore } from "../lib/replay";
-import type { Comparison, Resampled } from "../lib/types";
+import type { Comparison, Resampled, TrackOverlay } from "../lib/types";
 import { TelemetryCharts } from "./TelemetryCharts";
 import { TrackMap } from "./TrackMap";
 
@@ -34,7 +34,7 @@ function DriverCard({ name, lap, tr, i, color, dashed }: { name: string; lap: nu
  * Relecture plein écran : la carte (caméra qui suit les deux voitures, lignes et pédales) à gauche,
  * toutes les courbes à droite avec le curseur qui suit la lecture, commandes en bas.
  */
-export function ReplayStudio({ cmp, store, title, onClose }: { cmp: Comparison; store: ReplayStore; title: string; onClose: () => void }) {
+export function ReplayStudio({ cmp, store, title, onClose, overlay = null }: { cmp: Comparison; store: ReplayStore; title: string; onClose: () => void; overlay?: TrackOverlay | null }) {
   const s = useReplay(store);
   const { ci, ri } = positionsAt(cmp, s.t, s.ghost);
   const [axis, setAxis] = useState<Axis>("distance");
@@ -110,7 +110,7 @@ export function ReplayStudio({ cmp, store, title, onClose }: { cmp: Comparison; 
       </div>
       <div className="studio-main" ref={main}>
         <div className="studio-map">
-          <TrackMap cmp={cmp} store={store} selected={seg >= 0 ? corners[seg]!.corner.id : null} onSelectCorner={(id) => goSeg(corners.findIndex((k) => k.corner.id === id))} height={Math.max(300, h - 4)} studio />
+          <TrackMap cmp={cmp} store={store} selected={seg >= 0 ? corners[seg]!.corner.id : null} onSelectCorner={(id) => goSeg(corners.findIndex((k) => k.corner.id === id))} height={Math.max(300, h - 4)} studio overlay={overlay} />
           <div className="studio-seg" onPointerDown={(e) => e.stopPropagation()}>
             <button onClick={() => goSeg(seg - 1)} aria-label="Segment précédent">‹</button>
             <div>

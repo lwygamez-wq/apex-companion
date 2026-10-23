@@ -117,6 +117,9 @@ CREATE INDEX idx_plans_combo ON plans(track_key, car, archived);
 "#, r#"
 -- v9 : type de série (setup imposé « fixed » ou libre « open ») ; NULL = inconnu.
 ALTER TABLE sessions ADD COLUMN setup TEXT;
+"#, r#"
+-- v10 : fiche voiture et circuit fournie par le simulateur (JSON).
+ALTER TABLE sessions ADD COLUMN profile_json TEXT;
 "#];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
@@ -126,7 +129,8 @@ ALTER TABLE sessions ADD COLUMN setup TEXT;
 ///      surface sous la voiture conservée (localisation des sorties de piste).
 /// v4 : contexte de course (grille, positions au passage de la ligne, incidents localisés).
 /// v5 : type de série (setup fixed / open).
-pub const PARSER_VERSION: i64 = 5;
+/// v6 : fiche voiture / circuit, matière sous la voiture (vibreurs, lignes, herbe).
+pub const PARSER_VERSION: i64 = 6;
 
 /// (id session, id Garage 61 du premier tour, circuit, configuration, voiture).
 pub type G61Untyped = (i64, String, String, Option<String>, String);
@@ -248,13 +252,14 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version, race_json, setup)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version, race_json, setup, profile_json)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
                 m.sim.as_str(), m.track, m.track_config, m.track_length_m, m.car, m.kind.as_str(), m.started_at_unix,
                 serde_json::to_string(&m.weather)?, m.source_fingerprint, m.source_path, s.sample_rate_hz, now_unix(), PARSER_VERSION,
                 s.race.as_ref().map(serde_json::to_string).transpose()?,
-                m.setup.map(|x| x.as_str())
+                m.setup.map(|x| x.as_str()),
+                s.profile.as_ref().map(serde_json::to_string).transpose()?
             ],
         )?;
         let sid = tx.last_insert_rowid();
@@ -340,8 +345,11 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5, race_json = ?6, setup = IFNULL(?8, setup) WHERE id = ?7",
-            params![m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, s.race.as_ref().map(serde_json::to_string).transpose()?, id, m.setup.map(|x| x.as_str())],
+            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5, race_json = ?6, setup = IFNULL(?8, setup), profile_json = IFNULL(?9, profile_json) WHERE id = ?7",
+            params![
+                m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, s.race.as_ref().map(serde_json::to_string).transpose()?, id, m.setup.map(|x| x.as_str()),
+                s.profile.as_ref().map(serde_json::to_string).transpose()?
+            ],
         )?;
         tx.execute("DELETE FROM laps WHERE session_id = ?1", [id])?;
         Self::insert_laps(&tx, id, s)?;
@@ -369,6 +377,39 @@ impl Store {
             source_path: r.get("source_path")?,
             setup: r.get::<_, Option<String>>("setup")?.as_deref().and_then(SetupType::parse),
         })
+    }
+
+    /// Fiche voiture / circuit de la session (iRacing, décodeur v6 et suivants).
+    pub fn session_profile(&self, id: i64) -> Result<Option<SessionProfile>, StoreError> {
+        let j: Option<String> = self.conn.query_row("SELECT profile_json FROM sessions WHERE id = ?1", [id], |r| r.get(0)).optional()?.flatten();
+        Ok(j.and_then(|j| serde_json::from_str(&j).ok()))
+    }
+
+    /// Dernière fiche connue pour un circuit et une voiture (utile aux sessions qui n'en ont pas).
+    pub fn latest_profile(&self, track: &str, car: &str) -> Result<Option<SessionProfile>, StoreError> {
+        let j: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT profile_json FROM sessions WHERE track = ?1 AND car = ?2 AND profile_json IS NOT NULL ORDER BY started_at DESC LIMIT 1",
+                params![track, car],
+                |r| r.get(0),
+            )
+            .optional()?;
+        Ok(j.and_then(|j| serde_json::from_str(&j).ok()))
+    }
+
+    /// Dernière fiche connue pour un circuit qui situe le circuit (position et repère des trajectoires).
+    pub fn latest_track_profile(&self, track: &str) -> Result<Option<SessionProfile>, StoreError> {
+        let mut st = self.conn.prepare("SELECT profile_json FROM sessions WHERE track = ?1 AND profile_json IS NOT NULL ORDER BY started_at DESC")?;
+        let rows = st.query_map([track], |r| r.get::<_, String>(0))?;
+        for j in rows.flatten() {
+            if let Ok(p) = serde_json::from_str::<SessionProfile>(&j) {
+                if p.track.origin.is_some() && p.track.lat.is_some() {
+                    return Ok(Some(p));
+                }
+            }
+        }
+        Ok(None)
     }
 
     /// Contexte de course de la session (courses iRacing décodées depuis la v4 du décodeur).

@@ -370,6 +370,61 @@ pub struct ImportedSession {
     /// Données de course (grille, positions, incidents), pour les courses iRacing.
     #[serde(default)]
     pub race: Option<RaceData>,
+    /// Fiche voiture et circuit fournie par le simulateur (iRacing : YAML de session).
+    #[serde(default)]
+    pub profile: Option<SessionProfile>,
+}
+
+/// Caractéristiques de la voiture, lues dans la session : aucune base à tenir à jour.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CarProfile {
+    pub car_id: Option<i64>,
+    /// Catégorie (« SF Lights », « GT3 »…).
+    pub class: Option<String>,
+    pub fuel_max_l: Option<f32>,
+    /// Remplissage maximal autorisé par la série (0..1).
+    pub max_fuel_pct: Option<f32>,
+    pub redline_rpm: Option<f32>,
+    /// Régime conseillé de passage du rapport (témoins de passage).
+    pub shift_rpm: Option<f32>,
+    pub gears: Option<u8>,
+    pub electric: Option<bool>,
+    /// Estimation iRacing d'un tour pour cette voiture sur ce circuit (s).
+    pub est_lap_s: Option<f32>,
+}
+
+/// Caractéristiques du circuit, lues dans la session.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TrackProfile {
+    pub track_id: Option<i64>,
+    pub short_name: Option<String>,
+    pub city: Option<String>,
+    pub country: Option<String>,
+    /// Nombre officiel de virages.
+    pub turns: Option<u16>,
+    /// « road course », « oval »…
+    pub kind: Option<String>,
+    /// Position du circuit (degrés).
+    #[serde(default)]
+    pub lat: Option<f64>,
+    #[serde(default)]
+    pub lon: Option<f64>,
+    /// Origine (lat, lon) du repère des trajectoires de cette session : permet d'y placer des tracés GPS.
+    #[serde(default)]
+    pub origin: Option<[f64; 2]>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SessionProfile {
+    pub car: CarProfile,
+    pub track: TrackProfile,
+}
+
+impl SessionProfile {
+    /// Plein utilisable (L), limite de remplissage de la série comprise.
+    pub fn usable_tank_l(&self) -> Option<f32> {
+        Some(self.car.fuel_max_l? * self.car.max_fuel_pct.unwrap_or(1.0).clamp(0.05, 1.0))
+    }
 }
 
 /// Type d'incident iRacing (octet bas de `PlayerIncidents`).

@@ -10,6 +10,8 @@ Ce que fait l'application :
 - **Programme d'entraînement** : 2 à 3 objectifs mesurables pour la prochaine séance, évalués automatiquement ensuite.
 - **Coach vocal en direct** : synthèse des derniers tours contre la référence, focus d'un virage, annonce avant le virage, bips de freinage, voix naturelle hors ligne ; commandes vocales au volant (« répète », « point », « plan », « carburant », « silence », « reprends »).
 - **Références Garage 61** (facultatif) : import des tours exportés du site, API pour retrouver tes propres sessions.
+- **Fiche voiture et circuit automatique** : réservoir, régime de passage, rapports, catégorie, ville, nombre de virages, lus dans chaque session iRacing (toutes les voitures, aucune mise à jour).
+- **Relevé de piste** : vibreurs, bordures peintes et hors-piste relevés sous ta voiture à chaque tour, bords de piste (largeur mesurée sur 25 circuits, sinon estimés d'après tes tours), affichés sur la carte et en relecture.
 - **Séries fixed et open séparées** : type de série lu dans chaque session iRacing ; une référence fixed ne sert qu'aux sessions fixed, une open qu'aux sessions open (analyse, coach en direct, historique).
 - **Historique** de tous les tours par circuit, **app iPhone** (page installable) qui ouvre les exports de séance.
 
@@ -100,6 +102,14 @@ géométrie publique des tracés (lignes médianes issues d'OpenStreetMap) :
 - [markthebault/open-racetrack-db](https://github.com/markthebault/open-racetrack-db) (ODbL 1.0) — données © [contributeurs OpenStreetMap](https://www.openstreetmap.org/copyright) : Fuji, Motegi, Bathurst, Road Atlanta, Monaco, Albert Park
 
 Seules des valeurs dérivées (position et sens de chaque virage) sont intégrées à l'application.
+
+Données embarquées en plus (dossier `crates/apex-core/data`, licences jointes) :
+
+- **Banque de circuits** : 752 sites, 1 363 configurations, tracés simplifiés issus de
+  open-racetrack-db (ODbL 1.0, © contributeurs OpenStreetMap). Sert à reconnaître le circuit et à
+  numéroter les virages d'après le vrai tracé quand aucun relevé n'est intégré.
+- **Largeurs de piste** : 25 circuits de TUMFTM racetrack-database (LGPL-3.0), recalées sur tes
+  trajectoires ; utilisées seulement si le tracé colle (sinon bords estimés d'après tes tours).
 
 ## Crédits voix et reconnaissance vocale
 

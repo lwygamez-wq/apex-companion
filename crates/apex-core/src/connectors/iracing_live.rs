@@ -101,7 +101,7 @@ impl LiveSource for IrsdkLive {
                     None
                 };
                 let g = |n: &str| self.vars.get(n).map(|v| read_value(&rec, v)).unwrap_or(0.0);
-                let mut channels = [0.0f64; 19];
+                let mut channels = [0.0f64; crate::ingest::ibt::LIVE_N];
                 for (k, name) in crate::ingest::ibt::LIVE_CHANNELS.iter().enumerate() {
                     channels[k] = g(name);
                 }

@@ -387,3 +387,6 @@ td.num, th.num { text-align: right; }
   .studio-main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
 }
 .trackmap-studio .trackmap-overview { left: auto; right: 54px; bottom: 12px; width: 140px; height: 140px; }
+.profile-facts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.profile-facts span { font-size: 11px; background: var(--panel-2); color: var(--muted); padding: 1px 6px; border-radius: 2px; }
+.studio-source { align-self: center; font-size: 11px; color: var(--muted); background: rgba(17,17,24,0.85); padding: 3px 8px; border-radius: 3px; }

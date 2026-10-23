@@ -21,6 +21,7 @@ pub mod service;
 pub mod model;
 pub mod storage;
 pub mod tracks;
+pub mod trackdb;
 pub mod tts;
 pub mod mic;
 pub mod ptt;

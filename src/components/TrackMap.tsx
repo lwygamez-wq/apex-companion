@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { at, positionsAt, useReplay, type ReplayStore } from "../lib/replay";
 import { lapTime } from "../lib/format";
-import type { Comparison } from "../lib/types";
+import type { Comparison, TrackOverlay } from "../lib/types";
 
 /**
  * Carte du circuit interactive : trajectoires réelles (GPS) de la référence et du tour analysé,
@@ -159,7 +159,7 @@ function linePath(X: number[], Y: number[], step = 2): string {
 const SPEED_COLORS = ["#2f6bff", "#3fa7ff", "#2bd576", "#ffd400", "#ff8a00", "#e10600"];
 
 /** Couches fixes (ne dépendent pas du temps) : mémorisées. */
-const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Comparison; geo: Geo; mode: ColorMode }) {
+const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false }: { c: Comparison; geo: Geo; mode: ColorMode; hasEdges?: boolean }) {
   const layers = useMemo(() => {
     const { X, Y, CX, CY } = geo;
     const step = Math.max(1, Math.round(4 / c.step_m));
@@ -227,8 +227,8 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Compariso
     // référence en pointillés blancs, ton tour coloré selon les pédales (vert gaz, rouge frein, blanc roue libre).
     return (
       <g>
-        <path d={layers.refD} stroke="#3b3b46" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <path d={layers.refD} stroke="#1d1d24" strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        {!hasEdges && <path d={layers.refD} stroke="#3b3b46" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
+        {!hasEdges && <path d={layers.refD} stroke="#1d1d24" strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
         <path d={layers.refD} stroke="rgba(255,255,255,0.85)" strokeWidth={1.6} strokeDasharray="2 4" fill="none" vectorEffect="non-scaling-stroke" />
         {layers.cmpColored?.map(([col, d]) => <path key={col} d={d} stroke={col} strokeWidth={2.6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />)}
         {layers.cmpOff && <path d={layers.cmpOff} stroke={OFF_COLOR} strokeWidth={6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />}
@@ -249,6 +249,67 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Compariso
     </g>
   );
 });
+
+/** Carrés de `size` m centrés sur les points, en un seul tracé. */
+function squares(pts: [number, number][], size: number, keep?: (p: [number, number]) => boolean): string {
+  const h = size / 2;
+  let d = "";
+  for (const p of pts) {
+    if (keep && !keep(p)) continue;
+    d += `M${(p[0] - h).toFixed(1)} ${(p[1] - h).toFixed(1)}h${size}v${size}h-${size}z`;
+  }
+  return d;
+}
+
+/** Polyligne coupée là où il manque des tranches (trous > 15 m). */
+function brokenLine(pts: [number, number][]): string {
+  let d = "";
+  let prev: [number, number] | null = null;
+  for (const p of pts) {
+    const jump = !prev || Math.hypot(p[0] - prev[0], p[1] - prev[1]) > 15;
+    d += `${jump ? "M" : "L"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+    prev = p;
+  }
+  return d;
+}
+
+/**
+ * Relevé de la piste : surface d'asphalte entre les bords, bords (limites de piste), vibreurs
+ * rouge et blanc, bordures peintes et hors-piste, d'après la matière sous ta voiture.
+ * Les points sont dans le repère des trajectoires (y inversé comme la carte).
+ */
+const OverlayLayer = memo(function OverlayLayer({ ov, studio, flip }: { ov: TrackOverlay; studio: boolean; flip: (p: [number, number]) => [number, number] }) {
+  const d = useMemo(() => {
+    const e = ov.edges;
+    const L = e ? e.left.map(flip) : [];
+    const R = e ? e.right.map(flip) : [];
+    const ring = e ? `M${L.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}Z M${R.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}Z` : "";
+    const kerbs = ov.kerbs.map(flip);
+    const parity = (p: [number, number]) => (Math.floor(p[0] / 1.5) + Math.floor(p[1] / 1.5)) % 2 === 0;
+    return {
+      ring,
+      left: e ? brokenLine(L) : "",
+      right: e ? brokenLine(R) : "",
+      kerbRed: squares(kerbs, 1.3, parity),
+      kerbWhite: squares(kerbs, 1.3, (p) => !parity(p)),
+      lines: squares(ov.lines.map(flip), 1.0),
+      off: studio ? squares(ov.off.map(flip), 1.2) : "",
+    };
+  }, [ov, studio, flip]);
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {d.ring && <path d={d.ring} fill={studio ? "#202029" : "rgba(52,52,70,0.55)"} fillRule="evenodd" />}
+      {d.off && <path d={d.off} fill="rgba(76,150,80,0.45)" />}
+      {d.left && <path d={d.left} stroke="rgba(255,255,255,0.75)" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
+      {d.right && <path d={d.right} stroke="rgba(255,255,255,0.75)" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
+      {d.lines && <path d={d.lines} fill="rgba(240,240,245,0.8)" />}
+      {d.kerbRed && <path d={d.kerbRed} fill="#e0302a" />}
+      {d.kerbWhite && <path d={d.kerbWhite} fill="#f2f2f2" />}
+    </g>
+  );
+});
+
+const flipY = (p: [number, number]): [number, number] => [p[0], -p[1]];
 
 /** Repères des virages, placés à l'extérieur de la courbe. */
 function cornerLabels(c: Comparison, geo: Geo) {
@@ -298,7 +359,9 @@ const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y:
   );
 });
 
-export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false }: {
+export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false, overlay = null }: {
+  /** Relevé de la piste (vibreurs, bords) d'après tes tours. */
+  overlay?: TrackOverlay | null;
   cmp: Comparison;
   store: ReplayStore;
   selected: number | null;
@@ -318,6 +381,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   /** Caméra inclinée « poursuite » (relecture plein écran). */
   const [tilt, setTilt] = useState(false);
   const [marks, setMarks] = useState(true);
+  const [showSurf, setShowSurf] = useState(true);
   const inputs = useMemo(() => (geo ? inputMarks(cmp, geo) : []), [cmp, geo]);
   /** Orientation en mode suivi : la voiture pointe toujours vers le haut. */
   const [carUp, setCarUp] = useState(true);
@@ -470,6 +534,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         </div>
         <div className="seg">
           <button className={marks ? "on" : ""} onClick={() => setMarks((m) => !m)} title="Points de freinage (F) et de remise des gaz (G), les tiens et ceux de la référence">Repères F / G</button>
+          {overlay && (overlay.edges || overlay.kerbs.length > 0) && <button className={showSurf ? "on" : ""} onClick={() => setShowSurf((m) => !m)} title={`Bords de piste et vibreurs relevés sur ${overlay.laps} tours`}>Bords / vibreurs</button>}
           <button className={follow ? "on" : ""} onClick={() => setFollow((f) => !f)} title="La caméra suit la voiture (molette : zoom). Activé automatiquement en lecture.">Suivre</button>
           {follow && <button className={carUp ? "on" : ""} onClick={() => setCarUp((x) => !x)} title="La carte tourne pour que la voiture pointe vers le haut">Vue pilote</button>}
           <button onClick={() => { setFollow(false); setView(null); }} title="Voir tout le circuit">Circuit</button>
@@ -500,7 +565,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           style={tilt && follow ? { transform: "perspective(900px) rotateX(42deg) scale(1.35)", transformOrigin: "50% 62%" } : undefined}
         >
           <g transform={g}>
-            <StaticLayers c={cmp} geo={geo} mode={mode} />
+            {overlay && showSurf && <OverlayLayer ov={overlay} studio={studio} flip={flipY} />}
+            <StaticLayers c={cmp} geo={geo} mode={mode} hasEdges={!!overlay?.edges && showSurf} />
             {(() => {
               const dx = geo.X[3]! - geo.X[0]!, dy = geo.Y[3]! - geo.Y[0]!;
               const l = Math.hypot(dx, dy) || 1;
@@ -591,6 +657,13 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
             <button className={follow && !tilt ? "on" : ""} onClick={() => { setFollow(true); setCarUp(true); setTilt(false); }} title="Vue du dessus qui suit la voiture">Dessus</button>
             <button className={!follow ? "on" : ""} onClick={() => { setFollow(false); setTilt(false); setView(null); }} title="Tout le circuit">Circuit</button>
             <button className={marks ? "on" : ""} onClick={() => setMarks((m) => !m)} title="Points de freinage (F) et de remise des gaz (G)">F / G</button>
+            {overlay && <button className={showSurf ? "on" : ""} onClick={() => setShowSurf((m) => !m)} title={`Bords de piste et vibreurs relevés sur ${overlay.laps} tours`}>Piste</button>}
+            {overlay && showSurf && (
+              <span className="studio-source">
+                {overlay.edges?.source === "tum" ? "Bords : largeur mesurée + tes tours" : overlay.edges ? `Bords estimés sur ${overlay.laps} tours` : "Pas encore assez de tours pour les bords"}
+                {overlay.kerbs.length + overlay.lines.length === 0 ? " · vibreurs relevés dès tes prochaines sessions" : ""}
+              </span>
+            )}
           </div>
         )}
         <div className="trackmap-zoom">

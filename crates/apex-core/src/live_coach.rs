@@ -282,6 +282,8 @@ pub struct LiveCoach {
     /// Carburant : niveau actuel (l) et consommation des derniers tours complets (l).
     fuel_now: f64,
     fuel_laps: VecDeque<f64>,
+    /// Plein utilisable (l), d'après la fiche voiture de la session.
+    tank_l: Option<f64>,
 }
 
 /// Tours propres pris en compte dans la synthèse.
@@ -314,6 +316,7 @@ impl LiveCoach {
     pub fn new(session_yaml: &str, reference: Option<ReferenceLap>, user_names: Vec<CornerName>, plan: Option<(String, Vec<f32>)>) -> (Self, CoachMessage) {
         let builder = LiveLapBuilder::new(session_yaml);
         let meta = meta_from(builder.session_info());
+        let tank_l = builder.session_info().profile.usable_tank_l().map(f64::from);
         let mut text = match &reference {
             Some(r) => format!("Coach prêt. Référence : {}.", r.label),
             None => "Coach prêt. Pas de référence enregistrée ici : je prends ton meilleur tour propre de la session.".into(),
@@ -327,7 +330,7 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new() },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -343,7 +346,7 @@ impl LiveCoach {
     }
 
     /// Un échantillon de télémétrie (ordre de `LIVE_CHANNELS`). Renvoie le message radio quand un tour se termine.
-    pub fn push(&mut self, row: [f64; 19]) -> Option<CoachMessage> {
+    pub fn push(&mut self, row: [f64; crate::ingest::ibt::LIVE_N]) -> Option<CoachMessage> {
         if row[17] != self.last_session_num {
             // Nouvelle séance (essais → qualif → course) : on repart d'une synthèse vierge.
             self.last_session_num = row[17];
@@ -411,7 +414,12 @@ impl LiveCoach {
         }
         let per = self.fuel_laps.iter().sum::<f64>() / self.fuel_laps.len() as f64;
         let laps = (self.fuel_now / per).floor() as i64;
-        format!("Carburant : {litres} litres, environ {laps} tour{}. {} litre par tour.", if laps > 1 { "s" } else { "" }, format!("{per:.1}").replace('.', ","))
+        let mut t = format!("Carburant : {litres} litres, environ {laps} tour{}. {} litre par tour.", if laps > 1 { "s" } else { "" }, format!("{per:.1}").replace('.', ","));
+        // Fiche voiture : autonomie d'un plein, pour préparer l'arrêt ou le départ.
+        if let Some(tank) = self.tank_l.filter(|t| *t > 0.0 && per > 0.0) {
+            t += &format!(" Un plein, {} litres, fait environ {} tours.", tank.round() as i64, (tank / per).floor() as i64);
+        }
+        t
     }
 
     /// Dernier conseil (commande « répète »).
