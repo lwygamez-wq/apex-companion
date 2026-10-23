@@ -479,24 +479,24 @@ impl AppService {
     /// Importe un tour Garage 61 (contenu CSV + nom), quelle que soit sa provenance (fichier, API).
     pub fn import_garage61_text(&self, name: crate::ingest::garage61::G61Name, text: &str, fname: String) -> Result<ExternalImport> {
         use crate::ingest::garage61;
-        let fold = |s: &str| crate::tracks::fold_name(s);
-        let g_track = fold(&name.track);
-        let tokens = |s: &str| fold(s).split(|c: char| !c.is_alphanumeric()).filter(|t| !t.is_empty()).map(String::from).collect::<Vec<_>>();
-        let g_car = tokens(&name.car);
         let own = self.list_sessions(&SessionFilter { sim: Some(SimId::Iracing), ..Default::default() })?;
-        let same_track = |s: &SessionSummary| {
-            let full = fold(&format!("{} {}", s.track, s.track_config.clone().unwrap_or_default()));
-            g_track == full.trim() || g_track == fold(&s.track)
+        let score = |s: &SessionSummary| garage61::track_match_score(&name.track, &s.track, s.track_config.as_deref());
+        let same_car = |s: &SessionSummary| garage61::car_matches(&name.car, &s.car);
+        // Meilleure correspondance de circuit, en préférant la même voiture ; à égalité, la plus récente.
+        let best = own.iter().filter_map(|s| score(s).map(|sc| (sc, same_car(s), s))).max_by(|a, b| (a.1, a.0).cmp(&(b.1, b.0)).then(b.2.started_at_unix.cmp(&a.2.started_at_unix).reverse()));
+        let m = match best {
+            Some((_, _, s)) => s,
+            None => {
+                let mut known: Vec<String> = own.iter().map(|s| format!("{}{}", s.track, s.track_config.as_deref().map(|c| format!(" ({c})")).unwrap_or_default())).collect();
+                known.sort();
+                known.dedup();
+                return Err(ServiceError::User(format!(
+                    "le circuit du fichier, « {} », ne correspond à aucune de tes sessions iRacing ({}). Il faut avoir roulé au moins une session sur ce circuit (l'app a besoin de sa longueur exacte).",
+                    name.track,
+                    if known.is_empty() { "aucune session".into() } else { format!("circuits connus : {}", known.join(", ")) }
+                )));
+            }
         };
-        let same_car = |s: &SessionSummary| {
-            let c = tokens(&s.car);
-            g_car.iter().all(|t| c.contains(t)) || c.iter().all(|t| g_car.contains(t))
-        };
-        let m = own
-            .iter()
-            .find(|s| same_track(s) && same_car(s))
-            .or_else(|| own.iter().find(|s| same_track(s)))
-            .ok_or_else(|| ServiceError::User(format!("aucune de tes sessions iRacing n'est sur « {} » : roule d'abord une session sur ce circuit (il faut sa longueur exacte), puis réimporte le fichier", name.track)))?;
         let meta0 = self.db().session_meta(m.id)?;
         let length = meta0.track_length_m.ok_or_else(|| ServiceError::User("longueur du circuit inconnue".into()))?;
         let lap = garage61::parse_csv(text, length, name.lap_time_s).map_err(ServiceError::User)?;
@@ -1336,6 +1336,57 @@ mod tests {
         let q = dir.path().join("Garage 61 - X - Voiture - Monza Grand Prix - 01.40.000 - Z.csv");
         std::fs::write(&q, "Speed,LapDistPct,Brake,Throttle\n").unwrap();
         assert!(svc.import_garage61(&q).unwrap_err().to_string().contains("Monza"));
+    }
+
+    /// Reproduit le cas réel de Miami : nom de circuit Garage 61 avec parenthèses, voiture sans le « 324 »,
+    /// fichier dans un dossier de téléchargements quelconque.
+    #[test]
+    fn garage61_miami_file_with_parentheses_is_imported() {
+        let svc = AppService::in_memory().unwrap();
+        let mut s = demo_session(9, 1_760_000_000);
+        s.meta.sim = SimId::Iracing;
+        s.meta.track = "Miami International Autodrome".into();
+        s.meta.track_config = Some("Grand Prix".into());
+        s.meta.car = "Super Formula Lights 324".into();
+        s.meta.source_fingerprint = "ibt:miami".into();
+        let InsertOutcome::Inserted(sid) = svc.insert_imported(&s).unwrap() else { panic!() };
+        // Une autre session sur un autre circuit ne doit pas gêner.
+        let mut other = demo_session(10, 1_760_100_000);
+        other.meta.sim = SimId::Iracing;
+        other.meta.track = "Circuit of the Americas".into();
+        other.meta.source_fingerprint = "ibt:cota".into();
+        svc.insert_imported(&other).unwrap();
+        let len = s.meta.track_length_m.unwrap();
+        let lap = &s.laps.iter().find(|l| l.meta.is_clean()).unwrap().trace;
+        let mut csv = String::from("Speed,LapDistPct,Lat,Lon,Brake,Throttle,RPM,SteeringWheelAngle,Gear,Clutch,ABSActive,DRSActive,P2PActive,LatAccel,LongAccel,VertAccel,Yaw,YawRate,PositionType\n");
+        let t_end = *lap.time_s.last().unwrap();
+        let mut t = 0.0f32;
+        while t < t_end {
+            let i = lap.time_s.partition_point(|x| *x < t).min(lap.len() - 1);
+            csv += &format!("{},{},0,0,{},{},6000,0,3,1,false,false,false,0,0,9.8,0,0,3\n", lap.speed_mps[i], (lap.dist_m[i] / len).min(0.99999), lap.brake[i], lap.throttle[i]);
+            t += 1.0 / 60.0;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let name = format!("Garage 61 - Yohann Enette - Super Formula Lights - Miami International Autodrome (Grand Prix) - 0{}.{:06.3} - 01ABC.csv", (t_end / 60.0) as u32, t_end % 60.0);
+        std::fs::write(dir.path().join(&name), csv).unwrap();
+        let rep = svc.sync_downloads_in(dir.path()).unwrap();
+        assert_eq!(rep.len(), 1);
+        let r = rep[0].result.as_ref().unwrap();
+        assert_eq!(r.driver, "Yohann Enette");
+        assert!(r.car_matches && r.set_as_reference);
+        let d = svc.session_detail(sid).unwrap();
+        assert!(d.reference_label.as_deref().unwrap().starts_with("Yohann Enette"), "{:?}", d.reference_label);
+        assert_eq!(d.analysis_reference_lap_id, Some(r.lap_id));
+        // Comparaison complète d'un de tes tours avec cette référence.
+        let mine = d.laps.iter().find(|l| l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some()).unwrap();
+        let c = svc.compare(r.lap_id, mine.id, 1.0).unwrap();
+        assert_eq!(c.reference.driver.as_deref(), Some("Yohann Enette"));
+        assert!(!c.corners.is_empty());
+        // Message utile si le circuit n'existe pas dans tes sessions.
+        let bad = dir.path().join("Garage 61 - X - Super Formula Lights - Road Atlanta (Full Course) - 01.20.000 - Z.csv");
+        std::fs::write(&bad, "Speed,LapDistPct,Brake,Throttle\n").unwrap();
+        let e = svc.import_garage61(&bad).unwrap_err().to_string();
+        assert!(e.contains("Road Atlanta") && e.contains("Miami International Autodrome (Grand Prix)"), "{e}");
     }
 
     #[test]

@@ -42,6 +42,42 @@ pub fn parse_file_name(name: &str) -> Option<G61Name> {
     })
 }
 
+/// Mots normalisés (minuscules, sans accents ni ponctuation) : « Miami International Autodrome
+/// (Grand Prix) » et « Miami International Autodrome Grand Prix » donnent les mêmes mots.
+pub fn tokens(s: &str) -> Vec<String> {
+    crate::tracks::fold_name(s).split(|c: char| !c.is_alphanumeric()).filter(|t| !t.is_empty()).map(String::from).collect()
+}
+
+/// Le circuit écrit par Garage 61 (`g61_track`, configuration comprise) correspond-il à une session
+/// iRacing (`track` + `config`) ? Renvoie un score (nombre de mots en commun) ou `None`.
+///
+/// Règles : tous les mots du nom du circuit iRacing doivent figurer chez Garage 61 ; pour la
+/// configuration, soit tous ses mots y figurent, soit Garage 61 n'en précise aucune (circuit à
+/// tracé unique). Une configuration différente (« East » contre « Grand Prix ») est refusée.
+pub fn track_match_score(g61_track: &str, track: &str, config: Option<&str>) -> Option<usize> {
+    let g = tokens(g61_track);
+    let t = tokens(track);
+    if t.is_empty() || !t.iter().all(|w| g.contains(w)) {
+        return None;
+    }
+    let c = tokens(config.unwrap_or(""));
+    let extra: Vec<&String> = g.iter().filter(|w| !t.contains(w)).collect();
+    if c.iter().all(|w| g.contains(w)) {
+        Some(t.len() + c.len())
+    } else if extra.is_empty() {
+        Some(t.len())
+    } else {
+        None
+    }
+}
+
+/// Même voiture : les mots de l'un sont tous contenus dans l'autre
+/// (« Dallara F3 » / « Dallara F312 F3 », « Super Formula Lights » / « Super Formula Lights 324 »).
+pub fn car_matches(g61_car: &str, car: &str) -> bool {
+    let (g, c) = (tokens(g61_car), tokens(car));
+    !g.is_empty() && !c.is_empty() && (g.iter().all(|t| c.contains(t)) || c.iter().all(|t| g.contains(t)))
+}
+
 /// Tour décodé : trace et indicateur de sortie de piste.
 pub struct G61Lap {
     pub trace: LapTrace,
@@ -163,6 +199,28 @@ mod tests {
         assert_eq!(n.track, "Circuit of the Americas Grand Prix");
         assert!((n.lap_time_s - 116.507).abs() < 1e-9);
         assert!(parse_file_name("tour.csv").is_none());
+    }
+
+    #[test]
+    fn real_garage61_names_match_iracing_sessions() {
+        // Formats réels relevés sur des exports Garage 61 (octobre 2026).
+        let cota = parse_file_name("Garage 61 - Luke Fleming - Dallara F3 - Circuit of the Americas Grand Prix - 01.56.507 - X.csv").unwrap();
+        let miami = parse_file_name("Garage 61 - Yohann Enette - Super Formula Lights - Miami International Autodrome (Grand Prix) - 01.38.123 - Y.csv").unwrap();
+        assert_eq!(miami.track, "Miami International Autodrome (Grand Prix)");
+        assert!(track_match_score(&cota.track, "Circuit of the Americas", Some("Grand Prix")).is_some());
+        assert!(track_match_score(&miami.track, "Miami International Autodrome", Some("Grand Prix")).is_some());
+        assert!(track_match_score(&miami.track, "Miami International Autodrome", None).is_some());
+        assert!(track_match_score("Autódromo José Carlos Pace (Grand Prix)", "Autodromo Jose Carlos Pace", Some("Grand Prix")).is_some());
+        // Circuit à tracé unique : Garage 61 ne précise pas de configuration.
+        assert!(track_match_score("Okayama International Circuit", "Okayama International Circuit", Some("Full Course")).is_some());
+        // Autre configuration ou autre circuit : refus.
+        assert!(track_match_score(&cota.track, "Circuit of the Americas", Some("East")).is_none());
+        assert!(track_match_score(&miami.track, "Circuit of the Americas", Some("Grand Prix")).is_none());
+        // La configuration exacte l'emporte sur le nom seul.
+        assert!(track_match_score(&cota.track, "Circuit of the Americas", Some("Grand Prix")) > track_match_score(&cota.track, "Circuit of the Americas", None));
+        assert!(car_matches(&miami.car, "Super Formula Lights 324"));
+        assert!(car_matches(&cota.car, "Dallara F312 F3"));
+        assert!(!car_matches(&cota.car, "Super Formula Lights 324"));
     }
 
     #[test]
