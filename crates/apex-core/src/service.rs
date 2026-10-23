@@ -63,6 +63,13 @@ pub struct AppSettings {
     /// Voix du coach : « windows » (synthèse de Windows) ou une voix naturelle de `tts::VOICES`.
     #[serde(default = "default_voice")]
     pub coach_voice: String,
+    /// Volume de la voix du coach (0 à 100).
+    #[serde(default = "default_volume")]
+    pub coach_volume: u8,
+}
+
+fn default_volume() -> u8 {
+    50
 }
 
 fn default_voice() -> String {
@@ -91,6 +98,7 @@ impl Default for AppSettings {
             garage61_drivers: vec![],
             downloads_dir: None,
             coach_voice: default_voice(),
+            coach_volume: default_volume(),
         }
     }
 }

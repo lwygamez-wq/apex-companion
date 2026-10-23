@@ -424,6 +424,8 @@ export interface AppSettings {
   downloads_dir: string | null;
   /** « windows » ou identifiant d'une voix naturelle. */
   coach_voice: string;
+  /** Volume de la voix du coach, 0 à 100. */
+  coach_volume: number;
 }
 
 export interface SessionFilter {

@@ -3,6 +3,7 @@ import { api, isTauri } from "./api";
 
 let cached: SpeechSynthesisVoice | null = null;
 let current = "windows";
+let volume = 0.5;
 let playing: HTMLAudioElement | null = null;
 
 function frenchVoice(): SpeechSynthesisVoice | null {
@@ -28,6 +29,16 @@ export function setCoachVoice(id: string | null | undefined): void {
   current = id || "windows";
 }
 
+/** Volume de 0 à 100 ; s'applique aussi au message en cours. */
+export function setCoachVolume(v: number | null | undefined): void {
+  volume = Math.max(0, Math.min(100, v ?? 50)) / 100;
+  if (playing) playing.volume = volume;
+}
+
+export function coachVolume(): number {
+  return Math.round(volume * 100);
+}
+
 export function coachVoice(): string {
   return current;
 }
@@ -47,6 +58,7 @@ function speakWindows(text: string): void {
   if (v) u.voice = v;
   u.lang = v?.lang ?? "fr-FR";
   u.rate = 1.08;
+  u.volume = volume;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
 }
@@ -70,6 +82,7 @@ export async function speak(text: string, voice: string = current): Promise<void
   try {
     const wav = await api.ttsSpeak(voice, text);
     const a = new Audio(URL.createObjectURL(new Blob([wav], { type: "audio/wav" })));
+    a.volume = volume;
     playing = a;
     await a.play();
   } catch (e) {

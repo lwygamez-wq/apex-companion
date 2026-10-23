@@ -3,7 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
 import { findUpdate, installUpdate } from "../components/UpdateBanner";
 import { api, isTauri } from "../lib/api";
-import { setCoachVoice } from "../lib/voice";
+import { setCoachVoice, setCoachVolume } from "../lib/voice";
 import { SUPPORT_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { AppSettings, Capabilities, Support } from "../lib/types";
@@ -83,6 +83,7 @@ export function SettingsPage() {
       const saved = await api.saveSettings(s);
       setS(saved);
       setCoachVoice(saved.coach_voice);
+      setCoachVolume(saved.coach_volume);
       setMsg("Réglages enregistrés.");
       connectors.reload();
     } catch (e) {

@@ -3,7 +3,7 @@ import { api } from "../lib/api";
 import { delta, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { StatusPayload } from "../lib/types";
-import { coachVoice, setCoachVoice, speak, voiceAvailable, voiceName } from "../lib/voice";
+import { coachVoice, coachVolume, setCoachVoice, setCoachVolume, speak, voiceAvailable, voiceName } from "../lib/voice";
 
 const SAMPLE = "Radio check. Plus 3 dixièmes. Sur les 3 derniers tours, focus virage 16, secteur 3 : 3 dixièmes perdus. Freine 10 mètres plus tard.";
 
@@ -18,6 +18,16 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
   const voices = useAsync(() => api.ttsVoices(), []);
   const [sel, setSel] = useState(coachVoice());
   const [busy, setBusy] = useState<string | null>(null);
+  const [vol, setVol] = useState(coachVolume());
+  // Volume appliqué tout de suite (même au message en cours), enregistré au relâchement du curseur.
+  const saveVolume = async (v: number) => {
+    try {
+      const s = await api.settings();
+      await api.saveSettings({ ...s, coach_volume: v });
+    } catch (e) {
+      setBusy(e instanceof Error ? e.message : String(e));
+    }
+  };
   const choose = async (id: string) => {
     setSel(id);
     setBusy(null);
@@ -76,6 +86,25 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
                   <span className="muted" style={{ fontSize: 12 }}>{v.id === "windows" ? (winVoice ?? "voix par défaut") : v.installed ? "installée" : "naturelle · à télécharger"}</span>
                 </label>
               ))}
+            </div>
+            <div className="row" style={{ marginTop: 10, gap: 10 }}>
+              <span className="muted">Volume</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={vol}
+                style={{ flex: 1 }}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setVol(v);
+                  setCoachVolume(v);
+                }}
+                onPointerUp={() => void saveVolume(vol)}
+                onKeyUp={() => void saveVolume(vol)}
+              />
+              <span className="mono" style={{ width: 44, textAlign: "right" }}>{vol} %</span>
             </div>
             <button className="btn primary" onClick={() => void test()} style={{ marginTop: 8 }}>{sel !== "windows" && !voices.data?.find((v) => v.id === sel)?.installed ? "Télécharger et tester" : "Tester la voix"}</button>
             {busy && <div className="muted" style={{ marginTop: 8 }}>{busy}</div>}
