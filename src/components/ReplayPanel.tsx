@@ -107,8 +107,8 @@ export function ReplayPanel({ cmp, store, compact = false }: { cmp: Comparison; 
           <b className={`mono ${gap > 0.005 ? "pos" : gap < -0.005 ? "neg" : ""}`}>{delta(gap)} s</b>
         </div>
         <div>
-          <span className="muted">Fantôme</span>
-          <b className="mono">{Math.abs(aheadM) < 1 ? "à hauteur" : `${Math.abs(aheadM).toFixed(0)} m ${aheadM > 0 ? "devant" : "derrière"}`}</b>
+          <span className="muted">Voiture réf.</span>
+          <b className="mono">{s.ghost === "distance" ? "à ta hauteur" : Math.abs(aheadM) < 1 ? "à hauteur" : `${Math.abs(aheadM).toFixed(0)} m ${aheadM > 0 ? "devant" : "derrière"}`}</b>
         </div>
         <div>
           <span className="muted">Trajectoire</span>

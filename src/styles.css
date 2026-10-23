@@ -320,3 +320,21 @@ td.num, th.num { text-align: right; }
   .corner-row { grid-template-columns: 100px 1fr 60px; }
   .corner-facts { grid-column: 1 / -1; }
 }
+
+/* ---- Carte : plein écran, jauges ---- */
+.map-full { position: fixed; inset: 0; z-index: 1000; background: #0b0b10; padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.map-full .trackmap { clip-path: none; }
+.trackmap-tools .seg-label { font-size: 11px; }
+.hud { position: absolute; left: 8px; top: 8px; display: flex; gap: 6px; align-items: stretch; pointer-events: none; }
+.hud-car { background: rgba(12, 12, 18, 0.86); border: 1px solid #2c2c38; border-radius: 3px; padding: 5px 8px 6px; min-width: 128px; }
+.hud-name { font-size: 11px; font-weight: 700; color: var(--muted); border-left: 3px solid; padding-left: 6px; margin-bottom: 3px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.hud-row { display: flex; align-items: flex-end; gap: 6px; height: 34px; }
+.hud-speed { font-size: 24px; font-weight: 800; font-style: italic; line-height: 1; min-width: 46px; text-align: right; }
+.hud-speed small { font-size: 10px; font-weight: 500; font-style: normal; color: var(--muted); margin-left: 2px; }
+.hud-gear { font-size: 15px; font-weight: 800; background: #fff; color: #111; border-radius: 2px; padding: 0 5px; line-height: 20px; align-self: center; }
+.hud-pedal { width: 9px; height: 100%; background: #24242e; border-radius: 1px; position: relative; overflow: hidden; }
+.hud-pedal i { position: absolute; left: 0; right: 0; bottom: 0; }
+.hud-gap { background: rgba(12, 12, 18, 0.86); border: 1px solid #2c2c38; border-radius: 3px; padding: 5px 9px; font-size: 18px; font-weight: 800; display: flex; flex-direction: column; justify-content: center; }
+.hud-gap small { font-size: 10px; font-weight: 500; color: var(--muted); }
+.hud-clock { position: absolute; right: 8px; top: 8px; background: rgba(12, 12, 18, 0.86); border: 1px solid #2c2c38; border-radius: 3px; padding: 3px 8px; font-size: 14px; font-weight: 800; pointer-events: none; }
+@media (max-width: 700px) { .hud-car { min-width: 0; } .hud-speed { font-size: 18px; } }

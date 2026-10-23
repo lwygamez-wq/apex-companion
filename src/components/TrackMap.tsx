@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { at, positionsAt, useReplay, type ReplayStore } from "../lib/replay";
+import { lapTime } from "../lib/format";
 import type { Comparison } from "../lib/types";
 
 /**
@@ -9,9 +10,108 @@ import type { Comparison } from "../lib/types";
  */
 
 export type ColorMode = "delta" | "inputs" | "speed";
+/** Taille de la carte : dans la page, moitié de l'écran, ou plein écran. */
+export type MapSize = "normal" | "half" | "full";
 
-const REF_LINE = "rgba(201,201,212,0.85)";
-const CMP_LINE = "#e10600";
+const REF_LINE = "#8fb4ff";
+const CMP_LINE = "#ff3b30";
+const BRAKE = "#ff3b30";
+const GAS = "#2bd576";
+
+/**
+ * Monoplace vue de dessus (dessin générique, 5 m × 2 m, avant vers +x), centrée sur l'origine.
+ * `braking` allume le feu arrière.
+ */
+function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: number; heading: number; scale: number; body: string; ghost?: boolean; braking: boolean }) {
+  const tyre = ghost ? "rgba(143,180,255,0.35)" : "#0d0d12";
+  const op = ghost ? 0.9 : 1;
+  return (
+    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${heading.toFixed(1)}) scale(${scale.toFixed(4)})`} opacity={op} style={{ pointerEvents: "none" }}>
+      {/* ombre / halo de lisibilité */}
+      <ellipse cx={0} cy={0} rx={3.1} ry={1.5} fill="rgba(0,0,0,0.45)" />
+      {braking && <ellipse cx={-2.7} cy={0} rx={0.9} ry={0.7} fill="rgba(255,40,30,0.85)" />}
+      {/* aileron arrière */}
+      <rect x={-2.5} y={-0.78} width={0.42} height={1.56} rx={0.08} fill={body} stroke={ghost ? body : "#fff"} strokeWidth={0.08} />
+      {/* roues */}
+      <rect x={-2.02} y={-1.0} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
+      <rect x={-2.02} y={0.62} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
+      <rect x={1.18} y={-0.96} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
+      <rect x={1.18} y={0.62} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
+      {/* bras de suspension */}
+      <path d="M-1.65 -0.62 L-1.3 -0.3 M-1.65 0.62 L-1.3 0.3 M1.48 -0.62 L1.15 -0.18 M1.48 0.62 L1.15 0.18" stroke={ghost ? body : "#c8c8d0"} strokeWidth={0.07} />
+      {/* coque et pontons */}
+      <path
+        d="M-2.1 -0.42 L-1.25 -0.58 L0.15 -0.55 L0.55 -0.24 L1.95 -0.12 L2.28 0 L1.95 0.12 L0.55 0.24 L0.15 0.55 L-1.25 0.58 L-2.1 0.42 Z"
+        fill={ghost ? "rgba(143,180,255,0.6)" : body}
+        stroke={ghost ? body : "#ffffff"}
+        strokeWidth={ghost ? 0.1 : 0.07}
+        strokeDasharray={undefined}
+      />
+      {/* aileron avant */}
+      <rect x={2.12} y={-0.86} width={0.32} height={1.72} rx={0.08} fill={body} stroke={ghost ? body : "#fff"} strokeWidth={0.08} />
+      {/* casque */}
+      <circle cx={-0.25} cy={0} r={0.24} fill={ghost ? body : "#ffd400"} stroke="#111" strokeWidth={0.05} />
+    </g>
+  );
+}
+
+/** Repères de freinage (F) et de remise des gaz (G) d'un tour : tiret en travers de sa trajectoire. */
+interface Mark { x: number; y: number; nx: number; ny: number; kind: "brake" | "gas"; who: "ref" | "cmp"; corner: string; at: number }
+
+function inputMarks(c: Comparison, geo: Geo): Mark[] {
+  const out: Mark[] = [];
+  const put = (xs: number[], ys: number[], m: number | null, kind: Mark["kind"], who: Mark["who"], corner: string) => {
+    if (m == null) return;
+    const n = xs.length;
+    const i = Math.max(0, Math.min(n - 1, Math.round(m / c.step_m)));
+    const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4);
+    const dx = xs[b]! - xs[a]!, dy = ys[b]! - ys[a]!;
+    const l = Math.hypot(dx, dy) || 1;
+    out.push({ x: xs[i]!, y: ys[i]!, nx: -dy / l, ny: dx / l, kind, who, corner, at: m });
+  };
+  const CX = geo.CX && geo.CY ? geo.CX : geo.X;
+  const CY = geo.CX && geo.CY ? geo.CY : geo.Y;
+  for (const k of c.corners) {
+    const r = k.reference, p = k.compared;
+    put(geo.X, geo.Y, r.brake_peak >= 0.2 ? r.brake_on_m : null, "brake", "ref", k.corner.name);
+    put(CX, CY, p.brake_peak >= 0.2 ? p.brake_on_m : null, "brake", "cmp", k.corner.name);
+    put(geo.X, geo.Y, r.throttle_on_m, "gas", "ref", k.corner.name);
+    put(CX, CY, p.throttle_on_m, "gas", "cmp", k.corner.name);
+  }
+  return out;
+}
+
+/** Jauges type télé : vitesse, rapport, gaz et frein des deux voitures. */
+function Hud({ cmp, ci, ri, ghostMode }: { cmp: Comparison; ci: number; ri: number; ghostMode: "time" | "distance" }) {
+  const col = (label: string, color: string, tr: typeof cmp.ref_trace, i: number) => {
+    const th = Math.max(0, Math.min(1, at(tr.throttle, i) ?? 0));
+    const br = Math.max(0, Math.min(1, at(tr.brake, i) ?? 0));
+    const g = at(tr.gear, i);
+    return (
+      <div className="hud-car">
+        <div className="hud-name" style={{ borderColor: color }}>{label}</div>
+        <div className="hud-row">
+          <div className="hud-speed mono">{Math.round(at(tr.speed_kmh, i) ?? 0)}<small>km/h</small></div>
+          {g != null && <div className="hud-gear mono">{Math.round(g) || "N"}</div>}
+          <div className="hud-pedal" title="Frein"><i style={{ height: `${br * 100}%`, background: BRAKE }} /></div>
+          <div className="hud-pedal" title="Gaz"><i style={{ height: `${th * 100}%`, background: GAS }} /></div>
+        </div>
+      </div>
+    );
+  };
+  const gapS = at(cmp.delta_s, ci) ?? 0;
+  const aheadM = (ri - ci) * cmp.step_m;
+  return (
+    <div className="hud" onPointerDown={(e) => e.stopPropagation()}>
+      {col(cmp.reference.driver ?? `Réf. tour ${cmp.reference.number}`, REF_LINE, cmp.ref_trace, ri)}
+      {col(`Toi, tour ${cmp.compared.number}`, CMP_LINE, cmp.cmp_trace, ci)}
+      <div className={`hud-gap mono ${gapS > 0.005 ? "pos" : gapS < -0.005 ? "neg" : ""}`}>
+        {gapS > 0 ? "+" : gapS < 0 ? "−" : "±"}{Math.abs(gapS).toFixed(2)} s
+        <small>{ghostMode === "distance" ? "même endroit" : Math.abs(aheadM) < 1 ? "à hauteur" : `réf. ${Math.abs(aheadM).toFixed(0)} m ${aheadM > 0 ? "devant" : "derrière"}`}</small>
+      </div>
+    </div>
+  );
+}
 const OFF_COLOR = "#ff8a00";
 
 interface Geo {
@@ -172,14 +272,14 @@ const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y:
   );
 });
 
-export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, big, onToggleBig }: {
+export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize }: {
   cmp: Comparison;
   store: ReplayStore;
   selected: number | null;
   onSelectCorner: (id: number) => void;
   height?: number;
-  big?: boolean;
-  onToggleBig?: () => void;
+  size?: MapSize;
+  onSize?: (s: MapSize) => void;
 }) {
   const geo = useMemo(() => buildGeo(cmp), [cmp]);
   const labels = useMemo(() => (geo ? cornerLabels(cmp, geo) : []), [cmp, geo]);
@@ -187,10 +287,12 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
   const [px, setPx] = useState(400);
   const [mode, setMode] = useState<ColorMode>("delta");
   const [follow, setFollow] = useState(false);
+  const [marks, setMarks] = useState(true);
+  const inputs = useMemo(() => (geo ? inputMarks(cmp, geo) : []), [cmp, geo]);
   /** Orientation en mode suivi : la voiture pointe toujours vers le haut. */
   const [carUp, setCarUp] = useState(true);
   /** Échelle du suivi rapproché (mètres par pixel), indépendante de la taille de la carte. */
-  const [zoomMpp, setZoomMpp] = useState(0.55);
+  const [zoomMpp, setZoomMpp] = useState(0.22);
   const zoomW = zoomMpp * px;
   const full = useMemo<View | null>(() => {
     if (!geo) return null;
@@ -210,7 +312,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
   }, []);
 
   const rs = useReplay(store);
-  const { ci, ri } = positionsAt(cmp, rs.t);
+  const { ci, ri } = positionsAt(cmp, rs.t, rs.ghost);
 
   // Lecture lancée : la caméra passe automatiquement en suivi rapproché.
   const wasPlaying = useRef(false);
@@ -221,8 +323,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
 
   const CX = geo?.CX && geo.CY ? geo.CX : geo?.X;
   const CY = geo?.CX && geo.CY ? geo.CY : geo?.Y;
-  const car = geo && CX && CY ? { x: at(CX, ci)!, y: at(CY, ci)! } : null;
-  const ghost = geo ? { x: at(geo.X, ri)!, y: at(geo.Y, ri)! } : null;
+  const car = geo && CX && CY ? { x: at(CX, ci)!, y: at(CY, ci)!, h: headingAt(CX, CY, ci, 4 / cmp.step_m) } : null;
+  const ghost = geo ? { x: at(geo.X, ri)!, y: at(geo.Y, ri)!, h: headingAt(geo.X, geo.Y, ri, 4 / cmp.step_m) } : null;
 
   // Cap lissé (évite les à-coups de rotation).
   const smooth = useRef<number | null>(null);
@@ -331,12 +433,24 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
             <button key={k} className={mode === k ? "on" : ""} onClick={() => setMode(k)}>{l}</button>
           ))}
         </div>
+        <div className="seg" title="Où placer la voiture de la référence">
+          <span className="seg-label">Réf.</span>
+          <button className={rs.ghost === "time" ? "on" : ""} onClick={() => store.setGhost("time")} title="Où était la référence au même instant : elle se détache devant ou derrière toi">Même temps</button>
+          <button className={rs.ghost === "distance" ? "on" : ""} onClick={() => store.setGhost("distance")} title="La référence roule à ta hauteur : compare freinages et remises des gaz au même endroit">Même endroit</button>
+        </div>
         <div className="seg">
+          <button className={marks ? "on" : ""} onClick={() => setMarks((m) => !m)} title="Points de freinage (F) et de remise des gaz (G), les tiens et ceux de la référence">Repères F / G</button>
           <button className={follow ? "on" : ""} onClick={() => setFollow((f) => !f)} title="La caméra suit la voiture (molette : zoom). Activé automatiquement en lecture.">Suivre</button>
           {follow && <button className={carUp ? "on" : ""} onClick={() => setCarUp((x) => !x)} title="La carte tourne pour que la voiture pointe vers le haut">Vue pilote</button>}
           <button onClick={() => { setFollow(false); setView(null); }} title="Voir tout le circuit">Circuit</button>
-          {onToggleBig && <button className={big ? "on" : ""} onClick={onToggleBig} title="Agrandir la carte et la relecture">{big ? "Réduire" : "Agrandir"}</button>}
         </div>
+        {onSize && (
+          <div className="seg" title="Taille de la carte (Échap : quitter le plein écran)">
+            <button className={size === "normal" ? "on" : ""} onClick={() => onSize("normal")}>Normal</button>
+            <button className={size === "half" ? "on" : ""} onClick={() => onSize("half")}>50 %</button>
+            <button className={size === "full" ? "on" : ""} onClick={() => onSize("full")}>Plein écran</button>
+          </div>
+        )}
       </div>
       <div
         ref={host}
@@ -374,22 +488,78 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, b
                 </g>
               );
             })}
-            {ghost && <circle cx={ghost.x} cy={ghost.y} r={6 * mPerPx} fill="rgba(21,21,30,0.6)" stroke={REF_LINE} strokeWidth={2} vectorEffect="non-scaling-stroke" />}
-            {car && <circle cx={car.x} cy={car.y} r={7 * mPerPx} fill={CMP_LINE} stroke="#ffffff" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+            {marks && (() => {
+              // Tirets en travers de la piste : rouge = début du freinage, vert = remise des gaz ;
+              // trait plein = toi, contour bleu = référence. Lettre F / G quand on est assez près.
+              const half = 9 * mPerPx;
+              const showText = v.w < 900;
+              return inputs.map((m, i) => {
+                const col = m.kind === "brake" ? BRAKE : GAS;
+                const side = m.who === "ref" ? 1 : -1;
+                const x1 = m.x - m.nx * half, y1 = m.y - m.ny * half, x2 = m.x + m.nx * half, y2 = m.y + m.ny * half;
+                const tx = m.x + m.nx * side * (half + 9 * mPerPx), ty = m.y + m.ny * side * (half + 9 * mPerPx);
+                return (
+                  <g key={i}>
+                    <title>{`${m.who === "ref" ? "Référence" : "Toi"} : ${m.kind === "brake" ? "freinage" : "remise des gaz"} (${m.corner}, ${m.at.toFixed(0)} m)`}</title>
+                    {m.who === "ref" ? (
+                      <>
+                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={REF_LINE} strokeWidth={7} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                      </>
+                    ) : (
+                      <>
+                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeWidth={7} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={4} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                      </>
+                    )}
+                    {showText && (
+                      <g transform={upright(tx, ty)}>
+                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "#fff"} stroke="#101017" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">
+                          {m.kind === "brake" ? "F" : "G"}
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                );
+              });
+            })()}
+            {(() => {
+              // Voitures à l'échelle réelle quand on est près, jamais plus petites que 24 px à l'écran.
+              const sc = Math.max(1, ((follow ? 54 : 32) * mPerPx) / 5);
+              // « Même endroit » : les deux voitures roulent côte à côte (décalées de part et d'autre de la
+              // trajectoire) pour qu'on voie qui freine ou remet les gaz en premier.
+              const side = (p: { x: number; y: number; h: number }, k: number) => {
+                if (rs.ghost !== "distance") return p;
+                const a = (p.h * Math.PI) / 180;
+                const o = k * 1.15 * sc;
+                return { ...p, x: p.x - Math.sin(a) * o, y: p.y + Math.cos(a) * o };
+              };
+              const g2 = ghost && side(ghost, -1);
+              const c2 = car && side(car, 1);
+              return (
+                <>
+                  {g2 && <Car x={g2.x} y={g2.y} heading={g2.h} scale={sc} body={REF_LINE} ghost braking={(at(cmp.ref_trace.brake, ri) ?? 0) > 0.05} />}
+                  {c2 && <Car x={c2.x} y={c2.y} heading={c2.h} scale={sc} body={CMP_LINE} braking={(at(cmp.cmp_trace.brake, ci) ?? 0) > 0.05} />}
+                </>
+              );
+            })()}
           </g>
         </svg>
         {zoomed && car && <Overview geo={geo} x={car.x} y={car.y} />}
+        <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} />
+        <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>
         <div className="trackmap-zoom">
           <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(0.7)} aria-label="Zoomer">+</button>
           <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(1.4)} aria-label="Dézoomer">−</button>
         </div>
       </div>
       <div className="trackmap-legend">
-        <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · cercle vide = fantôme</span>
+        <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture bleue transparente</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
         {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
         {mode === "delta" && <span><i style={{ background: "#2bd576" }} />gain <i style={{ background: "#ffd400", marginLeft: 6 }} />perte</span>}
         {mode === "inputs" && <span><i style={{ background: "#ff2a1f" }} />frein <i style={{ background: "#ffd400", marginLeft: 6 }} />gaz partiel <i style={{ background: "#2bd576", marginLeft: 6 }} />plein gaz <i style={{ background: "#fff", marginLeft: 6 }} />roue libre</span>}
+        {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 6 }} />G gaz · contour bleu = réf., blanc = toi</span>}
         {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
       </div>
     </div>

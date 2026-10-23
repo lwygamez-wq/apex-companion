@@ -6,7 +6,7 @@ import { OffTrackCard } from "../components/OffTrackCard";
 import { RiskCard } from "../components/RiskCard";
 import { RaceCard } from "../components/RaceCard";
 import { ReplayPanel } from "../components/ReplayPanel";
-import { TrackMap } from "../components/TrackMap";
+import { TrackMap, type MapSize } from "../components/TrackMap";
 import { api } from "../lib/api";
 import { dateTime, LAP_KIND_FR, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
@@ -15,6 +15,16 @@ import type { LapRow, SessionDetail } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
 import { CornerList } from "../components/CornerList";
 import { finalGap, fmtGap, type Axis, type GapUnit } from "../lib/compareView";
+
+function useWindowHeight(): number {
+  const [h, setH] = useState(() => window.innerHeight);
+  useEffect(() => {
+    const f = () => setH(window.innerHeight);
+    window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
+  return h;
+}
 
 /** Réglage d'affichage gardé d'une visite à l'autre (navigateur uniquement, facultatif). */
 function usePref<T>(key: string, init: T): [T, (v: T | ((p: T) => T)) => void] {
@@ -73,7 +83,18 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const [cmpId, setCmpId] = useState<number | null>(route.cmpLapId ?? null);
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [bigMap, setBigMap] = useState(false);
+  const [mapSize, setMapSize] = usePref<MapSize>("apex.mapSize", "normal");
+  const bigMap = mapSize !== "normal";
+  const winH = useWindowHeight();
+  useEffect(() => {
+    if (mapSize === "half") requestAnimationFrame(() => document.querySelector(".replay-big")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [mapSize]);
+  useEffect(() => {
+    if (mapSize !== "full") return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMapSize("normal");
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mapSize, setMapSize]);
   const [axis, setAxis] = usePref<Axis>("apex.axis", "distance");
   const [gapUnit, setGapUnit] = usePref<GapUnit>("apex.gap", "s");
   const [more, setMore] = usePref<boolean>("apex.moreCharts", false);
@@ -213,10 +234,16 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   </button>
                 )}
               </div>
-              {bigMap && (
+              {mapSize === "half" && (
                 <div className="replay-big">
-                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={560} big onToggleBig={() => setBigMap(false)} />
+                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
                   <ReplayPanel cmp={c} store={store} />
+                </div>
+              )}
+              {mapSize === "full" && (
+                <div className="map-full">
+                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(300, winH - 190)} size={mapSize} onSize={setMapSize} />
+                  <ReplayPanel cmp={c} store={store} compact />
                 </div>
               )}
               <div className={bigMap ? "" : "grid analysis"}>
@@ -239,7 +266,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 </div>
                 {!bigMap && (
                   <div className="analysis-side">
-                    <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} onToggleBig={() => setBigMap(true)} />
+                    <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
                     <ReplayPanel cmp={c} store={store} />
                   </div>
                 )}

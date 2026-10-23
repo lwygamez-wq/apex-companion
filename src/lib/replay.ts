@@ -12,10 +12,17 @@ export interface ReplayState {
   chartFollow: boolean;
   /** Dernier déplacement venu du survol d'une courbe (la fenêtre des courbes ne bouge pas). */
   fromChart: boolean;
+  /**
+   * Placement du fantôme de la référence : « time » = où elle était au même instant (elle se détache
+   * devant ou derrière) ; « distance » = au même endroit que toi, pour comparer freinages et remises des gaz.
+   */
+  ghost: GhostMode;
 }
 
+export type GhostMode = "time" | "distance";
+
 export class ReplayStore {
-  private s: ReplayState = { t: 0, playing: false, speed: 1, chartFollow: true, fromChart: false };
+  private s: ReplayState = { t: 0, playing: false, speed: 1, chartFollow: true, fromChart: false, ghost: "time" };
   private subs = new Set<() => void>();
   private raf = 0;
   constructor(public readonly start: number, public readonly end: number) {
@@ -35,6 +42,9 @@ export class ReplayStore {
   }
   setChartFollow(chartFollow: boolean) {
     this.set({ chartFollow });
+  }
+  setGhost(ghost: GhostMode) {
+    this.set({ ghost });
   }
   setSpeed(speed: number) {
     this.set({ speed });
@@ -108,9 +118,14 @@ export function replayBounds(c: Comparison): [number, number] {
   return [t[0] ?? 0, t[t.length - 1] ?? 0];
 }
 
-/** Positions à l'instant `t` : voiture analysée et fantôme de la référence (au même temps). */
-export function positionsAt(c: Comparison, t: number): { ci: number; ri: number } {
-  return { ci: indexAtTime(c.cmp_trace.time, t), ri: indexAtTime(c.ref_trace.time, t) };
+/**
+ * Positions à l'instant `t` : voiture analysée et fantôme de la référence, au même instant
+ * (`time`) ou au même endroit (`distance` : les deux tours partagent la même grille de distance).
+ */
+export function positionsAt(c: Comparison, t: number, ghost: GhostMode = "time"): { ci: number; ri: number } {
+  const ci = indexAtTime(c.cmp_trace.time, t);
+  const ri = ghost === "distance" ? Math.min(ci, c.ref_trace.dist.length - 1) : indexAtTime(c.ref_trace.time, t);
+  return { ci, ri };
 }
 
 export function hasPositions(r: Resampled): boolean {
