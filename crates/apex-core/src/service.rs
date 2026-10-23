@@ -204,6 +204,7 @@ fn recovered_session(meta0: &SessionMeta, length: f32, g: &[RemoteLap], mut csv:
         },
         laps: out_laps,
         sample_rate_hz: Some(60.0),
+        race: None,
     }))
 }
 
@@ -306,6 +307,8 @@ pub struct SessionDetail {
     /// Carte de risque par virage (toutes tes sessions sur ce circuit et cette voiture), la plus prioritaire d'abord.
     pub risk: Vec<crate::analysis::risk::CornerRisk>,
     pub risk_headline: Option<String>,
+    /// Coach de course (courses iRacing) : grille, positions, incidents, points à travailler.
+    pub race: Option<crate::analysis::race::RaceReport>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -713,7 +716,7 @@ impl AppService {
             fuel_start_l: None,
             fuel_used_l: None,
         };
-        let s = ImportedSession { meta, laps: vec![ImportedLap { meta: lm, trace: lap.trace }], sample_rate_hz: Some(60.0) };
+        let s = ImportedSession { meta, laps: vec![ImportedLap { meta: lm, trace: lap.trace }], sample_rate_hz: Some(60.0), race: None };
         let sid = match self.db().insert_session(&s)? {
             InsertOutcome::Inserted(id) | InsertOutcome::Duplicate(id) => id,
         };
@@ -1426,6 +1429,10 @@ impl AppService {
             _ => (vec![], Default::default()),
         };
         let risk_headline = crate::analysis::risk::risk_headline(&risk, totals);
+        let race = db.race_data(id)?.map(|rd| {
+            let spots: Vec<(f32, String)> = windows.iter().map(|(n, _, a, _)| (*a, n.clone())).collect();
+            crate::analysis::race::race_report(&rd, &metas, &spots, length.unwrap_or(0.0))
+        });
         let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
             Some(p) => {
                 let l = db.lap(p)?;
@@ -1439,6 +1446,7 @@ impl AppService {
         };
         Ok(SessionDetail {
             id,
+            race,
             reference_label,
             risk,
             risk_headline,

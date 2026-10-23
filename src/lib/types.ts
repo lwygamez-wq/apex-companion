@@ -98,6 +98,46 @@ export interface SessionDetail {
   reference_label: string | null;
   risk: CornerRisk[];
   risk_headline: string | null;
+  /** Coach de course (courses iRacing). */
+  race: RaceReport | null;
+}
+
+export type IncidentKind = "loss_of_control" | "off_track" | "world_contact" | "world_collision" | "car_contact" | "car_collision" | "other";
+
+export interface IncidentView {
+  lap: number;
+  dist_m: number;
+  corner: string | null;
+  kind: IncidentKind;
+  points: number;
+  label: string;
+  lap_loss_s: number | null;
+}
+
+export interface RaceInsight {
+  kind: "danger" | "warning" | "good" | "info";
+  title: string;
+  detail: string;
+}
+
+export interface RaceReport {
+  field_size: number;
+  start_position: number | null;
+  finish_position: number | null;
+  positions_gained: number | null;
+  positions: [number, number][];
+  incidents: IncidentView[];
+  incident_total: number;
+  hotspots: { corner: string; count: number; points: number; laps: number[] }[];
+  pace: { laps: number; best_s: number; median_s: number; spread_s: number; first_third_s: number; last_third_s: number } | null;
+  my_irating: number | null;
+  field_irating: number | null;
+  irating_rank: number | null;
+  my_qualify_s: number | null;
+  pole_s: number | null;
+  race_lap_as_qualify: number | null;
+  headline: string;
+  insights: RaceInsight[];
 }
 
 export type RiskVerdict = "secure" | "cuts" | "push" | "fine" | "insufficient";

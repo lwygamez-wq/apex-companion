@@ -240,6 +240,153 @@ pub fn parse_session_info(yaml: &str) -> SessionInfo {
     si
 }
 
+/// Plateau et grille d'une course, extraits du YAML de session.
+#[derive(Debug, Default, Clone)]
+pub struct RaceYaml {
+    pub my_idx: Option<i32>,
+    /// CarIdx → (nom, iRating, voiture de sécurité ou spectateur)
+    pub drivers: HashMap<i32, (String, Option<u32>, bool)>,
+    /// Position de grille (1 = pole) par CarIdx.
+    pub grid: HashMap<i32, u32>,
+    /// Meilleur temps de qualification par CarIdx (s).
+    pub qualify: HashMap<i32, f64>,
+}
+
+/// Lecture ciblée des listes du YAML (pilotes, grille, résultats de qualification), sans dépendance YAML :
+/// chaque élément « - clé: valeur » est rassemblé puis rangé selon la section où il apparaît.
+pub fn parse_race_yaml(yaml: &str) -> RaceYaml {
+    let mut out = RaceYaml::default();
+    let mut section = String::new();
+    let mut session_type = String::new();
+    let mut item: HashMap<String, String> = HashMap::new();
+    let flush = |item: &mut HashMap<String, String>, section: &str, session_type: &str, out: &mut RaceYaml| {
+        let get = |k: &str| item.get(k).map(String::as_str);
+        let idx = get("CarIdx").and_then(|v| v.parse::<i32>().ok());
+        match (section, idx) {
+            ("DriverInfo", Some(i)) if item.contains_key("UserName") => {
+                let excluded = get("CarIsPaceCar") == Some("1") || get("IsSpectator") == Some("1");
+                let ir = get("IRating").and_then(|v| v.parse::<u32>().ok()).filter(|v| *v > 0);
+                out.drivers.insert(i, (get("UserName").unwrap_or_default().to_string(), ir, excluded));
+            }
+            ("QualifyResultsInfo", Some(i)) => {
+                if let Some(p) = get("Position").and_then(|v| v.parse::<u32>().ok()) {
+                    out.grid.insert(i, p + 1);
+                }
+                if let Some(t) = get("FastestTime").and_then(|v| v.parse::<f64>().ok()).filter(|t| *t > 0.0) {
+                    out.qualify.entry(i).and_modify(|x| *x = x.min(t)).or_insert(t);
+                }
+            }
+            ("SessionInfo", Some(i)) if session_type.to_ascii_lowercase().contains("qualify") && item.contains_key("Position") => {
+                if let Some(t) = get("FastestTime").and_then(|v| v.parse::<f64>().ok()).filter(|t| *t > 0.0) {
+                    out.qualify.entry(i).and_modify(|x| *x = x.min(t)).or_insert(t);
+                }
+            }
+            _ => {}
+        }
+        item.clear();
+    };
+    for line in yaml.lines() {
+        if !line.starts_with(' ') && !line.starts_with('-') && line.trim_end().ends_with(':') {
+            flush(&mut item, &section, &session_type, &mut out);
+            section = line.trim_end().trim_end_matches(':').to_string();
+            continue;
+        }
+        let t = line.trim_start();
+        let (is_item, body) = match t.strip_prefix("- ") {
+            Some(b) => (true, b),
+            None => (false, t),
+        };
+        if is_item {
+            flush(&mut item, &section, &session_type, &mut out);
+        }
+        if let Some((k, v)) = body.split_once(':') {
+            let (k, v) = (k.trim(), v.trim().trim_matches('"'));
+            if k == "DriverCarIdx" {
+                out.my_idx = v.parse().ok();
+            }
+            if section == "SessionInfo" && k == "SessionType" {
+                session_type = v.to_string();
+            }
+            if section == "SessionInfo" && k == "SessionNum" {
+                session_type.clear();
+            }
+            item.insert(k.to_string(), v.to_string());
+        }
+    }
+    flush(&mut item, &section, &session_type, &mut out);
+    out
+}
+
+/// Données de course : grille, positions au passage de la ligne, incidents localisés.
+fn extract_race(ch: &Channels, ry: &RaceYaml) -> Option<RaceData> {
+    let n = ch.session_time.len();
+    let lap = ch.lap.as_ref()?;
+    let pos = ch.position.as_ref()?;
+    let state = ch.session_state.as_ref();
+    // 3 = tour de formation, 4 = course, 5 = drapeau à damier, 6 = retour au stand.
+    let racing = |i: usize| state.is_none_or(|s| (3.0..=5.0).contains(&s[i]));
+    let mut positions: Vec<(i32, u32)> = vec![];
+    for i in 1..n {
+        if lap[i] > lap[i - 1] && lap[i - 1] >= 1.0 && (racing(i) || state.is_some_and(|s| s[i] == 6.0)) {
+            // iRacing met à jour la position quelques secondes après le passage de la ligne.
+            let t0 = ch.session_time[i];
+            let mut j = i;
+            while j + 1 < n && lap[j + 1] == lap[i] && ch.session_time[j] < t0 + 6.0 {
+                j += 1;
+            }
+            let p = pos[j];
+            if p >= 1.0 {
+                positions.push((lap[i - 1] as i32, p as u32));
+            }
+        }
+    }
+    let finish_position = (0..n).rev().find(|&i| state.is_none_or(|s| s[i] >= 4.0) && pos[i] >= 1.0).map(|i| pos[i] as u32);
+    // Incidents : un événement par changement du code iRacing ; les points du compteur lui sont rattachés.
+    let mut incidents: Vec<RaceIncident> = vec![];
+    if let (Some(code), Some(count)) = (ch.player_incidents.as_ref(), ch.incidents.as_ref()) {
+        for i in 1..n {
+            if !racing(i) {
+                continue;
+            }
+            let t = ch.session_time[i];
+            if code[i] != 0.0 && code[i] != code[i - 1] {
+                incidents.push(RaceIncident { lap: lap[i] as i32, dist_m: ch.lap_dist[i] as f32, kind: IncidentKind::from_report(code[i] as u32), points: 0, time_s: t });
+            }
+            let d = count[i] - count[i - 1];
+            if d > 0.0 {
+                match incidents.last_mut() {
+                    Some(e) if t - e.time_s <= 3.0 => e.points += d as u32,
+                    _ => incidents.push(RaceIncident { lap: lap[i] as i32, dist_m: ch.lap_dist[i] as f32, kind: IncidentKind::Other, points: d as u32, time_s: t }),
+                }
+            }
+        }
+    }
+    let field: Vec<_> = ry.drivers.iter().filter(|(_, d)| !d.2).collect();
+    let my_ir = ry.my_idx.and_then(|i| ry.drivers.get(&i)).and_then(|d| d.1);
+    let irs: Vec<u32> = field.iter().filter_map(|(_, d)| d.1).collect();
+    let field_irating = (!irs.is_empty()).then(|| (irs.iter().map(|&v| v as u64).sum::<u64>() / irs.len() as u64) as u32);
+    let irating_rank = my_ir.map(|m| irs.iter().filter(|&&v| v > m).count() as u32 + 1);
+    let start_position = ry.my_idx.and_then(|i| ry.grid.get(&i).copied()).or_else(|| (0..n).find(|&i| racing(i) && pos[i] >= 1.0).map(|i| pos[i] as u32));
+    Some(RaceData {
+        field_size: field.len() as u32,
+        start_position,
+        finish_position,
+        positions,
+        incident_total: incidents.iter().map(|e| e.points).sum(),
+        incidents,
+        my_irating: my_ir,
+        field_irating,
+        irating_rank,
+        my_qualify_s: ry.my_idx.and_then(|i| ry.qualify.get(&i).copied()),
+        pole_s: ry.qualify.values().copied().reduce(f64::min),
+        qualify_times: {
+            let mut v: Vec<f64> = ry.qualify.iter().filter(|(i, _)| ry.drivers.get(i).is_none_or(|d| !d.2)).map(|(_, t)| *t).collect();
+            v.sort_by(f64::total_cmp);
+            v
+        },
+    })
+}
+
 /// Canaux lus (tous optionnels sauf ceux marqués requis).
 struct Channels {
     session_time: Vec<f64>,
@@ -261,6 +408,9 @@ struct Channels {
     session_flags: Option<Vec<f64>>,
     session_num: Option<Vec<f64>>,
     yaw_rate: Option<Vec<f64>>,
+    position: Option<Vec<f64>>,
+    player_incidents: Option<Vec<f64>>,
+    session_state: Option<Vec<f64>>,
 }
 
 /// Drapeaux iRacing signalant une neutralisation locale ou globale.
@@ -330,6 +480,9 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         session_flags: read("SessionFlags"),
         session_num: read("SessionNum"),
         yaw_rate: read("YawRate"),
+        position: read("PlayerCarPosition"),
+        player_incidents: read("PlayerIncidents"),
+        session_state: read("SessionState"),
     };
 
     let laps = split_laps(&ch, &si);
@@ -341,6 +494,8 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         .or(si.session_types.last())
         .map(|(_, l)| l.clone());
 
+    let kind = session_label.as_deref().map(SessionKind::from_label).unwrap_or(SessionKind::Unknown);
+    let race = if kind == SessionKind::Race { extract_race(&ch, &parse_race_yaml(&yaml)) } else { None };
     let fp = fnv1a64(yaml.as_bytes(), 0xcbf29ce484222325) ^ (start_date as u64).rotate_left(17) ^ (n as u64).rotate_left(41);
     let wet = si.track_wetness.as_deref().map(|w| !w.to_ascii_lowercase().contains("dry"));
     Ok(ImportedSession {
@@ -350,7 +505,7 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
             track_config: si.track_config.clone(),
             track_length_m: si.track_length_m,
             car: si.car_screen_name.clone().unwrap_or_else(|| "Voiture inconnue".into()),
-            kind: session_label.as_deref().map(SessionKind::from_label).unwrap_or(SessionKind::Unknown),
+            kind,
             started_at_unix: start_date,
             weather: Weather {
                 air_temp_c: si.track_air_temp_c,
@@ -363,6 +518,7 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         },
         laps,
         sample_rate_hz: (h.tick_rate > 0).then_some(h.tick_rate as f32),
+        race,
     })
 }
 
@@ -756,6 +912,19 @@ mod tests {
         let a = import_ibt_bytes(&synthetic()).unwrap();
         let b = import_ibt_bytes(&synthetic()).unwrap();
         assert_eq!(a.meta.source_fingerprint, b.meta.source_fingerprint);
+    }
+
+    #[test]
+    fn race_yaml_field_grid_and_qualifying() {
+        // Extrait du YAML réel de la course d'Interlagos du 17/10 (structure iRacing).
+        let y = "WeekendInfo:\n TrackName: interlagos\nSessionInfo:\n Sessions:\n - SessionNum: 1\n   SessionType: Lone Qualify\n   ResultsPositions:\n   - Position: 1\n     CarIdx: 10\n     FastestTime: 86.0543\n   - Position: 19\n     CarIdx: 16\n     FastestTime: 93.4811\n   - Position: 20\n     CarIdx: 2\n     FastestTime: -1.0000\n - SessionNum: 2\n   SessionType: Race\n   ResultsPositions:\n   - Position: 1\n     CarIdx: 10\n     FastestTime: 80.0\nQualifyResultsInfo:\n Results:\n - Position: 0\n   CarIdx: 10\n   FastestTime: 86.0543\n - Position: 18\n   CarIdx: 16\n   FastestTime: 93.4811\nDriverInfo:\n DriverCarIdx: 16\n Drivers:\n - CarIdx: 0\n   UserName: Pace Car\n   IRating: 0\n   CarIsPaceCar: 1\n - CarIdx: 10\n   UserName: Diogo F Rosa\n   IRating: 1835\n   CarIsPaceCar: 0\n   IsSpectator: 0\n - CarIdx: 16\n   UserName: Alex Hudut\n   IRating: 1695\n   CarIsPaceCar: 0\n   IsSpectator: 0\n";
+        let r = parse_race_yaml(y);
+        assert_eq!(r.my_idx, Some(16));
+        assert_eq!(r.grid.get(&16), Some(&19), "position de grille 0-indexée dans le YAML");
+        assert_eq!(r.qualify.get(&16), Some(&93.4811));
+        assert_eq!(r.qualify.get(&10), Some(&86.0543), "temps de course ignoré");
+        assert!(!r.qualify.contains_key(&2), "pas de temps : ignoré");
+        assert_eq!(r.drivers.values().filter(|d| !d.2).count(), 2, "voiture de sécurité exclue");
     }
 
     #[test]

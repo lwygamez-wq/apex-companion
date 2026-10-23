@@ -223,3 +223,16 @@ td.num, th.num { text-align: right; }
 .history-time { font-variant-numeric: tabular-nums; font-weight: 700; }
 .history-time.kpi { font-size: 15px; }
 @media (max-width: 1100px) { .history { grid-template-columns: 1fr; } .history-list { position: static; } }
+
+/* Coach de course */
+.race { border-left: 4px solid var(--red, #e10600); }
+.race-kpi { display: flex; flex-direction: column; gap: 2px; background: var(--panel-2); border-radius: var(--radius); padding: 8px 10px; }
+.race-kpi b { font-size: 20px; font-family: var(--mono, monospace); }
+.race-kpi span { font-size: 12px; }
+.good-txt { color: var(--green); }
+.race-chart { width: 100%; height: auto; display: block; margin: 4px 0 10px; }
+.race-insights { display: flex; flex-direction: column; gap: 4px; }
+.race-insight { background: var(--panel-2); border-radius: var(--radius); padding: 7px 10px; border-left: 3px solid transparent; }
+.race-insight.danger { border-left-color: #ff5a4e; }
+.race-insight.warning { border-left-color: #ff8a00; }
+.race-insight.good { border-left-color: var(--green); }

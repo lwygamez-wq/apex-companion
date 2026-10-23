@@ -6,6 +6,7 @@ pub mod goals;
 pub mod insights;
 pub mod offtrack;
 pub mod progress;
+pub mod race;
 pub mod resample;
 pub mod risk;
 pub mod session;

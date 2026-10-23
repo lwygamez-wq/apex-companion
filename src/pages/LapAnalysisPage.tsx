@@ -4,6 +4,7 @@ import { InsightCard } from "../components/InsightCard";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { OffTrackCard } from "../components/OffTrackCard";
 import { RiskCard } from "../components/RiskCard";
+import { RaceCard } from "../components/RaceCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap } from "../components/TrackMap";
 import { api } from "../lib/api";
@@ -120,6 +121,8 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
             <div className="card"><h2>Théorique</h2><div className="kpi best">{lapTime(d.theoretical_best_s)}</div>{d.theoretical_best_s == null && <div className="kpi-sub">nécessite des tours propres</div>}</div>
             <div className="card"><h2>Régularité</h2><div className="kpi">{d.consistency ? `σ ${d.consistency.stddev_s.toFixed(3)} s` : "—"}</div><div className="kpi-sub">{d.consistency ? `${d.consistency.clean_laps} tours propres` : ""}</div></div>
           </div>
+
+          {d.race && <RaceCard r={d.race} laps={d.laps} onLap={(id) => setCmpId(id)} />}
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="row" style={{ justifyContent: "space-between" }}>

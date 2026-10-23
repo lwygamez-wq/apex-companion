@@ -99,6 +99,9 @@ ALTER TABLE sessions ADD COLUMN parser_version INTEGER NOT NULL DEFAULT 1;
 "#, r#"
 -- v6 : tours de référence d'autres pilotes (Garage 61…), tenus à l'écart des statistiques du pilote.
 ALTER TABLE sessions ADD COLUMN external_driver TEXT;
+"#, r#"
+-- v7 : contexte de course (grille, positions, incidents) en JSON.
+ALTER TABLE sessions ADD COLUMN race_json TEXT;
 "#];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
@@ -106,7 +109,8 @@ ALTER TABLE sessions ADD COLUMN external_driver TEXT;
 /// v2 : franchissement de ligne robuste, noms Windows-1252, origine GPS commune aux tours.
 /// v3 : un « reset » près de la ligne ne crée plus de faux tour ; positions GPS nulles ignorées ;
 ///      surface sous la voiture conservée (localisation des sorties de piste).
-pub const PARSER_VERSION: i64 = 3;
+/// v4 : contexte de course (grille, positions au passage de la ligne, incidents localisés).
+pub const PARSER_VERSION: i64 = 4;
 
 /// (id, clé circuit, date de création, titre, métrique JSON).
 pub type GoalRow = (i64, String, i64, String, String);
@@ -223,11 +227,12 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version, race_json)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             params![
                 m.sim.as_str(), m.track, m.track_config, m.track_length_m, m.car, m.kind.as_str(), m.started_at_unix,
-                serde_json::to_string(&m.weather)?, m.source_fingerprint, m.source_path, s.sample_rate_hz, now_unix(), PARSER_VERSION
+                serde_json::to_string(&m.weather)?, m.source_fingerprint, m.source_path, s.sample_rate_hz, now_unix(), PARSER_VERSION,
+                s.race.as_ref().map(serde_json::to_string).transpose()?
             ],
         )?;
         let sid = tx.last_insert_rowid();
@@ -297,8 +302,8 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5 WHERE id = ?6",
-            params![m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, id],
+            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5, race_json = ?6 WHERE id = ?7",
+            params![m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, s.race.as_ref().map(serde_json::to_string).transpose()?, id],
         )?;
         tx.execute("DELETE FROM laps WHERE session_id = ?1", [id])?;
         Self::insert_laps(&tx, id, s)?;
@@ -325,6 +330,12 @@ impl Store {
             source_fingerprint: r.get("source_fingerprint")?,
             source_path: r.get("source_path")?,
         })
+    }
+
+    /// Contexte de course de la session (courses iRacing décodées depuis la v4 du décodeur).
+    pub fn race_data(&self, id: i64) -> Result<Option<RaceData>, StoreError> {
+        let j: Option<String> = self.conn.query_row("SELECT race_json FROM sessions WHERE id = ?1", [id], |r| r.get(0)).optional()?.flatten();
+        Ok(j.and_then(|j| serde_json::from_str(&j).ok()))
     }
 
     pub fn session_meta(&self, id: i64) -> Result<SessionMeta, StoreError> {

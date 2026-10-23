@@ -293,6 +293,7 @@ pub fn demo_session(seed: u64, started_at_unix: i64) -> ImportedSession {
         },
         laps,
         sample_rate_hz: Some(60.0),
+        race: None,
     }
 }
 

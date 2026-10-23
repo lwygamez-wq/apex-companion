@@ -329,6 +329,83 @@ pub struct ImportedSession {
     pub laps: Vec<ImportedLap>,
     /// Fréquence d'échantillonnage de la source (Hz), si connue.
     pub sample_rate_hz: Option<f32>,
+    /// Données de course (grille, positions, incidents), pour les courses iRacing.
+    #[serde(default)]
+    pub race: Option<RaceData>,
+}
+
+/// Type d'incident iRacing (octet bas de `PlayerIncidents`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IncidentKind {
+    /// « Loss of Control (2x) » : tête-à-queue, perte de contrôle.
+    LossOfControl,
+    /// « Off Track (1x) » : quatre roues hors piste.
+    OffTrack,
+    /// Contact léger avec le décor (0x).
+    WorldContact,
+    /// Choc avec le décor (2x).
+    WorldCollision,
+    /// Contact léger avec une autre voiture (0x).
+    CarContact,
+    /// Accrochage avec une autre voiture (4x).
+    CarCollision,
+    Other,
+}
+
+impl IncidentKind {
+    pub fn from_report(code: u32) -> Self {
+        match code & 0xff {
+            1 => Self::LossOfControl,
+            2 | 3 => Self::OffTrack,
+            4 => Self::WorldContact,
+            5 | 6 => Self::WorldCollision,
+            7 => Self::CarContact,
+            8 => Self::CarCollision,
+            _ => Self::Other,
+        }
+    }
+}
+
+/// Un incident pendant la course : où, quand, quoi, combien de points.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RaceIncident {
+    /// Tour en cours (1 = premier tour après le départ).
+    pub lap: i32,
+    /// Distance depuis la ligne (m).
+    pub dist_m: f32,
+    pub kind: IncidentKind,
+    /// Points d'incident comptés par iRacing (0, 1, 2, 4…).
+    pub points: u32,
+    /// Temps de session (s).
+    pub time_s: f64,
+}
+
+/// Contexte de course extrait du fichier iRacing. Le fichier ne contient que la voiture du pilote :
+/// positions au passage de la ligne, incidents, plus la grille et le plateau (session YAML).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct RaceData {
+    /// Pilotes au départ (voiture de sécurité et spectateurs exclus).
+    pub field_size: u32,
+    /// Position sur la grille (classement des qualifications), 1 = pole.
+    pub start_position: Option<u32>,
+    /// Dernière position connue (arrivée).
+    pub finish_position: Option<u32>,
+    /// (tour bouclé, position au passage de la ligne).
+    pub positions: Vec<(i32, u32)>,
+    pub incidents: Vec<RaceIncident>,
+    pub incident_total: u32,
+    pub my_irating: Option<u32>,
+    /// Moyenne des iRating du plateau (approximation de la force du plateau).
+    pub field_irating: Option<u32>,
+    /// Ton rang d'iRating dans le plateau (1 = le mieux classé).
+    pub irating_rank: Option<u32>,
+    /// Ton meilleur tour de qualification et la pole (s).
+    pub my_qualify_s: Option<f64>,
+    pub pole_s: Option<f64>,
+    /// Meilleurs temps de qualification de tout le plateau, triés (s).
+    #[serde(default)]
+    pub qualify_times: Vec<f64>,
 }
 
 #[cfg(test)]
