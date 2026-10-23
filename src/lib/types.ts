@@ -364,6 +364,7 @@ export interface AppSettings {
   garage61_auto: boolean;
   watch_downloads: boolean;
   garage61_drivers: string[];
+  downloads_dir: string | null;
 }
 
 export interface SessionFilter {

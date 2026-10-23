@@ -183,6 +183,13 @@ export function SettingsPage() {
             <input type="checkbox" checked={s.watch_downloads} onChange={(e) => upd("watch_downloads", e.target.checked)} />
           </div>
           <div className="form-row">
+            <div>Dossier de téléchargements<div className="hint">Vide = le dossier Téléchargements de Windows, détecté automatiquement même s'il a été déplacé (ex. D:\Téléchargements).</div></div>
+            <div className="row">
+              <input type="text" style={{ flex: 1, minWidth: 280 }} value={s.downloads_dir ?? ""} placeholder="détection automatique" onChange={(e) => upd("downloads_dir", e.target.value || null)} />
+              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("downloads_dir", d))}>Parcourir</button>
+            </div>
+          </div>
+          <div className="form-row">
             <div>
               Jeton d'accès Garage 61
               <div className="hint">

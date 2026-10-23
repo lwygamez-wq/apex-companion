@@ -58,6 +58,8 @@ pub struct AppSettings {
     pub watch_downloads: bool,
     /// Pilotes Garage 61 à utiliser comme références (identifiant ou adresse de leur profil).
     pub garage61_drivers: Vec<String>,
+    /// Dossier de téléchargements à surveiller (vide = dossier Téléchargements de Windows, où qu'il soit).
+    pub downloads_dir: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -80,6 +82,7 @@ impl Default for AppSettings {
             garage61_auto: true,
             watch_downloads: true,
             garage61_drivers: vec![],
+            downloads_dir: None,
         }
     }
 }
@@ -222,6 +225,41 @@ pub fn track_key(m: &SessionMeta) -> String {
 }
 
 /// 66.052 → « 1:06.052 »
+/// Dossier Téléchargements de Windows (dossier connu FOLDERID_Downloads : suit les déplacements).
+#[cfg(windows)]
+fn system_downloads_dir() -> Option<PathBuf> {
+    use windows_sys::Win32::System::Com::CoTaskMemFree;
+    use windows_sys::Win32::UI::Shell::{SHGetKnownFolderPath, FOLDERID_Downloads};
+    let mut p: windows_sys::core::PWSTR = std::ptr::null_mut();
+    // SAFETY : appel documenté ; la chaîne renvoyée est libérée par CoTaskMemFree.
+    let hr = unsafe { SHGetKnownFolderPath(&FOLDERID_Downloads, 0, std::ptr::null_mut(), &mut p) };
+    let out = if hr >= 0 && !p.is_null() {
+        let mut len = 0;
+        // SAFETY : chaîne UTF-16 terminée par 0.
+        unsafe {
+            while *p.add(len) != 0 {
+                len += 1;
+            }
+            Some(PathBuf::from(String::from_utf16_lossy(std::slice::from_raw_parts(p, len))))
+        }
+    } else {
+        None
+    };
+    if !p.is_null() {
+        unsafe { CoTaskMemFree(p as *const core::ffi::c_void) };
+    }
+    out.filter(|d| d.is_dir()).or_else(|| {
+        let d = PathBuf::from(std::env::var_os("USERPROFILE")?).join("Downloads");
+        d.is_dir().then_some(d)
+    })
+}
+
+#[cfg(not(windows))]
+fn system_downloads_dir() -> Option<PathBuf> {
+    let d = PathBuf::from(std::env::var_os("HOME")?).join("Downloads");
+    d.is_dir().then_some(d)
+}
+
 fn now_secs() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
 }
@@ -624,16 +662,19 @@ impl AppService {
         now_secs() - last >= hours * 3600
     }
 
-    /// Dossier Téléchargements de l'utilisateur.
-    fn downloads_dir() -> Option<PathBuf> {
-        let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))?;
-        let d = PathBuf::from(home).join("Downloads");
-        d.is_dir().then_some(d)
+    /// Dossier Téléchargements surveillé : réglage s'il est rempli, sinon le dossier Téléchargements
+    /// réel de Windows (il peut avoir été déplacé, par exemple sur D:\Téléchargements).
+    pub fn downloads_dir(&self) -> Option<PathBuf> {
+        if let Some(d) = self.settings().downloads_dir.filter(|d| !d.trim().is_empty()) {
+            let p = PathBuf::from(d.trim());
+            return p.is_dir().then_some(p);
+        }
+        system_downloads_dir()
     }
 
     /// Importe les tours exportés de Garage 61 arrivés dans Téléchargements (une seule fois chacun).
     pub fn sync_downloads(&self) -> Result<Vec<ExternalImportReport>> {
-        match Self::downloads_dir() {
+        match self.downloads_dir() {
             Some(dir) => self.sync_downloads_in(&dir),
             None => Ok(vec![]),
         }
