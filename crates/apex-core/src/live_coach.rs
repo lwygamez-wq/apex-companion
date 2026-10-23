@@ -303,6 +303,7 @@ fn meta_from(si: &SessionInfo) -> SessionMeta {
         weather: Weather::default(),
         source_fingerprint: "live".into(),
         source_path: None,
+        setup: si.setup_type(),
     }
 }
 

@@ -19,7 +19,7 @@ fn main() {
     if let Ok(dir) = std::env::var("APEX_DUMP") {
         let cs = svc.circuits().unwrap();
         std::fs::write(format!("{dir}/circuits.json"), serde_json::to_string(&cs).unwrap()).unwrap();
-        let hs: Vec<_> = cs.iter().map(|c| svc.lap_history(c.sim, &c.track, c.track_config.as_deref(), &c.car).unwrap()).collect();
+        let hs: Vec<_> = cs.iter().map(|c| svc.lap_history(c.sim, &c.track, c.track_config.as_deref(), &c.car, c.setup).unwrap()).collect();
         std::fs::write(format!("{dir}/history.json"), serde_json::to_string(&hs).unwrap()).unwrap();
     }
     for c in svc.circuits().unwrap() {
@@ -27,7 +27,7 @@ fn main() {
             "\n{} ({}) — {} : {} sessions, {} tours ({} lancés, {} propres), meilleur propre {:?}, meilleur tout {:?}, noms {} , réf. ext. {:?}",
             c.track, c.track_config.clone().unwrap_or_default(), c.car, c.sessions, c.laps, c.timed_laps, c.clean_laps, c.best_clean_s, c.best_any_s, c.corner_names, c.external_reference
         );
-        let h = svc.lap_history(c.sim, &c.track, c.track_config.as_deref(), &c.car).unwrap();
+        let h = svc.lap_history(c.sim, &c.track, c.track_config.as_deref(), &c.car, c.setup).unwrap();
         let pbs: Vec<String> = h.iter().filter(|l| l.personal_best_at_time).map(|l| format!("{:.3}", l.lap_time_s.unwrap())).collect();
         println!("  historique : {} tours ; progression du record propre : {}", h.len(), pbs.join(" → "));
         let last = sessions.iter().find(|s| s.track == c.track && s.car == c.car).unwrap();

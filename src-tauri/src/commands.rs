@@ -152,6 +152,11 @@ pub async fn set_reference(state: State<'_, AppState>, lap_id: i64) -> R<()> {
 }
 
 #[tauri::command]
+pub async fn set_session_setup(state: State<'_, AppState>, id: i64, setup: Option<apex_core::model::SetupType>) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.set_session_setup(id, setup)).await
+}
+
+#[tauri::command]
 pub async fn delete_session(state: State<'_, AppState>, id: i64) -> R<()> {
     blocking(state.svc.clone(), move |s| s.delete_session(id)).await
 }
@@ -223,8 +228,15 @@ pub async fn list_circuits(state: State<'_, AppState>) -> R<Vec<apex_core::servi
 }
 
 #[tauri::command]
-pub async fn lap_history(state: State<'_, AppState>, sim: apex_core::model::SimId, track: String, track_config: Option<String>, car: String) -> R<Vec<apex_core::service::HistoryLap>> {
-    blocking(state.svc.clone(), move |s| s.lap_history(sim, &track, track_config.as_deref(), &car)).await
+pub async fn lap_history(
+    state: State<'_, AppState>,
+    sim: apex_core::model::SimId,
+    track: String,
+    track_config: Option<String>,
+    car: String,
+    setup: Option<apex_core::model::SetupType>,
+) -> R<Vec<apex_core::service::HistoryLap>> {
+    blocking(state.svc.clone(), move |s| s.lap_history(sim, &track, track_config.as_deref(), &car, setup)).await
 }
 
 #[tauri::command]

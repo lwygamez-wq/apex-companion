@@ -187,6 +187,14 @@ pub struct SessionInfo {
     pub track_wetness: Option<String>,
     pub car_screen_name: Option<String>,
     pub session_types: Vec<(i32, String)>,
+    /// `WeekendOptions.IsFixedSetup` : série à setup imposé.
+    pub fixed_setup: Option<bool>,
+}
+
+impl SessionInfo {
+    pub fn setup_type(&self) -> Option<SetupType> {
+        self.fixed_setup.map(|f| if f { SetupType::Fixed } else { SetupType::Open })
+    }
 }
 
 fn yaml_val<'a>(line: &'a str, key: &str) -> Option<&'a str> {
@@ -231,6 +239,8 @@ pub fn parse_session_info(yaml: &str) -> SessionInfo {
             if let Some(i) = cur_car_idx {
                 cars.insert(i, v.to_string());
             }
+        } else if let Some(v) = yaml_val(line, "IsFixedSetup") {
+            si.fixed_setup = v.parse::<i32>().ok().map(|x| x != 0);
         } else if let Some(v) = yaml_val(line, "SessionNum") {
             cur_session_num = v.parse().ok();
         } else if let Some(v) = yaml_val(line, "SessionType") {
@@ -518,6 +528,7 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
             },
             source_fingerprint: format!("ibt:{fp:016x}"),
             source_path: None,
+            setup: si.setup_type(),
         },
         laps,
         sample_rate_hz: (h.tick_rate > 0).then_some(h.tick_rate as f32),
@@ -884,6 +895,16 @@ pub mod writer {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn fixed_setup_flag_is_read_from_weekend_options() {
+        let y = "WeekendInfo:\n WeekendOptions:\n  NumStarters: 0\n  IsFixedSetup: 1\n";
+        assert_eq!(parse_session_info(y).setup_type(), Some(SetupType::Fixed));
+        let y = "WeekendInfo:\n WeekendOptions:\n  IsFixedSetup: 0\n";
+        assert_eq!(parse_session_info(y).setup_type(), Some(SetupType::Open));
+        assert_eq!(parse_session_info("WeekendInfo:\n").setup_type(), None);
+    }
+
     use super::writer::*;
     use super::*;
 

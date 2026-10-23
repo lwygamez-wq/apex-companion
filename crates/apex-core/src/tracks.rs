@@ -813,6 +813,7 @@ mod tests {
             weather: Weather::default(),
             source_fingerprint: "x".into(),
             source_path: None,
+            setup: None,
         }
     }
 

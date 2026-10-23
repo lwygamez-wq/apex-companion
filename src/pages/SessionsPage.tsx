@@ -2,6 +2,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { useMemo, useState } from "react";
 import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
+import { SetupChip, SetupSelect } from "../components/SetupChip";
 import { api } from "../lib/api";
 import { dateTime, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
@@ -67,13 +68,14 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
         <div className="card" style={{ marginBottom: 14, padding: 0 }}>
           <h2 style={{ padding: "12px 14px 0" }}>Références d'autres pilotes</h2>
           <table>
-            <thead><tr><th>Pilote</th><th>Circuit</th><th>Voiture</th><th className="num">Temps</th><th /></tr></thead>
+            <thead><tr><th>Pilote</th><th>Circuit</th><th>Voiture</th><th>Série</th><th className="num">Temps</th><th /></tr></thead>
             <tbody>
               {refs.data!.map((r) => (
                 <tr key={r.id}>
                   <td><b>{r.external_driver}</b></td>
                   <td>{r.track}{r.track_config ? <span className="muted">, {r.track_config}</span> : null}</td>
                   <td>{r.car}</td>
+                  <td><SetupSelect value={r.setup} onChange={(v) => void api.setSessionSetup(r.id, v).then(() => refs.reload())} /></td>
                   <td className="num">{lapTime(r.best_lap_s ?? null)}</td>
                   <td><button className="btn danger" onClick={() => void api.deleteSession(r.id).then(() => refs.reload())}>Retirer</button></td>
                 </tr>
@@ -81,7 +83,9 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
             </tbody>
           </table>
           <div className="muted" style={{ padding: "8px 14px 12px", fontSize: 12 }}>
-            Ces tours servent de référence dans l'analyse de tes sessions sur le même circuit et la même voiture. Ils ne comptent pas dans tes statistiques.
+            Ces tours servent de référence dans l'analyse de tes sessions sur le même circuit, la même voiture et le même type de série :
+            une référence <b>Fixed</b> ne sert qu'à tes sessions fixed, une <b>Open</b> qu'à tes sessions open (vitesses de pointe et freinages différents).
+            Le fichier Garage 61 ne précise pas la série : choisis-la dans la colonne « Série ». Ils ne comptent pas dans tes statistiques.
           </div>
         </div>
       )}
@@ -122,7 +126,16 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
                 <td>{s.sim_name}</td>
                 <td>{s.track}{s.track_config ? <span className="muted">, {s.track_config}</span> : null}</td>
                 <td>{s.car}</td>
-                <td>{SESSION_KIND_FR[s.kind]}</td>
+                <td>
+                  {SESSION_KIND_FR[s.kind]}{" "}
+                  {s.setup || s.sim !== "iracing" ? (
+                    <SetupChip setup={s.setup} />
+                  ) : (
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <SetupSelect value={null} onChange={(v) => void api.setSessionSetup(s.id, v).then(() => (list.reload(), all.reload()))} />
+                    </span>
+                  )}
+                </td>
                 <td className="num">{lapTime(s.best_lap_s)}</td>
                 <td className="num">{lapTime(s.mean_clean_s)}</td>
                 <td className="num">{s.stddev_clean_s != null ? s.stddev_clean_s.toFixed(3) : "—"}</td>

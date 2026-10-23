@@ -129,6 +129,8 @@ impl Default for AppSettings {
 /// Un circuit roulé (circuit + configuration + voiture), vu sur tout l'historique.
 #[derive(Debug, Clone, Serialize)]
 pub struct CircuitOverview {
+    /// Type de série : les temps fixed et open ne sont pas mélangés (`None` : sessions de type inconnu).
+    pub setup: Option<SetupType>,
     pub sim: SimId,
     pub track: String,
     pub track_config: Option<String>,
@@ -200,7 +202,31 @@ type ComboKey = (String, Option<String>, String);
 
 /// Session Apex reconstruite à partir de tours Garage 61 (`csv` : télémétrie d'un tour par son id).
 /// `Err` : téléchargement impossible (on s'arrête) ; `Ok(None)` : aucun tour lisible.
-fn recovered_session(meta0: &SessionMeta, length: f32, g: &[RemoteLap], mut csv: impl FnMut(&str) -> std::result::Result<String, String>) -> std::result::Result<Option<ImportedSession>, String> {
+/// Avertissement quand la référence et le tour comparé ne sont pas du même type de série.
+fn setup_warning(reference: Option<SetupType>, lap: Option<SetupType>) -> Option<String> {
+    match (reference, lap) {
+        (Some(r), Some(l)) if r != l => Some(format!(
+            "Attention : référence roulée en {}, ton tour en {}. Vitesses de pointe et points de freinage ne sont pas comparables.",
+            r.label(),
+            l.label()
+        )),
+        (None, Some(l)) => Some(format!("Type de série de la référence inconnu (ton tour : {}). Précise-le dans Sessions › Références d'autres pilotes.", l.label())),
+        _ => None,
+    }
+}
+
+/// Type de série d'un groupe de tours : celui de la majorité des tours dont le type est connu.
+fn group_setup(g: &[RemoteLap], tags: &std::collections::HashMap<String, SetupType>) -> Option<SetupType> {
+    let fixed = g.iter().filter(|l| tags.get(&l.id) == Some(&SetupType::Fixed)).count();
+    let open = g.iter().filter(|l| tags.get(&l.id) == Some(&SetupType::Open)).count();
+    match (fixed, open) {
+        (0, 0) => None,
+        (f, o) if f >= o => Some(SetupType::Fixed),
+        _ => Some(SetupType::Open),
+    }
+}
+
+fn recovered_session(meta0: &SessionMeta, length: f32, setup: Option<SetupType>, g: &[RemoteLap], mut csv: impl FnMut(&str) -> std::result::Result<String, String>) -> std::result::Result<Option<ImportedSession>, String> {
     let mut out_laps = vec![];
     for l in g {
         let text = csv(&l.id)?;
@@ -240,6 +266,7 @@ fn recovered_session(meta0: &SessionMeta, length: f32, g: &[RemoteLap], mut csv:
             weather: Weather::default(),
             source_fingerprint: format!("garage61-session:{}", g[0].id),
             source_path: Some(format!("Garage 61 (récupérée) {}", g[0].id)),
+            setup,
         },
         laps: out_laps,
         sample_rate_hz: Some(60.0),
@@ -278,6 +305,8 @@ pub struct ExternalImport {
     /// La voiture du fichier correspond à celle de tes sessions sur ce circuit.
     pub car_matches: bool,
     pub set_as_reference: bool,
+    /// Type de série du tour importé (`None` : à préciser par le pilote).
+    pub setup: Option<SetupType>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -753,11 +782,12 @@ impl AppService {
         let name = garage61::parse_file_name(&fname)
             .ok_or_else(|| ServiceError::User("nom de fichier non reconnu : garde le nom donné par Garage 61 (« Garage 61 - pilote - voiture - circuit - temps - … .csv »)".into()))?;
         let text = std::fs::read_to_string(path).map_err(|e| ServiceError::User(format!("lecture du fichier : {e}")))?;
-        self.import_garage61_text(name, &text, fname)
+        self.import_garage61_text(name, &text, fname, None)
     }
 
     /// Importe un tour Garage 61 (contenu CSV + nom), quelle que soit sa provenance (fichier, API).
-    pub fn import_garage61_text(&self, name: crate::ingest::garage61::G61Name, text: &str, fname: String) -> Result<ExternalImport> {
+    /// `setup` : type de série du tour s'il est connu (recherche API filtrée) ; sinon à préciser par le pilote.
+    pub fn import_garage61_text(&self, name: crate::ingest::garage61::G61Name, text: &str, fname: String, setup: Option<SetupType>) -> Result<ExternalImport> {
         use crate::ingest::garage61;
         let own = self.list_sessions(&SessionFilter { sim: Some(SimId::Iracing), ..Default::default() })?;
         let score = |s: &SessionSummary| garage61::track_match_score(&name.track, &s.track, s.track_config.as_deref());
@@ -792,6 +822,7 @@ impl AppService {
             weather: Weather::default(),
             source_fingerprint: format!("garage61:{}", name.id),
             source_path: Some(fname.clone()),
+            setup,
         };
         let lm = LapMeta {
             number: 1,
@@ -813,7 +844,7 @@ impl AppService {
         if car_matches {
             self.db().set_reference(lap_id)?;
         }
-        Ok(ExternalImport { session_id: sid, lap_id, driver: name.driver, lap_time_s: name.lap_time_s, track: meta0.track, car_matches, set_as_reference: car_matches })
+        Ok(ExternalImport { session_id: sid, lap_id, driver: name.driver, lap_time_s: name.lap_time_s, track: meta0.track, car_matches, set_as_reference: car_matches, setup })
     }
 
     fn g61_api(&self) -> Result<crate::garage61_api::G61Api> {
@@ -865,7 +896,7 @@ impl AppService {
         };
         let teams: Vec<String> = me.teams.iter().map(|t| t.slug.clone()).collect();
         let mut laps: Vec<_> = api
-            .best_laps(track.id, car.id, &teams, &extra)
+            .best_laps(track.id, car.id, &teams, &extra, meta.setup)
             .map_err(ServiceError::User)?
             .into_iter()
             .filter(|l| l.driver.as_ref().is_none_or(|d| d.slug != me.slug))
@@ -873,7 +904,8 @@ impl AppService {
         laps.sort_by(|a, b| a.lap_time.total_cmp(&b.lap_time));
         if laps.is_empty() {
             let who = if extra.is_empty() { "des pilotes que tu suis".to_string() } else { format!("des pilotes que tu suis ni des {} pilote(s) ajouté(s)", extra.len()) };
-            let mut m = format!("aucun tour {who} n'est visible par l'API Garage 61 sur ce circuit avec cette voiture.");
+            let series = meta.setup.map(|s| format!(" en série {}", s.label())).unwrap_or_default();
+            let mut m = format!("aucun tour {who} n'est visible par l'API Garage 61 sur ce circuit avec cette voiture{series}.");
             if diagnose {
                 // Un seul appel de contrôle (l'API gratuite limite fortement le nombre de requêtes).
                 let mine = api.count_laps(track.id, Some(car.id), Some("me")).map(|v| v.to_string()).unwrap_or_else(|e| format!("erreur ({e})"));
@@ -886,6 +918,8 @@ impl AppService {
             .list_sessions(&SessionFilter { sim: Some(SimId::Iracing), track: Some(meta.track.clone()), external: Some(true), ..Default::default() })?
             .into_iter()
             .filter(|s| s.track_config == meta.track_config && s.car == meta.car)
+            // Une référence open ne bloque pas la recherche d'une référence fixed (et inversement).
+            .filter(|s| meta.setup.is_none() || s.setup == meta.setup)
             .filter_map(|s| s.best_lap_s)
             .fold(f64::INFINITY, f64::min);
         let mut last_err = None;
@@ -897,8 +931,9 @@ impl AppService {
                 Ok(csv) => {
                     let name = lap_name(l);
                     let fname = format!("Garage 61 (API) - {} - {} - {} - {}", name.driver, name.car, name.track, name.id);
-                    let r = self.import_garage61_text(name, &csv, fname)?;
-                    return Ok(format!("Nouvelle référence : {} en {} (Garage 61).", r.driver, fmt_lap(r.lap_time_s)));
+                    let r = self.import_garage61_text(name, &csv, fname, meta.setup)?;
+                    let series = meta.setup.map(|s| format!(", série {}", s.label())).unwrap_or_default();
+                    return Ok(format!("Nouvelle référence : {} en {} (Garage 61{series}).", r.driver, fmt_lap(r.lap_time_s)));
                 }
                 Err(e) => last_err = Some(e),
             }
@@ -919,10 +954,10 @@ impl AppService {
         let mut out = vec![];
         // list_sessions est trié du plus récent au plus ancien.
         for s in sessions {
-            if !seen.insert((s.track.clone(), s.track_config.clone(), s.car.clone())) {
+            if !seen.insert((s.track.clone(), s.track_config.clone(), s.car.clone(), s.setup)) {
                 continue;
             }
-            let label = format!("{} / {}", s.track, s.car);
+            let label = format!("{} / {}{}", s.track, s.car, s.setup.map(|x| format!(" ({})", x.label())).unwrap_or_default());
             if !out.is_empty() {
                 // Espacement des requêtes : l'API gratuite limite le débit.
                 std::thread::sleep(std::time::Duration::from_millis(1500));
@@ -989,7 +1024,7 @@ impl AppService {
                 continue;
             };
             pause(&mut first_call);
-            let laps = match api.my_laps(track.id, car.id, &after) {
+            let laps = match api.my_laps(track.id, car.id, &after, None) {
                 Ok(v) => v,
                 Err(e) => {
                     rep.messages.push(format!("{label} : {e}"));
@@ -1014,6 +1049,34 @@ impl AppService {
                 .map(|g| g.into_iter().filter(|l| !covered(l.start)).collect::<Vec<_>>())
                 .filter(|g| !g.is_empty())
                 .collect();
+            // Type de série (fixed / open) de chaque tour : deux requêtes filtrées, seulement s'il y a des
+            // sessions à créer ou des sessions déjà récupérées dont le type est inconnu.
+            let backfill: Vec<(i64, String)> = self
+                .db()
+                .garage61_sessions_without_setup()?
+                .into_iter()
+                .filter(|(_, _, t, cfg, cr)| *t == c.track && *cfg == c.track_config && *cr == c.car)
+                .map(|(id, lap, ..)| (id, lap))
+                .collect();
+            let mut tags: std::collections::HashMap<String, SetupType> = Default::default();
+            if !remote.is_empty() && (!missing.is_empty() || !backfill.is_empty()) {
+                let mut ids = |st: SetupType| -> Option<std::collections::HashSet<String>> {
+                    pause(&mut first_call);
+                    api.my_laps(track.id, car.id, &after, Some(st)).ok().map(|v| v.into_iter().map(|l| l.id).collect())
+                };
+                if let (Some(fixed), Some(open)) = (ids(SetupType::Fixed), ids(SetupType::Open)) {
+                    // Filtre ignoré par l'API (mêmes tours des deux côtés) : type laissé inconnu.
+                    if fixed != open || fixed.is_empty() {
+                        tags.extend(fixed.into_iter().map(|id| (id, SetupType::Fixed)));
+                        tags.extend(open.into_iter().map(|id| (id, SetupType::Open)));
+                    }
+                }
+            }
+            for (sid, lap) in &backfill {
+                if let Some(st) = tags.get(lap) {
+                    self.db().set_session_setup(*sid, Some(*st))?;
+                }
+            }
             if missing.is_empty() {
                 rep.messages.push(format!("{label} : {} tour(s) sur Garage 61, tous déjà dans Apex", remote.len()));
                 continue;
@@ -1027,7 +1090,8 @@ impl AppService {
                     pause(&mut first_call);
                     api.lap_csv(id)
                 };
-                let session = match recovered_session(&meta0, length, &g, fetch) {
+                let setup = group_setup(&g, &tags);
+                let session = match recovered_session(&meta0, length, setup, &g, fetch) {
                     Ok(Some(x)) => x,
                     Ok(None) => continue,
                     Err(e) => {
@@ -1129,13 +1193,14 @@ impl AppService {
     pub fn circuits(&self) -> Result<Vec<CircuitOverview>> {
         let sessions = self.list_sessions(&SessionFilter::default())?;
         let externals = self.list_sessions(&SessionFilter { external: Some(true), ..Default::default() })?;
-        let mut map: std::collections::BTreeMap<(String, String, Option<String>, String), Vec<&SessionSummary>> = Default::default();
+        type CircuitKey<'a> = (String, String, Option<String>, String, Option<&'a str>);
+        let mut map: std::collections::BTreeMap<CircuitKey, Vec<&SessionSummary>> = Default::default();
         for s in &sessions {
-            map.entry((s.sim.as_str().to_string(), s.track.clone(), s.track_config.clone(), s.car.clone())).or_default().push(s);
+            map.entry((s.sim.as_str().to_string(), s.track.clone(), s.track_config.clone(), s.car.clone(), s.setup.map(|x| x.as_str()))).or_default().push(s);
         }
         let db = self.db();
         let mut out = vec![];
-        for ((_, track, config, car), ss) in map {
+        for ((_, track, config, car, _), ss) in map {
             let first = ss[0];
             let meta = db.session_meta(first.id)?;
             let mut laps = 0;
@@ -1167,10 +1232,11 @@ impl AppService {
             };
             let ext = externals
                 .iter()
-                .filter(|e| e.sim == first.sim && e.track == track && e.track_config == config && e.car == car)
+                .filter(|e| e.sim == first.sim && e.track == track && e.track_config == config && e.car == car && SetupType::compatible(e.setup, first.setup))
                 .filter_map(|e| Some((e.external_driver.clone()?, e.best_lap_s?)))
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             out.push(CircuitOverview {
+                setup: first.setup,
                 sim: first.sim,
                 track,
                 track_config: config,
@@ -1193,11 +1259,12 @@ impl AppService {
     }
 
     /// Tous les tours d'un circuit (circuit + configuration + voiture), du plus ancien au plus récent.
-    pub fn lap_history(&self, sim: SimId, track: &str, track_config: Option<&str>, car: &str) -> Result<Vec<HistoryLap>> {
+    /// `setup` : type de série (les sessions de type inconnu forment un groupe à part).
+    pub fn lap_history(&self, sim: SimId, track: &str, track_config: Option<&str>, car: &str, setup: Option<SetupType>) -> Result<Vec<HistoryLap>> {
         let mut sessions: Vec<SessionSummary> = self
             .list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), car: Some(car.to_string()), ..Default::default() })?
             .into_iter()
-            .filter(|s| s.track_config.as_deref() == track_config)
+            .filter(|s| s.track_config.as_deref() == track_config && s.setup == setup)
             .collect();
         sessions.sort_by_key(|s| s.started_at_unix);
         let db = self.db();
@@ -1525,8 +1592,12 @@ impl AppService {
             Some(p) => {
                 let l = db.lap(p)?;
                 let time = l.meta.lap_time_s.map(fmt_lap).unwrap_or_default();
+                let series = match db.session_meta(l.session_id)?.setup {
+                    Some(st) => format!(", {}", st.label()),
+                    None => ", série inconnue".into(),
+                };
                 Some(match db.external_driver(l.session_id)? {
-                    Some(d) => format!("{d} (référence externe), {time}"),
+                    Some(d) => format!("{d} (référence externe{series}), {time}"),
                     None => format!("Ta référence perso (autre session), {time}"),
                 })
             }
@@ -1617,24 +1688,26 @@ impl AppService {
             Some(id) => Some(id),
             None => {
                 let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() };
-                let mut best: Option<(f64, i64)> = None;
-                for s in db.list_sessions(&f)?.into_iter().filter(|s| s.track_config == meta.track_config) {
+                // Meilleur tour propre du même type de série ; à défaut, d'une session de type inconnu.
+                let mut best: [Option<(f64, i64)>; 2] = [None, None];
+                for s in db.list_sessions(&f)?.into_iter().filter(|s| s.track_config == meta.track_config && SetupType::compatible(s.setup, meta.setup)) {
+                    let slot = &mut best[usize::from(s.setup != meta.setup)];
                     for l in db.laps(s.id)? {
                         if let (true, Some(t)) = (l.clean, l.meta.lap_time_s) {
-                            if best.is_none_or(|(b, _)| t < b) {
-                                best = Some((t, l.id));
+                            if slot.is_none_or(|(b, _)| t < b) {
+                                *slot = Some((t, l.id));
                             }
                         }
                     }
                 }
-                best.map(|b| b.1)
+                best[0].or(best[1]).map(|b| b.1)
             }
         };
         let Some(id) = lap_id else { return Ok(None) };
         let l = db.lap(id)?;
         let trace = db.trace(id)?;
         let label = match db.external_driver(l.session_id)? {
-            Some(d) => format!("{d}, {}", spoken_lap(l.meta.lap_time_s)),
+            Some(d) => format!("{d}{}, {}", meta.setup.map(|s| format!(" en {}", s.label())).filter(|_| db.session_meta(l.session_id).is_ok_and(|m| m.setup == meta.setup)).unwrap_or_default(), spoken_lap(l.meta.lap_time_s)),
             None if l.is_reference => format!("ta référence perso, {}", spoken_lap(l.meta.lap_time_s)),
             None => format!("ton meilleur tour ici, {}", spoken_lap(l.meta.lap_time_s)),
         };
@@ -1642,19 +1715,26 @@ impl AppService {
         Ok(Some(crate::live_coach::ReferenceLap { label, meta: l.meta, trace, names }))
     }
 
+    /// Référence perso (à toi ou externe) du circuit et de la voiture, pour le type de série de `meta` :
+    /// d'abord une référence du même type (fixed / open), sinon une référence de type inconnu.
+    /// Une référence de l'autre type n'est jamais utilisée (vitesses de pointe et freinages différents).
     fn personal_reference(db: &Store, meta: &SessionMeta) -> Result<Option<i64>> {
         let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() };
         let ext = SessionFilter { external: Some(true), ..f.clone() };
+        let mut fallback = None;
         for s in db.list_sessions(&f)?.into_iter().chain(db.list_sessions(&ext)?) {
-            if s.track_config != meta.track_config {
+            if s.track_config != meta.track_config || !SetupType::compatible(s.setup, meta.setup) {
                 continue;
             }
             // Seul un tour lancé complet peut servir de référence (un ancien choix sur un tour incomplet est ignoré).
             if let Some(l) = db.laps(s.id)?.into_iter().find(|l| l.is_reference && l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some()) {
-                return Ok(Some(l.id));
+                if s.setup == meta.setup {
+                    return Ok(Some(l.id));
+                }
+                fallback.get_or_insert(l.id);
             }
         }
-        Ok(None)
+        Ok(fallback)
     }
 
     pub fn compare(&self, ref_lap: i64, cmp_lap: i64, step_m: f32) -> Result<Comparison> {
@@ -1683,7 +1763,11 @@ impl AppService {
         if let Some(d) = external {
             c.reference.driver = Some(d.clone());
             c.warnings.retain(|w| !w.starts_with("Météo inconnue"));
-            c.warnings.insert(0, format!("Référence : tour de {d}. Son setup, son carburant et la météo ne sont pas connus : un écart peut aussi venir de là."));
+            let what = if mr.setup.is_some() { "Son carburant et la météo" } else { "Son type de série (fixed / open), son carburant et la météo" };
+            c.warnings.insert(0, format!("Référence : tour de {d}. {what} ne sont pas connus : un écart peut aussi venir de là."));
+        }
+        if let Some(w) = setup_warning(mr.setup, mc.setup) {
+            c.warnings.insert(0, w);
         }
         Ok(c)
     }
@@ -1740,6 +1824,14 @@ impl AppService {
             return Err(ServiceError::User("seul un tour lancé complet peut servir de référence (pas un tour de sortie, d'entrée ou interrompu)".into()));
         }
         Ok(self.db().set_reference(lap_id)?)
+    }
+
+    /// Précise le type de série (fixed / open) d'une session, typiquement une référence Garage 61 importée
+    /// depuis un fichier .csv (le fichier ne le dit pas).
+    pub fn set_session_setup(&self, id: i64, setup: Option<SetupType>) -> Result<()> {
+        self.db().set_session_setup(id, setup)?;
+        *self.risk_cache.lock().unwrap_or_else(|p| p.into_inner()) = None;
+        Ok(())
     }
 
     pub fn delete_session(&self, id: i64) -> Result<()> {
@@ -2172,6 +2264,101 @@ mod tests {
         assert!(e.contains("Road Atlanta") && e.contains("Miami International Autodrome (Grand Prix)"), "{e}");
     }
 
+    /// Séries fixed et open : une référence de l'autre type n'est jamais utilisée ; une référence de type
+    /// inconnu ne sert qu'à défaut, avec un avertissement ; historique séparé par type.
+    #[test]
+    fn fixed_and_open_series_use_their_own_reference() {
+        let svc = AppService::in_memory().unwrap();
+        let mk = |seed: u64, t0: i64, setup: Option<SetupType>, fp: &str| {
+            let mut s = demo_session(seed, t0);
+            s.meta.sim = SimId::Iracing;
+            s.meta.setup = setup;
+            s.meta.source_fingerprint = fp.into();
+            s
+        };
+        let fixed = mk(5, 1_760_000_000, Some(SetupType::Fixed), "ibt:fixed");
+        let open = mk(6, 1_760_100_000, Some(SetupType::Open), "ibt:open");
+        let InsertOutcome::Inserted(fid) = svc.insert_imported(&fixed).unwrap() else { panic!() };
+        let InsertOutcome::Inserted(oid) = svc.insert_imported(&open).unwrap() else { panic!() };
+        let len = fixed.meta.track_length_m.unwrap();
+        let lap = fixed.laps.iter().find(|l| l.meta.is_clean()).unwrap().trace.clone();
+        let t_end = *lap.time_s.last().unwrap();
+        let csv = {
+            let mut c = String::from("Speed,LapDistPct,Brake,Throttle,Gear,PositionType\n");
+            let mut t = 0.0f32;
+            while t < t_end {
+                let i = lap.time_s.partition_point(|x| *x < t).min(lap.len() - 1);
+                c += &format!("{},{},{},{},3,3\n", lap.speed_mps[i], (lap.dist_m[i] / len).min(0.99999), lap.brake[i], lap.throttle[i]);
+                t += 1.0 / 60.0;
+            }
+            c
+        };
+        let car = fixed.meta.car.clone();
+        let import = |driver: &str, id: &str, setup: Option<SetupType>| {
+            let fname = format!("Garage 61 - {driver} - {car} - Circuit Démo Complet - 0{}.{:06.3} - {id}.csv", (t_end / 60.0) as u32, t_end % 60.0);
+            let name = crate::ingest::garage61::parse_file_name(&fname).unwrap();
+            svc.import_garage61_text(name, &csv, fname, setup).unwrap()
+        };
+        // Référence de type inconnu seule : utilisée partout, avec un avertissement.
+        let nathan = import("Nathan Open", "N1", None);
+        let d = svc.session_detail(fid).unwrap();
+        assert_eq!(d.analysis_reference_lap_id, Some(nathan.lap_id));
+        assert!(d.reference_label.as_deref().unwrap().contains("série inconnue"), "{:?}", d.reference_label);
+        let c = svc.compare(nathan.lap_id, d.laps[1].id, 1.0).unwrap();
+        assert!(c.warnings.iter().any(|w| w.contains("Type de série de la référence inconnu")), "{:?}", c.warnings);
+        // Cas réel : la référence fixed a été importée avant la mise à jour (type inconnu) et a pris la place
+        // de Nathan. Le pilote précise ensuite les deux types : chacun redevient la référence de sa série.
+        let anthony = import("Anthony Fixed", "A1", None);
+        assert!(!svc.db().lap(nathan.lap_id).unwrap().is_reference);
+        svc.set_session_setup(nathan.session_id, Some(SetupType::Open)).unwrap();
+        svc.set_session_setup(anthony.session_id, Some(SetupType::Fixed)).unwrap();
+        // Les deux références coexistent : une par type de série.
+        let refs: Vec<i64> = [nathan.lap_id, anthony.lap_id].into_iter().filter(|id| svc.db().lap(*id).unwrap().is_reference).collect();
+        assert_eq!(refs.len(), 2, "une référence fixed et une open");
+        let df = svc.session_detail(fid).unwrap();
+        assert_eq!(df.analysis_reference_lap_id, Some(anthony.lap_id), "session fixed → référence fixed");
+        assert!(df.reference_label.as_deref().unwrap().contains("Fixed"));
+        let dop = svc.session_detail(oid).unwrap();
+        assert_eq!(dop.analysis_reference_lap_id, Some(nathan.lap_id), "session open → référence open");
+        // Coach en direct : même règle.
+        let lf = svc.live_reference(&fixed.meta).unwrap().unwrap();
+        assert!(lf.label.starts_with("Anthony Fixed"), "{}", lf.label);
+        let lo = svc.live_reference(&open.meta).unwrap().unwrap();
+        assert!(lo.label.starts_with("Nathan Open"), "{}", lo.label);
+        // Comparaison forcée entre types différents : avertissement explicite.
+        let c = svc.compare(nathan.lap_id, df.laps[1].id, 1.0).unwrap();
+        assert!(c.warnings[0].contains("référence roulée en Open, ton tour en Fixed"), "{:?}", c.warnings);
+        // Seule la référence open disparaît : la session fixed retombe sur sa propre référence, jamais sur l'open.
+        svc.delete_session(anthony.session_id).unwrap();
+        let df = svc.session_detail(fid).unwrap();
+        assert_ne!(df.analysis_reference_lap_id, Some(nathan.lap_id));
+        let lf = svc.live_reference(&fixed.meta).unwrap().unwrap();
+        assert!(lf.label.starts_with("ton meilleur tour"), "{}", lf.label);
+        // Historique : un groupe par type de série, sans mélange des temps.
+        let cs = svc.circuits().unwrap();
+        assert_eq!(cs.len(), 2);
+        for c in &cs {
+            let h = svc.lap_history(c.sim, &c.track, c.track_config.as_deref(), &c.car, c.setup).unwrap();
+            let sid = if c.setup == Some(SetupType::Fixed) { fid } else { oid };
+            assert!(h.iter().all(|l| l.session_id == sid));
+            assert_eq!(c.external_reference.as_ref().map(|e| e.0.as_str()), if c.setup == Some(SetupType::Open) { Some("Nathan Open") } else { None });
+        }
+    }
+
+    #[test]
+    fn group_setup_follows_the_majority() {
+        let lap = |id: &str| RemoteLap { id: id.into(), start: 0, lap_time: 90.0, clean: true, number: None };
+        let g = vec![lap("a"), lap("b"), lap("c")];
+        let mut tags = std::collections::HashMap::new();
+        assert_eq!(group_setup(&g, &tags), None);
+        tags.insert("a".to_string(), SetupType::Open);
+        tags.insert("b".to_string(), SetupType::Fixed);
+        tags.insert("c".to_string(), SetupType::Fixed);
+        assert_eq!(group_setup(&g, &tags), Some(SetupType::Fixed));
+        assert!(setup_warning(Some(SetupType::Fixed), Some(SetupType::Fixed)).is_none());
+        assert!(setup_warning(None, None).is_none());
+    }
+
     #[test]
     fn sessions_recovered_from_garage61_are_own_sessions() {
         let svc = AppService::in_memory().unwrap();
@@ -2209,7 +2396,7 @@ mod tests {
         let groups = group_into_sessions(remote.clone(), 1200);
         assert_eq!(groups.len(), 1);
         let meta0 = s.meta.clone();
-        let rs = recovered_session(&meta0, len, &groups[0], |id| Ok(csv_of(&flying[id[1..].parse::<usize>().unwrap()].trace))).unwrap().unwrap();
+        let rs = recovered_session(&meta0, len, Some(SetupType::Fixed), &groups[0], |id| Ok(csv_of(&flying[id[1..].parse::<usize>().unwrap()].trace))).unwrap().unwrap();
         assert_eq!(rs.laps.len(), flying.len());
         assert_eq!(rs.meta.started_at_unix, start);
         let InsertOutcome::Inserted(id) = svc.insert_imported(&rs).unwrap() else { panic!() };
@@ -2217,14 +2404,14 @@ mod tests {
         let d = svc.session_detail(id).unwrap();
         assert!(d.reference_label.is_none_or(|l| !l.contains("Garage 61 (récupérée)")));
         assert!(svc.list_sessions(&SessionFilter::default()).unwrap().iter().any(|x| x.id == id && x.external_driver.is_none()));
-        let h = svc.lap_history(SimId::Iracing, "Miami International Autodrome", Some("Grand Prix"), "Super Formula Lights 324").unwrap();
+        let h = svc.lap_history(SimId::Iracing, "Miami International Autodrome", Some("Grand Prix"), "Super Formula Lights 324", Some(SetupType::Fixed)).unwrap();
         assert_eq!(h.iter().filter(|l| l.session_id == id).count(), flying.len());
         // Les tours invalides restent invalides (carte de risque juste).
         assert_eq!(rs.laps.iter().filter(|l| l.meta.validity == Validity::Invalid).count(), flying.iter().filter(|l| !l.meta.is_clean()).count());
         // Deuxième récupération : même empreinte, pas de doublon.
         assert!(matches!(svc.insert_imported(&rs).unwrap(), InsertOutcome::Duplicate(_)));
         // Téléchargement refusé (limite de débit) : on s'arrête net, sans session partielle.
-        assert!(recovered_session(&meta0, len, &groups[0], |_| Err("trop de requêtes".into())).is_err());
+        assert!(recovered_session(&meta0, len, None, &groups[0], |_| Err("trop de requêtes".into())).is_err());
     }
 
     #[test]
@@ -2282,7 +2469,7 @@ mod tests {
         let c = svc.circuits().unwrap();
         assert_eq!(c.len(), 1);
         assert_eq!(c[0].sessions, 2);
-        let h = svc.lap_history(c[0].sim, &c[0].track, c[0].track_config.as_deref(), &c[0].car).unwrap();
+        let h = svc.lap_history(c[0].sim, &c[0].track, c[0].track_config.as_deref(), &c[0].car, c[0].setup).unwrap();
         assert_eq!(h.len(), c[0].laps);
         let best = h.iter().filter(|l| l.clean && l.lap_time_s.is_some()).map(|l| l.lap_time_s.unwrap()).fold(f64::INFINITY, f64::min);
         assert!((c[0].best_clean_s.unwrap() - best).abs() < 1e-9);

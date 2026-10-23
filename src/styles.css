@@ -256,3 +256,5 @@ td.num, th.num { text-align: right; }
 .plan-list { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
 .azure-box { margin-top: 10px; background: var(--panel-2); border-radius: var(--radius); padding: 8px 10px; }
 .azure-box summary { cursor: pointer; font-weight: 700; }
+.chip.setup-fixed { background: rgba(64, 156, 255, 0.16); color: #7ab8ff; font-style: normal; }
+.chip.setup-open { background: rgba(255, 140, 60, 0.15); color: #ffad70; font-style: normal; }

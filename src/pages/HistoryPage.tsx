@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { CircuitOverview, HistoryLap } from "../lib/types";
+import { SetupChip } from "../components/SetupChip";
 
 const NAMES_FR: Record<CircuitOverview["corner_names"], string> = {
   exact: "virages nommés (relevé)",
@@ -11,7 +12,7 @@ const NAMES_FR: Record<CircuitOverview["corner_names"], string> = {
   none: "virages numérotés",
 };
 
-const key = (c: CircuitOverview) => `${c.sim}|${c.track}|${c.track_config ?? ""}|${c.car}`;
+const key = (c: CircuitOverview) => `${c.sim}|${c.track}|${c.track_config ?? ""}|${c.car}|${c.setup ?? ""}`;
 
 /** Nuage des temps au tour dans l'ordre chronologique, record propre en violet. */
 function LapChart({ laps, best, external }: { laps: HistoryLap[]; best: number | null; external: [string, number] | null }) {
@@ -82,7 +83,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
   const [sort, setSort] = useState<"date" | "time">("date");
   const current = useMemo(() => circuits.data?.find((c) => key(c) === sel) ?? circuits.data?.[0] ?? null, [circuits.data, sel]);
   const history = useAsync(
-    () => (current ? api.lapHistory(current.sim, current.track, current.track_config, current.car) : Promise.resolve([] as HistoryLap[])),
+    () => (current ? api.lapHistory(current.sim, current.track, current.track_config, current.car, current.setup) : Promise.resolve([] as HistoryLap[])),
     [current ? key(current) : ""],
   );
   useEffect(() => setOnlyClean(false), [sel]);
@@ -108,7 +109,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
           <div className="history-list">
             {circuits.data!.map((c) => (
               <button key={key(c)} className={`history-item ${key(c) === key(current) ? "on" : ""}`} onClick={() => setSel(key(c))}>
-                <b>{c.track}</b>
+                <b>{c.track} <SetupChip setup={c.setup} /></b>
                 <span className="muted">{c.track_config ?? ""}{c.track_config ? " · " : ""}{c.car}</span>
                 <span className="history-item-row">
                   <span className={c.best_clean_s != null ? "kpi best history-kpi" : "kpi history-kpi"}>{lapTime(c.best_clean_s ?? c.best_any_s)}</span>

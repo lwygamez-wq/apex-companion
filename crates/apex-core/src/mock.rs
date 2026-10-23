@@ -290,6 +290,7 @@ pub fn demo_session(seed: u64, started_at_unix: i64) -> ImportedSession {
             weather: Weather { air_temp_c: Some(22.0), track_temp_c: Some(31.0), description: Some("Ensoleillé".into()), wet: Some(false) },
             source_fingerprint: format!("demo:{seed}"),
             source_path: None,
+            setup: None,
         },
         laps,
         sample_rate_hz: Some(60.0),

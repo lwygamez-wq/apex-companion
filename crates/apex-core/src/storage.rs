@@ -114,6 +114,9 @@ CREATE TABLE plans (
     archived INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_plans_combo ON plans(track_key, car, archived);
+"#, r#"
+-- v9 : type de série (setup imposé « fixed » ou libre « open ») ; NULL = inconnu.
+ALTER TABLE sessions ADD COLUMN setup TEXT;
 "#];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
@@ -122,7 +125,11 @@ CREATE INDEX idx_plans_combo ON plans(track_key, car, archived);
 /// v3 : un « reset » près de la ligne ne crée plus de faux tour ; positions GPS nulles ignorées ;
 ///      surface sous la voiture conservée (localisation des sorties de piste).
 /// v4 : contexte de course (grille, positions au passage de la ligne, incidents localisés).
-pub const PARSER_VERSION: i64 = 4;
+/// v5 : type de série (setup fixed / open).
+pub const PARSER_VERSION: i64 = 5;
+
+/// (id session, id Garage 61 du premier tour, circuit, configuration, voiture).
+pub type G61Untyped = (i64, String, String, Option<String>, String);
 
 /// (id, clé circuit, date de création, titre, métrique JSON).
 pub type GoalRow = (i64, String, i64, String, String);
@@ -158,6 +165,8 @@ pub struct SessionSummary {
     pub fuel_per_lap_l: Option<f32>,
     /// Pilote d'un tour de référence externe ; `None` pour les sessions du pilote.
     pub external_driver: Option<String>,
+    /// Setup imposé (fixed) ou libre (open) ; `None` : inconnu.
+    pub setup: Option<SetupType>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -239,12 +248,13 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version, race_json)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            "INSERT INTO sessions (sim, track, track_config, track_length_m, car, kind, started_at, weather_json, source_fingerprint, source_path, sample_rate_hz, imported_at, parser_version, race_json, setup)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             params![
                 m.sim.as_str(), m.track, m.track_config, m.track_length_m, m.car, m.kind.as_str(), m.started_at_unix,
                 serde_json::to_string(&m.weather)?, m.source_fingerprint, m.source_path, s.sample_rate_hz, now_unix(), PARSER_VERSION,
-                s.race.as_ref().map(serde_json::to_string).transpose()?
+                s.race.as_ref().map(serde_json::to_string).transpose()?,
+                m.setup.map(|x| x.as_str())
             ],
         )?;
         let sid = tx.last_insert_rowid();
@@ -278,6 +288,22 @@ impl Store {
     pub fn set_external_driver(&self, id: i64, driver: &str) -> Result<(), StoreError> {
         self.conn.execute("UPDATE sessions SET external_driver = ?1 WHERE id = ?2", params![driver, id])?;
         Ok(())
+    }
+
+    /// Sessions recréées depuis Garage 61 dont le type de série est inconnu :
+    /// (id, identifiant Garage 61 du premier tour, circuit, configuration, voiture).
+    pub fn garage61_sessions_without_setup(&self) -> Result<Vec<G61Untyped>, StoreError> {
+        let mut st = self.conn.prepare(
+            "SELECT id, source_fingerprint, track, track_config, car FROM sessions
+             WHERE setup IS NULL AND external_driver IS NULL AND source_fingerprint LIKE 'garage61-session:%'",
+        )?;
+        let v = st
+            .query_map([], |r| {
+                let fp: String = r.get(1)?;
+                Ok((r.get(0)?, fp.trim_start_matches("garage61-session:").to_string(), r.get(2)?, r.get(3)?, r.get(4)?))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(v)
     }
 
     /// Pilote de la session si c'est une référence externe.
@@ -314,8 +340,8 @@ impl Store {
         let tx = self.conn.transaction()?;
         let m = &s.meta;
         tx.execute(
-            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5, race_json = ?6 WHERE id = ?7",
-            params![m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, s.race.as_ref().map(serde_json::to_string).transpose()?, id],
+            "UPDATE sessions SET track = ?1, track_config = ?2, car = ?3, track_length_m = ?4, parser_version = ?5, race_json = ?6, setup = IFNULL(?8, setup) WHERE id = ?7",
+            params![m.track, m.track_config, m.car, m.track_length_m, PARSER_VERSION, s.race.as_ref().map(serde_json::to_string).transpose()?, id, m.setup.map(|x| x.as_str())],
         )?;
         tx.execute("DELETE FROM laps WHERE session_id = ?1", [id])?;
         Self::insert_laps(&tx, id, s)?;
@@ -341,6 +367,7 @@ impl Store {
             weather: serde_json::from_str(&weather).unwrap_or_default(),
             source_fingerprint: r.get("source_fingerprint")?,
             source_path: r.get("source_path")?,
+            setup: r.get::<_, Option<String>>("setup")?.as_deref().and_then(SetupType::parse),
         })
     }
 
@@ -463,23 +490,56 @@ impl Store {
                     incident_laps: metas.iter().filter(|l| l.flags.incident || l.flags.off_track).count(),
                     fuel_per_lap_l: (!fuel.is_empty()).then(|| fuel.iter().sum::<f32>() / fuel.len() as f32),
                     external_driver,
+                    setup: m.setup,
                 })
             })
             .collect()
     }
 
-    /// Une seule référence personnelle par (simulateur, circuit, config, voiture).
+    /// Une seule référence personnelle par (simulateur, circuit, config, voiture, type de setup) :
+    /// une référence fixed et une référence open peuvent coexister.
     pub fn set_reference(&mut self, lap_id: i64) -> Result<(), StoreError> {
         let lap = self.lap(lap_id)?;
         let m = self.session_meta(lap.session_id)?;
         let tx = self.conn.transaction()?;
         tx.execute(
             "UPDATE laps SET is_reference = 0 WHERE session_id IN (
-               SELECT id FROM sessions WHERE sim = ?1 AND track = ?2 AND IFNULL(track_config,'') = IFNULL(?3,'') AND car = ?4)",
-            params![m.sim.as_str(), m.track, m.track_config, m.car],
+               SELECT id FROM sessions WHERE sim = ?1 AND track = ?2 AND IFNULL(track_config,'') = IFNULL(?3,'') AND car = ?4
+                 AND IFNULL(setup,'') = IFNULL(?5,''))",
+            params![m.sim.as_str(), m.track, m.track_config, m.car, m.setup.map(|x| x.as_str())],
         )?;
         tx.execute("UPDATE laps SET is_reference = 1 WHERE id = ?1", [lap_id])?;
         tx.commit()?;
+        Ok(())
+    }
+
+    /// Fixe le type de setup d'une session (référence Garage 61 importée sans précision, correction).
+    /// Si la session porte une référence, elle redevient l'unique référence de son type de setup.
+    pub fn set_session_setup(&mut self, id: i64, setup: Option<SetupType>) -> Result<(), StoreError> {
+        self.conn.execute("UPDATE sessions SET setup = ?1 WHERE id = ?2", params![setup.map(|x| x.as_str()), id])?;
+        let r: Option<i64> = self.conn.query_row("SELECT id FROM laps WHERE session_id = ?1 AND is_reference = 1", [id], |r| r.get(0)).optional()?;
+        if let Some(l) = r {
+            self.set_reference(l)?;
+            return Ok(());
+        }
+        // Tour externe sans référence de ce type sur le circuit : il le devient (cas d'une référence open
+        // importée avant une fixed, qui avait perdu son statut quand les deux types étaient confondus).
+        if self.external_driver(id)?.is_some() {
+            let m = self.session_meta(id)?;
+            let taken: bool = self.conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM laps l JOIN sessions s ON s.id = l.session_id WHERE l.is_reference = 1
+                   AND s.sim = ?1 AND s.track = ?2 AND IFNULL(s.track_config,'') = IFNULL(?3,'') AND s.car = ?4 AND IFNULL(s.setup,'') = IFNULL(?5,''))",
+                params![m.sim.as_str(), m.track, m.track_config, m.car, m.setup.map(|x| x.as_str())],
+                |r| r.get(0),
+            )?;
+            let lap: Option<i64> = self
+                .conn
+                .query_row("SELECT id FROM laps WHERE session_id = ?1 AND kind = 'flying' AND lap_time_s IS NOT NULL ORDER BY lap_time_s LIMIT 1", [id], |r| r.get(0))
+                .optional()?;
+            if let (false, Some(l)) = (taken, lap) {
+                self.set_reference(l)?;
+            }
+        }
         Ok(())
     }
 

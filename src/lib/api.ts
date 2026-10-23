@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  SetupType,
   AppSettings,
   CircuitOverview,
   HistoryLap,
@@ -52,6 +53,7 @@ export const api = {
   compare: (referenceLapId: number, comparedLapId: number, stepM = 1) =>
     call<Comparison>("compare_laps", { referenceLapId, comparedLapId, stepM }),
   setReference: (lapId: number) => call<void>("set_reference", { lapId }),
+  setSessionSetup: (id: number, setup: SetupType | null) => call<void>("set_session_setup", { id, setup }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),
   deleteAll: () => call<void>("delete_all_data"),
   exportData: (path: string) => call<number>("export_data", { path }),
@@ -74,7 +76,8 @@ export const api = {
   setIracingAutolog: (enable: boolean) => call<AutoLogStatus>("set_iracing_autolog", { enable }),
   exportSession: (id: number, path: string) => call<ExportSummary>("export_session", { id, path }),
   circuits: () => call<CircuitOverview[]>("list_circuits"),
-  lapHistory: (sim: SimId, track: string, trackConfig: string | null, car: string) => call<HistoryLap[]>("lap_history", { sim, track, trackConfig, car }),
+  lapHistory: (sim: SimId, track: string, trackConfig: string | null, car: string, setup: SetupType | null) =>
+    call<HistoryLap[]>("lap_history", { sim, track, trackConfig, car, setup }),
   garage61Check: () => call<string>("garage61_check"),
   findGarage61ReferencesAll: () => call<string[]>("find_garage61_references_all"),
   recoverGarage61Sessions: (days: number) => call<RecoverReport>("recover_garage61_sessions", { days }),

@@ -10,6 +10,7 @@ Ce que fait l'application :
 - **Programme d'entraînement** : 2 à 3 objectifs mesurables pour la prochaine séance, évalués automatiquement ensuite.
 - **Coach vocal en direct** : synthèse des derniers tours contre la référence, focus d'un virage, annonce avant le virage, bips de freinage, voix naturelle hors ligne ; commandes vocales au volant (« répète », « point », « plan », « carburant », « silence », « reprends »).
 - **Références Garage 61** (facultatif) : import des tours exportés du site, API pour retrouver tes propres sessions.
+- **Séries fixed et open séparées** : type de série lu dans chaque session iRacing ; une référence fixed ne sert qu'aux sessions fixed, une open qu'aux sessions open (analyse, coach en direct, historique).
 - **Historique** de tous les tours par circuit, **app iPhone** (page installable) qui ouvre les exports de séance.
 
 - Architecture, limites par simulateur, schéma de données : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
@@ -62,7 +63,7 @@ npm run tauri build
 - Base locale : `%APPDATA%\app.apexcompanion.desktop\apex.db` (SQLite). Journaux locaux dans le dossier `logs` voisin. Copies de garde des `.ibt` dans `telemetrie-gardee`, voix et reconnaissance vocale dans `voix`.
 - **Aucune donnée de conduite n'est envoyée.** Connexions sortantes, toutes déclenchées par l'application elle-même :
   - mises à jour : lecture de `latest.json` sur GitHub (désactivable dans Réglages) ;
-  - Garage 61, seulement si tu saisis un jeton : recherche de tours de référence et de tes propres sessions (critères envoyés : circuit, voiture) ;
+  - Garage 61, seulement si tu saisis un jeton : recherche de tours de référence et de tes propres sessions (critères envoyés : circuit, voiture, type de série) ;
   - voix Azure, seulement si tu saisis une clé Azure AI Speech : le texte des messages radio est envoyé à Azure pour être prononcé (rien d'autre) ;
   - téléchargements à la demande, une seule fois : moteur vocal Piper (GitHub), voix françaises (Hugging Face), reconnaissance vocale Vosk (GitHub) et son modèle français (alphacephei.com).
 - Le micro n'est ouvert que pendant l'appui sur le bouton radio ; l'audio est analysé sur le PC puis jeté.

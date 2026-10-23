@@ -9,6 +9,7 @@
 //! tes coéquipiers et ceux des pilotes que tu suis (« following »). Pas de recherche globale.
 
 use crate::ingest::garage61::G61Name;
+use crate::model::SetupType;
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -138,7 +139,8 @@ impl G61Api {
 
     /// Meilleur tour propre de chaque pilote suivi, coéquipier ou pilote ajouté par son identifiant,
     /// sur ce circuit et cette voiture.
-    pub fn best_laps(&self, track_id: i64, car_id: i64, teams: &[String], extra_drivers: &[String]) -> Result<Vec<G61Lap>, String> {
+    /// `setup` : uniquement les tours roulés en série fixed ou open (`None` : tous).
+    pub fn best_laps(&self, track_id: i64, car_id: i64, teams: &[String], extra_drivers: &[String], setup: Option<SetupType>) -> Result<Vec<G61Lap>, String> {
         let mut q = vec![
             ("tracks", track_id.to_string()),
             ("cars", car_id.to_string()),
@@ -152,6 +154,9 @@ impl G61Api {
         }
         if !extra_drivers.is_empty() {
             q.push(("extraDrivers", extra_drivers.join(",")));
+        }
+        if let Some(s) = setup {
+            q.push(("sessionSetupTypes", setup_param(s)));
         }
         Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items)
     }
@@ -169,8 +174,8 @@ impl G61Api {
     }
 
     /// Tous tes tours lancés (propres ou non) sur ce circuit et cette voiture depuis `after` (ISO UTC).
-    pub fn my_laps(&self, track_id: i64, car_id: i64, after: &str) -> Result<Vec<G61Lap>, String> {
-        let q = vec![
+    pub fn my_laps(&self, track_id: i64, car_id: i64, after: &str, setup: Option<SetupType>) -> Result<Vec<G61Lap>, String> {
+        let mut q = vec![
             ("tracks", track_id.to_string()),
             ("cars", car_id.to_string()),
             ("drivers", "me".to_string()),
@@ -180,6 +185,9 @@ impl G61Api {
             ("after", after.to_string()),
             ("limit", "1000".to_string()),
         ];
+        if let Some(s) = setup {
+            q.push(("sessionSetupTypes", setup_param(s)));
+        }
         Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items)
     }
 
@@ -189,6 +197,15 @@ impl G61Api {
 }
 
 /// Date ISO 8601 (« 2026-10-23T09:00:14Z », « …14.123Z », « …14+02:00 ») → secondes Unix UTC.
+/// Filtre `sessionSetupTypes` de l'API : 1 = open, 2 = fixed.
+fn setup_param(s: SetupType) -> String {
+    match s {
+        SetupType::Open => "1",
+        SetupType::Fixed => "2",
+    }
+    .to_string()
+}
+
 pub fn parse_iso_utc(s: &str) -> Option<i64> {
     let s = s.trim();
     let (date, rest) = s.split_once(['T', ' '])?;

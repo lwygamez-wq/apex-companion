@@ -10,7 +10,7 @@ function summarize(r: ImportReport[]): string {
   const dup = r.filter((x) => x.outcome?.status === "duplicate").length;
   const err = r.filter((x) => x.error);
   let s = `${ins} session(s) importée(s)`;
-  if (refs) s += `, ${refs} tour(s) de référence Garage 61 importé(s) : ils servent maintenant de référence sur ce circuit`;
+  if (refs) s += `, ${refs} tour(s) de référence Garage 61 importé(s) : précise s'il s'agit d'une série Fixed ou Open dans « Références d'autres pilotes » ci-dessous, pour qu'il ne serve qu'aux sessions du même type`;
   if (dup) s += `, ${dup} déjà présente(s)`;
   if (err.length) s += `, ${err.length} erreur(s) : ${err.map((e) => e.error).join(" ; ")}`;
   return s;

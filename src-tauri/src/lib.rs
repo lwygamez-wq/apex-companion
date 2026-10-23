@@ -45,6 +45,7 @@ pub fn run() {
             commands::load_demo,
             commands::compare_laps,
             commands::set_reference,
+            commands::set_session_setup,
             commands::delete_session,
             commands::delete_all_data,
             commands::export_data,

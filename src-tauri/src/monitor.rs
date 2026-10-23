@@ -166,7 +166,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                         Ok(Some(snap)) => {
                             if let Some(yaml) = &snap.session_info {
                                 let meta = session_meta_from_yaml(yaml);
-                                let key = format!("{}|{}|{}", meta.track, meta.track_config.clone().unwrap_or_default(), meta.car);
+                                let key = format!("{}|{}|{}|{:?}", meta.track, meta.track_config.clone().unwrap_or_default(), meta.car, meta.setup);
                                 if coach.as_ref().is_none_or(|(k, _)| *k != key) && meta.track != "Circuit inconnu" {
                                     let reference = svc.live_reference(&meta).unwrap_or_else(|e| {
                                         log::warn!("référence du coach : {e}");

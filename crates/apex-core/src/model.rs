@@ -131,6 +131,44 @@ pub struct SessionMeta {
     /// Empreinte stable de la source : clé d'anti-doublon à l'import.
     pub source_fingerprint: String,
     pub source_path: Option<String>,
+    /// Type de série : setup imposé (fixed) ou libre (open). `None` : inconnu (ancienne session,
+    /// tour Garage 61 importé sans précision). Les vitesses de pointe et les freinages en dépendent.
+    #[serde(default)]
+    pub setup: Option<SetupType>,
+}
+
+/// Setup imposé par la série (« fixed ») ou libre (« open »).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SetupType {
+    Fixed,
+    Open,
+}
+
+impl SetupType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SetupType::Fixed => "fixed",
+            SetupType::Open => "open",
+        }
+    }
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "fixed" => Some(SetupType::Fixed),
+            "open" => Some(SetupType::Open),
+            _ => None,
+        }
+    }
+    pub fn label(&self) -> &'static str {
+        match self {
+            SetupType::Fixed => "Fixed",
+            SetupType::Open => "Open",
+        }
+    }
+    /// Deux tours sont comparables si leur type de setup est le même ou si l'un des deux est inconnu.
+    pub fn compatible(a: Option<SetupType>, b: Option<SetupType>) -> bool {
+        a.is_none() || b.is_none() || a == b
+    }
 }
 
 /// Règles de coaching : tour de sortie / lancé / retour stands.

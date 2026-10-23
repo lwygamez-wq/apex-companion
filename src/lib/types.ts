@@ -27,7 +27,11 @@ export interface SessionMeta {
   weather: Weather;
   source_fingerprint: string;
   source_path: string | null;
+  /** Setup imposé (fixed) ou libre (open) ; null : inconnu. */
+  setup?: SetupType | null;
 }
+
+export type SetupType = "fixed" | "open";
 
 export interface SessionSummary {
   id: number;
@@ -48,6 +52,7 @@ export interface SessionSummary {
   fuel_per_lap_l: number | null;
   /** Pilote d'un tour de référence externe (Garage 61…) ; null pour tes sessions. */
   external_driver: string | null;
+  setup: SetupType | null;
 }
 
 export interface LapFlags {
@@ -466,6 +471,7 @@ export interface SessionFilter {
 }
 
 export interface CircuitOverview {
+  setup: SetupType | null;
   sim: SimId;
   track: string;
   track_config: string | null;

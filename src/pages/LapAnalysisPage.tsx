@@ -12,6 +12,7 @@ import { dateTime, delta, LAP_KIND_FR, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { ReplayStore, replayBounds } from "../lib/replay";
 import type { LapRow, SessionDetail } from "../lib/types";
+import { SetupChip } from "../components/SetupChip";
 
 function lapFlags(l: LapRow): string {
   const f = [];
@@ -112,7 +113,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
       {d && (
         <>
           <div className="grid cols-4" style={{ marginBottom: 14 }}>
-            <div className="card"><h2>Session</h2><div style={{ fontWeight: 600 }}>{d.meta.track}</div><div className="kpi-sub">{d.meta.car}</div></div>
+            <div className="card"><h2>Session</h2><div style={{ fontWeight: 600 }}>{d.meta.track}</div><div className="kpi-sub">{d.meta.car} <SetupChip setup={d.meta.setup} /></div></div>
             {d.best_lap_id != null || d.fastest_lap_id == null ? (
               <div className="card"><h2>Meilleur tour</h2><div className="kpi best">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
             ) : (
