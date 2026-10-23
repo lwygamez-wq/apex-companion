@@ -338,3 +338,12 @@ td.num, th.num { text-align: right; }
 .hud-gap small { font-size: 10px; font-weight: 500; color: var(--muted); }
 .hud-clock { position: absolute; right: 8px; top: 8px; background: rgba(12, 12, 18, 0.86); border: 1px solid #2c2c38; border-radius: 3px; padding: 3px 8px; font-size: 14px; font-weight: 800; pointer-events: none; }
 @media (max-width: 700px) { .hud-car { min-width: 0; } .hud-speed { font-size: 18px; } }
+.hud.compact .hud-car { min-width: 0; padding: 4px 6px; }
+.hud.compact .hud-name { display: none; }
+.hud.compact .hud-speed { font-size: 17px; min-width: 34px; }
+.hud.compact .hud-speed small { display: none; }
+.hud.compact .hud-row { height: 26px; }
+.hud.compact .hud-car:first-child { border-left: 3px solid #8fb4ff; }
+.hud.compact .hud-car:nth-child(2) { border-left: 3px solid #ff3b30; }
+.hud.compact .hud-gap { font-size: 14px; }
+.trackmap-zoom button[aria-label*="lein"] { font-size: 16px; }

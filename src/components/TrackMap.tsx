@@ -82,7 +82,7 @@ function inputMarks(c: Comparison, geo: Geo): Mark[] {
 }
 
 /** Jauges type télé : vitesse, rapport, gaz et frein des deux voitures. */
-function Hud({ cmp, ci, ri, ghostMode }: { cmp: Comparison; ci: number; ri: number; ghostMode: "time" | "distance" }) {
+function Hud({ cmp, ci, ri, ghostMode, compact }: { cmp: Comparison; ci: number; ri: number; ghostMode: "time" | "distance"; compact?: boolean }) {
   const col = (label: string, color: string, tr: typeof cmp.ref_trace, i: number) => {
     const th = Math.max(0, Math.min(1, at(tr.throttle, i) ?? 0));
     const br = Math.max(0, Math.min(1, at(tr.brake, i) ?? 0));
@@ -102,7 +102,7 @@ function Hud({ cmp, ci, ri, ghostMode }: { cmp: Comparison; ci: number; ri: numb
   const gapS = at(cmp.delta_s, ci) ?? 0;
   const aheadM = (ri - ci) * cmp.step_m;
   return (
-    <div className="hud" onPointerDown={(e) => e.stopPropagation()}>
+    <div className={`hud ${compact ? "compact" : ""}`} onPointerDown={(e) => e.stopPropagation()}>
       {col(cmp.reference.driver ?? `Réf. tour ${cmp.reference.number}`, REF_LINE, cmp.ref_trace, ri)}
       {col(`Toi, tour ${cmp.compared.number}`, CMP_LINE, cmp.cmp_trace, ci)}
       <div className={`hud-gap mono ${gapS > 0.005 ? "pos" : gapS < -0.005 ? "neg" : ""}`}>
@@ -460,6 +460,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
+        onDoubleClick={() => onSize?.(size === "full" ? "normal" : "full")}
       >
         <svg viewBox={vb} width="100%" height={height} preserveAspectRatio="xMidYMid meet">
           <g transform={g}>
@@ -546,9 +547,19 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           </g>
         </svg>
         {zoomed && car && <Overview geo={geo} x={car.x} y={car.y} />}
-        <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} />
-        <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>
+        <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} compact={px < 560} />
+        {px >= 560 && <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>}
         <div className="trackmap-zoom">
+          {onSize && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onSize(size === "full" ? "normal" : "full")}
+              aria-label={size === "full" ? "Quitter le plein écran" : "Plein écran"}
+              title={size === "full" ? "Quitter le plein écran (Échap)" : "Plein écran (double-clic sur la carte)"}
+            >
+              {size === "full" ? "⤡" : "⤢"}
+            </button>
+          )}
           <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(0.7)} aria-label="Zoomer">+</button>
           <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(1.4)} aria-label="Dézoomer">−</button>
         </div>
