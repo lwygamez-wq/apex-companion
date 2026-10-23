@@ -261,6 +261,12 @@ pub struct AppService {
     /// Fichiers en erreur déjà réessayés pendant ce lancement (on retente une fois par lancement,
     /// et à chaque passage si l'erreur est passagère : fichier verrouillé par un autre programme).
     retried: Mutex<std::collections::HashSet<String>>,
+    /// Dossier des copies de garde (liens physiques) des .ibt : un autre logiciel (l'agent Garage 61
+    /// avec « supprimer après envoi ») peut effacer le fichier quelques secondes après la fin de
+    /// l'écriture, avant qu'Apex ait pu l'importer. `None` : pas de garde (tests en mémoire).
+    keep_dir: Option<PathBuf>,
+    /// Fichiers déjà gardés (ou déjà importés) pendant ce lancement : évite de retoucher la base à chaque tour de boucle.
+    guarded: Mutex<std::collections::HashSet<String>>,
 }
 
 const SETTINGS_KEY: &str = "app_settings";
@@ -391,11 +397,27 @@ impl AppService {
             Ok(_) => {}
             Err(e) => log::warn!("dédoublonnage des sessions : {e}"),
         }
-        Ok(Self { store: Mutex::new(store), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None), retried: Mutex::new(Default::default()) })
+        Ok(Self {
+            store: Mutex::new(store),
+            connectors: registry(),
+            g61_catalog: Mutex::new(None),
+            risk_cache: Mutex::new(None),
+            retried: Mutex::new(Default::default()),
+            keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
+            guarded: Mutex::new(Default::default()),
+        })
     }
 
     pub fn in_memory() -> Result<Self> {
-        Ok(Self { store: Mutex::new(Store::open_in_memory()?), connectors: registry(), g61_catalog: Mutex::new(None), risk_cache: Mutex::new(None), retried: Mutex::new(Default::default()) })
+        Ok(Self {
+            store: Mutex::new(Store::open_in_memory()?),
+            connectors: registry(),
+            g61_catalog: Mutex::new(None),
+            risk_cache: Mutex::new(None),
+            retried: Mutex::new(Default::default()),
+            keep_dir: None,
+            guarded: Mutex::new(Default::default()),
+        })
     }
 
     /// Faut-il (re)traiter ce fichier ? Nouveau ou modifié : oui. Déjà traité sans erreur : non.
@@ -941,17 +963,36 @@ impl AppService {
         let dir = self.iracing_dir()?;
         let now = std::time::SystemTime::now();
         let mut rep = SyncReport::default();
+        // (fichier à lire, clé = chemin d'origine dans le dossier iRacing, copie de garde éventuelle)
+        let mut todo: Vec<(PathBuf, String, Option<PathBuf>)> = vec![];
         for p in self.ibt_files(&dir)? {
+            let guard = self.guard_path(&p).filter(|g| g.exists());
+            todo.push((p.clone(), p.to_string_lossy().into_owned(), guard));
+        }
+        // Fichiers effacés du dossier iRacing par un autre logiciel : on importe la copie de garde.
+        if let Some(keep) = &self.keep_dir {
+            for g in self.ibt_files(keep).unwrap_or_default() {
+                let Some(name) = g.file_name() else { continue };
+                let orig = dir.join(name);
+                if !orig.exists() {
+                    todo.push((g.clone(), orig.to_string_lossy().into_owned(), None));
+                }
+            }
+        }
+        for (p, key, guard) in todo {
             let Ok(meta) = std::fs::metadata(&p) else { continue };
             let Ok(modified) = meta.modified() else { continue };
             let size = meta.len() as i64;
             let mtime = modified.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
-            let key = p.to_string_lossy().into_owned();
             if now.duration_since(modified).unwrap_or_default() < min_age {
                 rep.pending += 1;
                 continue;
             }
             if !self.should_process(&key, size, mtime)? {
+                // Déjà importé et toujours présent dans le dossier iRacing : la garde ne sert plus.
+                if let (Some(g), Ok(Some((_, _, None)))) = (&guard, self.db().file_record(&key)) {
+                    let _ = std::fs::remove_file(g);
+                }
                 continue;
             }
             let r = self.import_paths(std::slice::from_ref(&p)).remove(0);
@@ -974,8 +1015,50 @@ impl AppService {
                 rep.errors.push(format!("{} : {e}", p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()));
             }
             self.db().record_file(&key, size, mtime, sid, r.error.as_deref())?;
+            // L'original est toujours là : la copie de garde est supprimée. Si l'original a été effacé,
+            // la garde est conservée (seule copie brute, utile pour recalculer la session plus tard).
+            if let (Some(g), Some(_), None) = (&guard, sid, &r.error) {
+                let _ = std::fs::remove_file(g);
+            }
         }
         Ok(rep)
+    }
+
+    fn guard_path(&self, p: &Path) -> Option<PathBuf> {
+        Some(self.keep_dir.as_ref()?.join(p.file_name()?))
+    }
+
+    /// Pose une copie de garde (lien physique, aucune place disque en plus) sur chaque .ibt du dossier
+    /// iRacing pas encore importé, dès qu'il apparaît, pendant qu'iRacing l'écrit. Si un autre logiciel
+    /// efface le fichier juste après la session, les données restent accessibles par la garde.
+    /// À appeler souvent (boucle de surveillance) : coût négligeable une fois les fichiers connus.
+    pub fn guard_iracing_files(&self) -> Result<usize> {
+        let Some(keep) = &self.keep_dir else { return Ok(0) };
+        let dir = self.iracing_dir()?;
+        let mut n = 0;
+        for p in self.ibt_files(&dir)? {
+            let key = p.to_string_lossy().into_owned();
+            if self.guarded.lock().unwrap_or_else(|e| e.into_inner()).contains(&key) {
+                continue;
+            }
+            let Ok(meta) = std::fs::metadata(&p) else { continue };
+            let mtime = meta.modified().ok().and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0);
+            let done = matches!(self.db().file_record(&key)?, Some((s, m, None)) if s == meta.len() as i64 && m == mtime);
+            if !done {
+                let Some(g) = self.guard_path(&p) else { continue };
+                if !g.exists() {
+                    std::fs::create_dir_all(keep).map_err(|e| ServiceError::User(format!("dossier de garde : {e}")))?;
+                    if let Err(e) = std::fs::hard_link(&p, &g) {
+                        // Autre disque que les données d'Apex, ou fichier pas encore accessible : on réessaie au prochain tour.
+                        log::debug!("garde de {} impossible : {e}", p.display());
+                        continue;
+                    }
+                    n += 1;
+                }
+            }
+            self.guarded.lock().unwrap_or_else(|e| e.into_inner()).insert(key);
+        }
+        Ok(n)
     }
 
     fn iracing_app_ini(&self) -> Result<PathBuf> {
@@ -1734,6 +1817,76 @@ mod tests {
         svc.db().record_file(&key, meta.len() as i64, mtime, None, Some("import : lecture fichier : (os error 32)")).unwrap();
         assert!(svc.should_process(&key, meta.len() as i64, mtime).unwrap());
         assert!(svc.should_process(&key, meta.len() as i64, mtime).unwrap());
+    }
+
+    fn guarded_service(root: &Path) -> (AppService, PathBuf) {
+        let mut svc = AppService::in_memory().unwrap();
+        svc.keep_dir = Some(root.join("garde"));
+        let tel = root.join("telemetry");
+        std::fs::create_dir_all(&tel).unwrap();
+        svc.save_settings(AppSettings { iracing_telemetry_dir: Some(tel.to_string_lossy().into()), ..Default::default() }).unwrap();
+        (svc, tel)
+    }
+
+    #[test]
+    fn file_deleted_by_another_program_is_still_imported() {
+        // Cas réel du 22-23/10 : l'agent Garage 61 efface le .ibt 2 à 12 s après la fin de la session.
+        let root = tempfile::tempdir().unwrap();
+        let (svc, tel) = guarded_service(root.path());
+        let ibt = crate::ingest::ibt::writer::synthetic();
+        let f = tel.join("superformulalights324_miami gp 2026-10-23 11-00-14.ibt");
+        // iRacing commence à écrire : la garde est posée pendant l'écriture.
+        std::fs::write(&f, &ibt[..ibt.len() / 2]).unwrap();
+        assert_eq!(svc.guard_iracing_files().unwrap(), 1);
+        assert_eq!(svc.guard_iracing_files().unwrap(), 0, "une seule garde par fichier");
+        {
+            use std::io::Write;
+            let mut w = std::fs::OpenOptions::new().append(true).open(&f).unwrap();
+            w.write_all(&ibt[ibt.len() / 2..]).unwrap();
+        }
+        std::fs::remove_file(&f).unwrap();
+        let r = svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap();
+        assert_eq!((r.imported, r.errors.len()), (1, 0), "{:?}", r.errors);
+        let g = root.path().join("garde").join(f.file_name().unwrap());
+        assert_eq!(std::fs::read(&g).unwrap(), ibt, "la garde contient le fichier complet");
+        assert!(g.exists(), "seule copie brute : conservée");
+        assert_eq!(svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap(), SyncReport::default());
+    }
+
+    #[test]
+    fn guard_is_removed_when_the_original_stays() {
+        let root = tempfile::tempdir().unwrap();
+        let (svc, tel) = guarded_service(root.path());
+        let f = tel.join("s.ibt");
+        std::fs::write(&f, crate::ingest::ibt::writer::synthetic()).unwrap();
+        assert_eq!(svc.guard_iracing_files().unwrap(), 1);
+        assert_eq!(svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap().imported, 1);
+        assert!(!root.path().join("garde").join("s.ibt").exists());
+        // Fichier déjà importé : jamais regardé à nouveau, même après redémarrage.
+        svc.guarded.lock().unwrap().clear();
+        assert_eq!(svc.guard_iracing_files().unwrap(), 0);
+    }
+
+    /// Comportement Windows réel : iRacing écrit le fichier en ne partageant que la lecture ; la garde
+    /// doit pouvoir être posée pendant l'écriture et survivre à la suppression de l'original.
+    #[cfg(windows)]
+    #[test]
+    fn windows_guard_while_iracing_writes_then_original_deleted() {
+        use std::io::Write;
+        use std::os::windows::fs::OpenOptionsExt;
+        let root = tempfile::tempdir().unwrap();
+        let (svc, tel) = guarded_service(root.path());
+        let ibt = crate::ingest::ibt::writer::synthetic();
+        let f = tel.join("w.ibt");
+        let mut w = std::fs::OpenOptions::new().write(true).create(true).share_mode(1 /* FILE_SHARE_READ */).open(&f).unwrap();
+        w.write_all(&ibt[..ibt.len() / 2]).unwrap();
+        w.flush().unwrap();
+        assert_eq!(svc.guard_iracing_files().unwrap(), 1, "garde posée pendant l'écriture");
+        w.write_all(&ibt[ibt.len() / 2..]).unwrap();
+        drop(w);
+        std::fs::remove_file(&f).unwrap();
+        assert_eq!(std::fs::read(root.path().join("garde").join("w.ibt")).unwrap(), ibt);
+        assert_eq!(svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap().imported, 1);
     }
 
     #[test]

@@ -121,6 +121,15 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             // Synchro automatique du dossier de télémétrie iRacing, indépendante de la lecture live :
             // un .ibt est importé dès qu'il n'a plus bougé depuis 20 s (iRacing a fini de l'écrire).
             let mut auto_msg = None;
+            // Copie de garde des .ibt dès leur apparition : un autre logiciel (agent Garage 61 réglé pour
+            // supprimer après envoi) peut les effacer quelques secondes après la fin de la session.
+            if settings.auto_import {
+                match svc.guard_iracing_files() {
+                    Ok(n) if n > 0 => log::info!("{n} fichier(s) de télémétrie mis sous garde"),
+                    Ok(_) => {}
+                    Err(e) => log::debug!("garde : {e}"),
+                }
+            }
             if settings.auto_import && Instant::now() >= next_sync {
                 next_sync = Instant::now() + Duration::from_secs(15);
                 // Tours Garage 61 téléchargés depuis le site : importés comme références.
