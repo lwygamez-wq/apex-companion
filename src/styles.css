@@ -246,3 +246,9 @@ td.num, th.num { text-align: right; }
 .voice-list { display: flex; flex-direction: column; gap: 4px; }
 .voice-opt { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; background: var(--panel-2); border-radius: var(--radius); padding: 6px 10px; cursor: pointer; border-left: 3px solid transparent; }
 .voice-opt.on { border-left-color: var(--red); }
+.radio-cmds { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 13px; margin: 6px 0; }
+.ptt-state { margin-top: 8px; padding: 8px 10px; border-radius: var(--radius); background: var(--panel-2); font-weight: 700; }
+.ptt-state.listening { border-left: 3px solid var(--red); }
+.ptt-state.error { color: #ff8a80; }
+.radio-msg.reply { border-left-color: var(--green); }
+.radio-msg.callout { border-left-color: var(--yellow); }

@@ -3,6 +3,7 @@
 
 mod commands;
 mod monitor;
+mod ptt_loop;
 mod updater;
 
 use apex_core::service::AppService;
@@ -29,6 +30,7 @@ pub fn run() {
             let svc = Arc::new(AppService::open(&dir.join("apex.db")).map_err(|e| e.to_string())?);
             let status = Arc::new(Mutex::new(monitor::StatusPayload::default()));
             monitor::spawn(app.handle().clone(), svc.clone(), status.clone());
+            ptt_loop::spawn(app.handle().clone(), svc.clone(), status.clone());
             app.manage(AppState { svc, status });
             log::info!("Apex Companion démarré, données : {}", dir.display());
             Ok(())
@@ -65,6 +67,10 @@ pub fn run() {
             commands::tts_voices,
             commands::tts_install,
             commands::tts_speak,
+            commands::ptt_learn,
+            commands::voice_installed,
+            commands::voice_install,
+            commands::set_coach_muted,
             commands::set_corner_name,
             commands::create_goal,
             commands::archive_goal,

@@ -35,6 +35,10 @@ pub enum CoachMessageKind {
     Focus,
     /// Tour non compté (sortie, incident, stand).
     Invalid,
+    /// Rappel court juste avant le virage du focus.
+    Callout,
+    /// Réponse à une commande vocale.
+    Reply,
 }
 
 /// Message radio, prononcé au début du tour suivant.
@@ -70,6 +74,8 @@ struct CornerStat {
     /// > 0 : remet les gaz plus tard (m).
     throttle_late_m: Option<f32>,
     exit_deficit_kmh: f32,
+    /// Distance où annoncer le virage : ~3,5 s avant son entrée, à la vitesse de la référence (m).
+    trigger_m: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -92,6 +98,21 @@ enum Cue {
 }
 
 impl Cue {
+    /// Version très courte, pour l'annonce juste avant le virage.
+    fn short(&self) -> &'static str {
+        match self {
+            Cue::BrakeLater(_) => "freine plus tard",
+            Cue::BrakeEarlier => "freine plus tôt",
+            Cue::NoBrake => "sans freiner",
+            Cue::TurnEarlier => "tourne plus tôt",
+            Cue::TurnLater => "tourne plus tard",
+            Cue::CarrySpeed(_) => "relâche le frein plus tôt",
+            Cue::ThrottleEarlier => "gaz plus tôt",
+            Cue::BetterExit => "soigne la sortie",
+            Cue::Line => "vise la corde",
+        }
+    }
+
     fn say(&self) -> String {
         match self {
             Cue::BrakeLater(m) => format!("Freine {} mètres plus tard.", round_to(*m, 5.0)),
@@ -179,6 +200,10 @@ fn analyse(c: &Comparison) -> LapAnalysis {
                     _ => None,
                 },
                 exit_deficit_kmh: rf.exit_speed_kmh - cm.exit_speed_kmh,
+                trigger_m: {
+                    let v = c.ref_trace.speed_kmh.get(c.ref_trace.idx(k.corner.entry_m)).copied().unwrap_or(150.0);
+                    k.corner.entry_m - v / 3.6 * 3.5
+                },
             }
         })
         .collect();
@@ -234,6 +259,15 @@ pub struct LiveCoach {
     user_names: Vec<CornerName>,
     /// Sorties de piste de la séance par virage.
     offs: std::collections::HashMap<String, u32>,
+    /// Annonce avant le virage du focus : (distance de déclenchement, texte), et si elle a déjà été faite ce tour-ci.
+    callout: Option<(f32, String)>,
+    callout_done: bool,
+    last_dist: f64,
+    /// Meilleur tour propre de la séance, écart du dernier tour, dernier conseil (pour « répète » / « point »).
+    best_lap: Option<f64>,
+    last_delta: Option<f64>,
+    last_advice: Option<String>,
+    last_cue: Option<String>,
 }
 
 /// Tours propres pris en compte dans la synthèse.
@@ -270,7 +304,7 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default() },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -293,9 +327,52 @@ impl LiveCoach {
             self.history.clear();
             self.last_focus = None;
             self.offs.clear();
+            self.callout = None;
+            self.best_lap = None;
         }
-        let lap = self.builder.push(row)?;
-        Some(self.on_lap(lap))
+        // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
+        let dist = row[1];
+        let mut callout = None;
+        if let Some((trig, text)) = &self.callout {
+            let t = *trig as f64;
+            if !self.callout_done && self.last_dist < t && dist >= t && dist - self.last_dist < 100.0 {
+                self.callout_done = true;
+                callout = Some(CoachMessage { kind: CoachMessageKind::Callout, lap: row[6] as i32, text: text.clone(), focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
+            }
+        }
+        self.last_dist = dist;
+        match self.builder.push(row) {
+            Some(lap) => {
+                self.callout_done = false;
+                Some(self.on_lap(lap))
+            }
+            None => callout,
+        }
+    }
+
+    /// Dernier conseil (commande « répète »).
+    pub fn repeat_text(&self) -> String {
+        self.last_advice.clone().unwrap_or_else(|| "Pas encore de conseil : il faut au moins un tour propre.".into())
+    }
+
+    /// Point de situation (commande « point ») : dernier tour, meilleur tour, focus.
+    pub fn status_text(&self) -> String {
+        let mut parts = vec![];
+        match self.last_delta {
+            Some(d) if d < -0.05 => parts.push(format!("Dernier tour : moins {} sur la référence.", say_time(d))),
+            Some(d) if d.abs() <= 0.05 => parts.push("Dernier tour : à égalité avec la référence.".into()),
+            Some(d) => parts.push(format!("Dernier tour : plus {}.", say_time(d))),
+            None => {}
+        }
+        if let Some(b) = self.best_lap {
+            parts.push(format!("Meilleur tour, {}.", say_lap(Some(b))));
+        }
+        match (&self.last_focus, &self.callout) {
+            (Some((_, name, loss)), Some((_, short))) => parts.push(format!("Focus {name}, {} à prendre : {}", say_time(*loss as f64), short.split_once(", ").map(|x| x.1).unwrap_or(short))),
+            (Some((_, name, _)), None) => parts.push(format!("Focus {name}.")),
+            _ => parts.push("Pas de focus pour l'instant.".into()),
+        }
+        parts.join(" ")
     }
 
     fn on_lap(&mut self, lap: ImportedLap) -> CoachMessage {
@@ -358,18 +435,28 @@ impl LiveCoach {
             self.reference = Some(ReferenceLap { label: "ton meilleur tour de la session".into(), meta: lap.meta.clone(), trace: lap.trace.clone(), names });
             self.history.clear();
             self.last_focus = None;
+            self.callout = None;
+            self.best_lap = t;
             return msg(CoachMessageKind::Info, format!("Meilleur tour, {}. Nouvelle référence.", say_lap(t)), None, None, delta);
+        }
+        self.last_delta = delta;
+        let session_best = t.is_some_and(|x| self.best_lap.is_none_or(|b| x < b));
+        if session_best {
+            self.best_lap = t;
         }
         self.history.push_back(analyse(&c));
         while self.history.len() > WINDOW {
             self.history.pop_front();
         }
-        let head = match delta {
+        let mut head = match delta {
             Some(d) if d < -0.05 => format!("Moins {} sur la référence, excellent.", say_time(d)),
             Some(d) if d.abs() <= 0.05 => "À égalité avec la référence.".to_string(),
             Some(d) => format!("Plus {}.", say_time(d)),
             None => String::new(),
         };
+        if session_best && self.history.len() > 1 {
+            head = format!("Meilleur tour, {}. {head}", say_lap(t));
+        }
         let laps = self.history.len();
         let length = self.meta.track_length_m.unwrap_or(c.length_m);
         // Synthèse : perte moyenne par virage sur les derniers tours propres, perte répétée exigée.
@@ -397,7 +484,8 @@ impl LiveCoach {
                 solved = format!("{} : c'est mieux. ", capitalize(&pname));
             }
         }
-        let scope = if laps >= 2 { format!("Sur les {laps} derniers tours, ") } else { "Premier relevé, ".into() };
+        let lead = if laps >= 2 { "Focus" } else { "Premier relevé, focus" };
+        let prev_focus = self.last_focus.as_ref().map(|f| f.0);
         match best {
             Some((mean, stats)) => {
                 let s0 = stats[0];
@@ -405,12 +493,25 @@ impl LiveCoach {
                 let sector = ((s0.apex_m / length.max(1.0)) * 3.0).floor().clamp(0.0, 2.0) as i32 + 1;
                 let losing: Vec<&CornerStat> = stats.iter().copied().filter(|s| s.loss_s >= LOSS_MIN_S).collect();
                 let cue = cue_for(if losing.is_empty() { &stats } else { &losing });
-                let text = format!("{head} {solved}{scope}focus {name}, secteur {sector} : {} perdus. {}", say_time(mean as f64), cue.say());
+                // Même focus, même consigne qu'au tour précédent : version courte, comme à la radio.
+                let same = prev_focus == Some(s0.id) && self.last_cue.as_deref() == Some(cue.short());
+                let text = if same {
+                    format!("{head} {solved}Toujours {name} : {}", cue.say().to_lowercase())
+                } else {
+                    format!("{head} {solved}{lead} {name}, secteur {sector} : {} perdus. {}", say_time(mean as f64), cue.say())
+                };
+                self.last_cue = Some(cue.short().to_string());
+                self.last_advice = Some(format!("Focus {name}, secteur {sector} : {} perdus. {}", say_time(mean as f64), cue.say()));
                 self.last_focus = Some((s0.id, name.clone(), mean));
+                // Annonce juste avant le virage, sauf s'il suit de près la ligne (le message du tour suffit).
+                let trig = s0.trigger_m;
+                self.callout = (trig >= 400.0).then(|| (trig, format!("{}, {}.", capitalize(&name), cue.short())));
                 msg(CoachMessageKind::Focus, text.trim().to_string(), Some(name), Some(mean), delta)
             }
             None => {
                 self.last_focus = None;
+                self.callout = None;
+                self.last_advice = Some("Rien de significatif à corriger, garde ce rythme.".into());
                 msg(CoachMessageKind::Focus, format!("{head} {solved}Rien de significatif à corriger, garde ce rythme.").trim().to_string(), None, None, delta)
             }
         }
@@ -487,7 +588,7 @@ mod tests {
     }
 
     fn stat(loss: f32, brake: Option<f32>, vmin: f32) -> CornerStat {
-        CornerStat { id: 1, name: "V1".into(), apex_m: 100.0, loss_s: loss, brake_early_m: brake, needless_brake: false, turn_in_late_m: None, vmin_deficit_kmh: vmin, throttle_late_m: None, exit_deficit_kmh: 0.0 }
+        CornerStat { id: 1, name: "V1".into(), apex_m: 100.0, loss_s: loss, brake_early_m: brake, needless_brake: false, turn_in_late_m: None, vmin_deficit_kmh: vmin, throttle_late_m: None, exit_deficit_kmh: 0.0, trigger_m: 0.0 }
     }
 
     #[test]

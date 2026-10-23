@@ -22,6 +22,12 @@ pub struct StatusPayload {
     pub last_auto_import: Option<String>,
     /// Derniers messages radio du coach en direct (le plus récent en dernier).
     pub coach: Vec<CoachMessage>,
+    /// Radio coupée par la commande vocale « silence ».
+    pub muted: bool,
+    /// Réponses prêtes pour les commandes « répète », « point » et « plan ».
+    pub coach_repeat: Option<String>,
+    pub coach_point: Option<String>,
+    pub coach_plan: Option<String>,
 }
 
 /// Message radio envoyé à l'interface, qui le prononce si `speak`.
@@ -41,13 +47,20 @@ impl Default for StatusPayload {
             importing: None,
             last_auto_import: None,
             coach: vec![],
+            muted: false,
+            coach_repeat: None,
+            coach_point: None,
+            coach_plan: None,
         }
     }
 }
 
-/// Diffuse un message du coach (journal, état, voix).
-fn radio(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message: CoachMessage, speak: bool) {
+/// Diffuse un message du coach (journal, état, voix). Radio coupée : seuls les messages
+/// demandés (réponses aux commandes vocales) sont prononcés.
+pub(crate) fn radio(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message: CoachMessage, speak: bool) {
     log::info!("coach : {}", message.text);
+    let muted = status.lock().map(|s| s.muted).unwrap_or(false);
+    let speak = speak && (!muted || message.kind == apex_core::live_coach::CoachMessageKind::Reply);
     if let Ok(mut s) = status.lock() {
         s.coach.push(message.clone());
         let n = s.coach.len();
@@ -164,8 +177,17 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                             }
                             if let (Some(row), Some((_, c))) = (snap.channels, coach.as_mut()) {
                                 if let Some(m) = c.push(row) {
-                                    let mute = c.current_kind() == SessionKind::Race && !settings.coach_in_race;
-                                    radio(&app, &status, m, settings.coach_audio && !mute);
+                                    let kind = c.current_kind();
+                                    // Course (si désactivé) et qualification : silence radio, les messages restent affichés.
+                                    let mute = (kind == SessionKind::Race && !settings.coach_in_race) || kind == SessionKind::Qualifying;
+                                    let callout_off = m.kind == apex_core::live_coach::CoachMessageKind::Callout && !settings.coach_callouts;
+                                    if let Ok(mut s) = status.lock() {
+                                        s.coach_repeat = Some(c.repeat_text());
+                                        s.coach_point = Some(c.status_text());
+                                    }
+                                    if !callout_off {
+                                        radio(&app, &status, m, settings.coach_audio && !mute);
+                                    }
                                 }
                             }
                             latest = Ok(Some(snap));

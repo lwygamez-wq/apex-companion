@@ -22,3 +22,6 @@ pub mod model;
 pub mod storage;
 pub mod tracks;
 pub mod tts;
+pub mod mic;
+pub mod ptt;
+pub mod voice_cmd;

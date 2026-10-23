@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../lib/api";
 import { delta, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
+import { RadioControlCard } from "../components/RadioControlCard";
 import type { StatusPayload } from "../lib/types";
 import { coachVoice, coachVolume, setCoachVoice, setCoachVolume, speak, voiceAvailable, voiceName } from "../lib/voice";
 
@@ -68,7 +69,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
           {msgs.map((m, i) => (
             <div key={`${m.lap}-${i}`} className={`radio-msg ${m.kind} ${i === 0 ? "latest" : ""}`}>
               <div className="row" style={{ justifyContent: "space-between" }}>
-                <span className="muted">{m.lap > 0 ? `Tour ${m.lap}${m.lap_time_s ? ` · ${lapTime(m.lap_time_s)}` : ""}` : "Mise en route"}</span>
+                <span className="muted">{m.kind === "reply" ? "Réponse" : m.kind === "callout" ? `Annonce · tour ${m.lap}` : m.lap > 0 ? `Tour ${m.lap}${m.lap_time_s ? ` · ${lapTime(m.lap_time_s)}` : ""}` : "Mise en route"}</span>
                 {m.lap_delta_s != null && <span className={`mono ${m.lap_delta_s > 0 ? "pos" : "neg"}`}>{delta(m.lap_delta_s)} s</span>}
               </div>
               <div className="radio-text">{m.text}</div>
@@ -113,6 +114,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               Voix naturelles : synthèse neuronale hors ligne (Piper), téléchargée une fois puis utilisée sans connexion. Un seul message par tour, au passage de la ligne. Réglages : « Audio » coupe la voix, « Actif en course » la coupe en course.
             </div>
           </div>
+          <RadioControlCard status={status} />
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Connexion simulateur</h2>
             <div className="kpi" style={{ fontSize: 18 }}>{status?.label ?? "—"}</div>

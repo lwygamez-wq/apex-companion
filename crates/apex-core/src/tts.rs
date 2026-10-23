@@ -83,7 +83,8 @@ pub fn piper_args(model: &Path, out: &Path, speaker: Option<i64>) -> Vec<String>
     a
 }
 
-fn download(url: &str, dest: &Path) -> Result<(), TtsError> {
+/// Téléchargement vers un fichier (via un fichier temporaire renommé à la fin).
+pub fn download_to(url: &str, dest: &Path) -> Result<(), TtsError> {
     let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(std::time::Duration::from_secs(600))).build().into();
     let mut resp = agent.get(url).header("User-Agent", "apex-companion").call().map_err(|e| TtsError::Download(e.to_string()))?;
     let tmp = dest.with_extension("part");
@@ -124,24 +125,20 @@ impl Tts {
         std::fs::create_dir_all(&self.dir).map_err(|e| TtsError::Install(e.to_string()))?;
         if !self.engine().exists() {
             let zip = self.dir.join("piper_windows_amd64.zip");
-            download(ENGINE_URL, &zip)?;
-            // tar.exe de Windows (10 et +) sait extraire les .zip.
-            let mut cmd = std::process::Command::new("tar");
-            cmd.arg("-xf").arg(&zip).arg("-C").arg(&self.dir);
-            no_window(&mut cmd);
-            let st = cmd.status().map_err(|e| TtsError::Install(format!("extraction : {e}")))?;
+            download_to(ENGINE_URL, &zip)?;
+            extract_zip(&zip, &self.dir)?;
             let _ = std::fs::remove_file(&zip);
-            if !st.success() || !self.engine().exists() {
+            if !self.engine().exists() {
                 return Err(TtsError::Install("extraction du moteur échouée".into()));
             }
         }
         let model = self.model(v);
         let config = model.with_extension("onnx.json");
         if !config.exists() {
-            download(&format!("{VOICES_URL}/{}.onnx.json?download=true", v.path), &config)?;
+            download_to(&format!("{VOICES_URL}/{}.onnx.json?download=true", v.path), &config)?;
         }
         if !model.exists() {
-            download(&format!("{VOICES_URL}/{}.onnx?download=true", v.path), &model)?;
+            download_to(&format!("{VOICES_URL}/{}.onnx?download=true", v.path), &model)?;
         }
         Ok(())
     }
@@ -177,6 +174,19 @@ impl Tts {
         let wav = std::fs::read(&out).map_err(|e| TtsError::Synth(e.to_string()))?;
         let _ = std::fs::remove_file(&out);
         Ok(wav)
+    }
+}
+
+/// Extraction d'une archive .zip avec tar.exe, fourni par Windows depuis Windows 10.
+pub fn extract_zip(zip: &Path, dest: &Path) -> Result<(), TtsError> {
+    let mut cmd = std::process::Command::new("tar");
+    cmd.arg("-xf").arg(zip).arg("-C").arg(dest);
+    no_window(&mut cmd);
+    let st = cmd.status().map_err(|e| TtsError::Install(format!("extraction : {e}")))?;
+    if st.success() {
+        Ok(())
+    } else {
+        Err(TtsError::Install(format!("extraction de {} échouée", zip.display())))
     }
 }
 

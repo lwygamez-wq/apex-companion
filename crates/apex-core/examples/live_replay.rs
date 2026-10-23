@@ -25,8 +25,9 @@ fn main() {
     let t0 = std::time::Instant::now();
     for r in rows {
         if let Some(m) = coach.push(r) {
-            println!("[tour {:>2} {:>8}] {}", m.lap, m.lap_time_s.map(|t| format!("{t:.3}")).unwrap_or_default(), m.text);
+            println!("[tour {:>2} {:>8}] {:?} {}", m.lap, m.lap_time_s.map(|t| format!("{t:.3}")).unwrap_or_default(), m.kind, m.text);
         }
     }
+    println!("« répète » → {}\n« point » → {}", coach.repeat_text(), coach.status_text());
     println!("({} ms pour toute la session)", t0.elapsed().as_millis());
 }

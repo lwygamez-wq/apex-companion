@@ -5,6 +5,8 @@ import type {
   AppSettings,
   CircuitOverview,
   HistoryLap,
+  PttBinding,
+  PttEvent,
   VoiceInfo,
   CoachEvent,
   RecoverReport,
@@ -59,6 +61,10 @@ export const api = {
   ttsVoices: () => call<VoiceInfo[]>("tts_voices"),
   ttsInstall: (voice: string) => call<void>("tts_install", { voice }),
   ttsSpeak: (voice: string, text: string) => call<ArrayBuffer>("tts_speak", { voice, text }),
+  pttLearn: () => call<PttBinding | null>("ptt_learn"),
+  voiceInstalled: () => call<boolean>("voice_installed"),
+  voiceInstall: () => call<void>("voice_install"),
+  setCoachMuted: (muted: boolean) => call<void>("set_coach_muted", { muted }),
   iracingAutolog: () => call<AutoLogStatus>("get_iracing_autolog"),
   setIracingAutolog: (enable: boolean) => call<AutoLogStatus>("set_iracing_autolog", { enable }),
   exportSession: (id: number, path: string) => call<ExportSummary>("export_session", { id, path }),
@@ -82,6 +88,16 @@ export function onStatus(cb: (s: StatusPayload) => void): Promise<UnlistenFn> {
 export function onCoach(cb: (e: CoachEvent) => void): Promise<UnlistenFn> {
   if (!isTauri()) return Promise.resolve(() => undefined);
   return listen<CoachEvent>("apex://coach", (e) => cb(e.payload));
+}
+
+export function onPtt(cb: (e: PttEvent) => void): Promise<UnlistenFn> {
+  if (!isTauri()) return Promise.resolve(() => undefined);
+  return listen<PttEvent>("apex://ptt", (e) => cb(e.payload));
+}
+
+export function onCoachStop(cb: () => void): Promise<UnlistenFn> {
+  if (!isTauri()) return Promise.resolve(() => undefined);
+  return listen("apex://coach-stop", () => cb());
 }
 
 export function onSessionsChanged(cb: () => void): Promise<UnlistenFn> {

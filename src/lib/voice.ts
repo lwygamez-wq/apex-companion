@@ -63,6 +63,11 @@ function speakWindows(text: string): void {
   window.speechSynthesis.speak(u);
 }
 
+/** Coupe immédiatement la voix (bouton radio enfoncé : le micro ne doit pas entendre le coach). */
+export function stopVoice(): void {
+  stop();
+}
+
 function stop(): void {
   if (playing) {
     playing.pause();

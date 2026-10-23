@@ -66,6 +66,17 @@ pub struct AppSettings {
     /// Volume de la voix du coach (0 à 100).
     #[serde(default = "default_volume")]
     pub coach_volume: u8,
+    /// Annonce courte juste avant le virage du focus.
+    #[serde(default = "default_true")]
+    pub coach_callouts: bool,
+    /// Commandes vocales au volant (bouton maintenu + mot-clé).
+    pub voice_commands: bool,
+    /// Bouton « radio » du volant (ou touche clavier).
+    pub ptt_binding: Option<crate::ptt::PttBinding>,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_volume() -> u8 {
@@ -99,6 +110,9 @@ impl Default for AppSettings {
             downloads_dir: None,
             coach_voice: default_voice(),
             coach_volume: default_volume(),
+            coach_callouts: true,
+            voice_commands: false,
+            ptt_binding: None,
         }
     }
 }
@@ -378,6 +392,8 @@ pub struct AppService {
     keep_dir: Option<PathBuf>,
     /// Voix naturelles du coach (moteur et voix téléchargés à la demande).
     tts: Option<crate::tts::Tts>,
+    /// Reconnaissance des commandes vocales (téléchargée à la demande).
+    voice: Option<crate::voice_cmd::VoiceRecognizer>,
     /// Fichiers déjà gardés (ou déjà importés) pendant ce lancement : évite de retoucher la base à chaque tour de boucle.
     guarded: Mutex<std::collections::HashSet<String>>,
 }
@@ -534,6 +550,7 @@ impl AppService {
             retried: Mutex::new(Default::default()),
             keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
             tts: db.parent().map(|d| crate::tts::Tts::new(d.join("voix"))),
+            voice: db.parent().map(|d| crate::voice_cmd::VoiceRecognizer::new(d.join("voix"))),
             guarded: Mutex::new(Default::default()),
         })
     }
@@ -547,6 +564,7 @@ impl AppService {
             retried: Mutex::new(Default::default()),
             keep_dir: None,
             tts: None,
+            voice: None,
             guarded: Mutex::new(Default::default()),
         })
     }
@@ -1513,6 +1531,22 @@ impl AppService {
     pub fn tts_speak(&self, id: &str, text: &str) -> Result<Vec<u8>> {
         let t = self.tts.as_ref().ok_or_else(|| ServiceError::User("voix naturelles indisponibles".into()))?;
         t.synthesize(id, text).map_err(|e| ServiceError::User(e.to_string()))
+    }
+
+    pub fn voice_installed(&self) -> bool {
+        self.voice.as_ref().is_some_and(|v| v.installed())
+    }
+
+    /// Télécharge la reconnaissance vocale (bibliothèque + modèle français) si besoin.
+    pub fn voice_install(&self) -> Result<()> {
+        let v = self.voice.as_ref().ok_or_else(|| ServiceError::User("commandes vocales indisponibles".into()))?;
+        v.install().map_err(|e| ServiceError::User(e.to_string()))
+    }
+
+    /// Mots-clés reconnus dans un enregistrement 16 kHz.
+    pub fn voice_recognize(&self, pcm16k: &[i16]) -> Result<String> {
+        let v = self.voice.as_ref().ok_or_else(|| ServiceError::User("commandes vocales indisponibles".into()))?;
+        v.recognize(pcm16k).map_err(|e| ServiceError::User(e.to_string()))
     }
 
     /// Noms de virages donnés par le pilote pour ce circuit.

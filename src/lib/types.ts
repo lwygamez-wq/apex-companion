@@ -342,10 +342,23 @@ export interface StatusPayload {
   last_auto_import: string | null;
   /** Derniers messages radio du coach en direct (le plus récent en dernier). */
   coach: CoachMessage[];
+  muted: boolean;
+  coach_repeat: string | null;
+  coach_point: string | null;
+  coach_plan: string | null;
+}
+
+export type PttBinding = { type: "joystick"; id: number; button: number; name: string } | { type: "key"; vk: number; name: string };
+
+export interface PttEvent {
+  state: "listening" | "done" | "error";
+  heard: string | null;
+  command: "repeat" | "mute" | "resume" | "status" | "plan" | null;
+  error: string | null;
 }
 
 export interface CoachMessage {
-  kind: "info" | "focus" | "invalid";
+  kind: "info" | "focus" | "invalid" | "callout" | "reply";
   lap: number;
   text: string;
   focus: string | null;
@@ -426,6 +439,11 @@ export interface AppSettings {
   coach_voice: string;
   /** Volume de la voix du coach, 0 à 100. */
   coach_volume: number;
+  /** Annonce courte juste avant le virage du focus. */
+  coach_callouts: boolean;
+  /** Commandes vocales au volant. */
+  voice_commands: boolean;
+  ptt_binding: PttBinding | null;
 }
 
 export interface SessionFilter {

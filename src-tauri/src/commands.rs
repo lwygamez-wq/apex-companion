@@ -42,6 +42,40 @@ pub async fn tts_speak(state: State<'_, AppState>, voice: String, text: String) 
     Ok(tauri::ipc::Response::new(wav))
 }
 
+/// Attend l'appui sur le bouton radio (10 s) et l'enregistre dans les réglages.
+#[tauri::command]
+pub async fn ptt_learn(state: State<'_, AppState>) -> R<Option<apex_core::ptt::PttBinding>> {
+    blocking(state.svc.clone(), |s| {
+        let b = apex_core::ptt::learn(std::time::Duration::from_secs(10));
+        if let Some(b) = &b {
+            let mut st = s.settings();
+            st.ptt_binding = Some(b.clone());
+            st.voice_commands = true;
+            s.save_settings(st)?;
+        }
+        Ok(b)
+    })
+    .await
+}
+
+#[tauri::command]
+pub fn voice_installed(state: State<'_, AppState>) -> bool {
+    state.svc.voice_installed()
+}
+
+#[tauri::command]
+pub async fn voice_install(state: State<'_, AppState>) -> R<()> {
+    blocking(state.svc.clone(), |s| s.voice_install()).await
+}
+
+/// Radio coupée / reprise depuis l'interface.
+#[tauri::command]
+pub fn set_coach_muted(state: State<'_, AppState>, muted: bool) {
+    if let Ok(mut s) = state.status.lock() {
+        s.muted = muted;
+    }
+}
+
 #[tauri::command]
 pub fn get_status(state: State<'_, AppState>) -> StatusPayload {
     state.status.lock().map(|s| s.clone()).unwrap_or_default()
