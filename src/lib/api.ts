@@ -62,6 +62,7 @@ export const api = {
   ttsInstall: (voice: string) => call<void>("tts_install", { voice }),
   ttsSpeak: (voice: string, text: string) => call<ArrayBuffer>("tts_speak", { voice, text }),
   pttLearn: () => call<PttBinding | null>("ptt_learn"),
+  pttDevices: () => call<string[]>("ptt_devices"),
   voiceInstalled: () => call<boolean>("voice_installed"),
   voiceInstall: () => call<void>("voice_install"),
   setCoachMuted: (muted: boolean) => call<void>("set_coach_muted", { muted }),

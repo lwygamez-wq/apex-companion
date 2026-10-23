@@ -348,7 +348,10 @@ export interface StatusPayload {
   coach_plan: string | null;
 }
 
-export type PttBinding = { type: "joystick"; id: number; button: number; name: string } | { type: "key"; vk: number; name: string };
+export type PttBinding =
+  | { type: "hid"; vid: number; pid: number; button: number; name: string }
+  | { type: "joystick"; id: number; button: number; name: string }
+  | { type: "key"; vk: number; name: string };
 
 export interface PttEvent {
   state: "listening" | "done" | "error";

@@ -13,6 +13,7 @@ const COMMANDS: [string, string][] = [
 function bindingLabel(s: AppSettings | null): string {
   const b = s?.ptt_binding;
   if (!b) return "aucun";
+  if (b.type === "hid") return `${b.name}, bouton ${b.button}`;
   return b.type === "joystick" ? `${b.name}, bouton ${b.button + 1}` : `touche ${b.name}`;
 }
 
@@ -45,7 +46,15 @@ export function RadioControlCard({ status }: { status: StatusPayload | null }) {
     try {
       const b = await api.pttLearn();
       setS(await api.settings());
-      setMsg(b ? "Bouton enregistré. Maintiens-le et dis un mot-clé." : "Aucun bouton détecté. S'il ne réagit pas, associe-le à une touche clavier (SimHub, logiciel du volant) et recommence.");
+      if (b) {
+        setMsg("Bouton enregistré. Maintiens-le et dis un mot-clé.");
+      } else {
+        const devs = await api.pttDevices().catch(() => [] as string[]);
+        setMsg(
+          `Aucun bouton détecté. Appareils de jeu vus par l'app : ${devs.length ? devs.join(", ") : "aucun"}. ` +
+            "Si ton volant n'y est pas, associe le bouton à une touche clavier (SimHub ou logiciel Simagic) et recommence.",
+        );
+      }
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
     }

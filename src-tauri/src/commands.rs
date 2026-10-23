@@ -58,6 +58,17 @@ pub async fn ptt_learn(state: State<'_, AppState>) -> R<Option<apex_core::ptt::P
     .await
 }
 
+/// Appareils de jeu vus par l'app (aide quand un bouton n'est pas détecté).
+#[tauri::command]
+pub async fn ptt_devices(state: State<'_, AppState>) -> R<Vec<String>> {
+    blocking(state.svc.clone(), |_| {
+        let _ = apex_core::ptt::snapshot(false);
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        Ok(apex_core::ptt::devices())
+    })
+    .await
+}
+
 #[tauri::command]
 pub fn voice_installed(state: State<'_, AppState>) -> bool {
     state.svc.voice_installed()

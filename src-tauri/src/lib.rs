@@ -68,6 +68,7 @@ pub fn run() {
             commands::tts_install,
             commands::tts_speak,
             commands::ptt_learn,
+            commands::ptt_devices,
             commands::voice_installed,
             commands::voice_install,
             commands::set_coach_muted,
