@@ -7,6 +7,7 @@ import { RiskCard } from "../components/RiskCard";
 import { RaceCard } from "../components/RaceCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap, type MapSize } from "../components/TrackMap";
+import { ReplayStudio } from "../components/ReplayStudio";
 import { api } from "../lib/api";
 import { dateTime, LAP_KIND_FR, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
@@ -89,12 +90,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   useEffect(() => {
     if (mapSize === "half") requestAnimationFrame(() => document.querySelector(".replay-big")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }, [mapSize]);
-  useEffect(() => {
-    if (mapSize !== "full") return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMapSize("normal");
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [mapSize, setMapSize]);
+
   const [axis, setAxis] = usePref<Axis>("apex.axis", "distance");
   const [gapUnit, setGapUnit] = usePref<GapUnit>("apex.gap", "s");
   const [more, setMore] = usePref<boolean>("apex.moreCharts", false);
@@ -196,6 +192,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               <button className="btn ghost" title="Inverser référence et tour analysé" onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
               {c && <div className={`duel-delta mono ${(endGap ?? 0) > 0 ? "pos" : "neg"}`}>{fmtGap(endGap, gapUnit, gapUnit === "s" ? 3 : 0)}</div>}
               <div className="muted" style={{ fontSize: 12 }}>{c ? ((endGap ?? 0) > 0 ? "de retard à l'arrivée" : "d'avance à l'arrivée") : ""}</div>
+              {c && store && <button className="btn primary" style={{ marginTop: 6 }} onClick={() => setMapSize("full")} title="Carte et télémétrie synchronisées, en plein écran">▶ Relecture</button>}
             </div>
             <div className="duel-lap cmp">
               <span className="duel-tag"><i className="swatch cmp" />Ton tour</span>
@@ -240,12 +237,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   <ReplayPanel cmp={c} store={store} />
                 </div>
               )}
-              {mapSize === "full" && (
-                <div className="map-full">
-                  <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(300, winH - 190)} size={mapSize} onSize={setMapSize} />
-                  <ReplayPanel cmp={c} store={store} compact />
-                </div>
-              )}
+              {mapSize === "full" && <ReplayStudio cmp={c} store={store} title={`${d.meta.track} · ${d.meta.car}`} onClose={() => setMapSize("normal")} />}
               <div className={bigMap ? "" : "grid analysis"}>
                 <div>
                   <div className="card charts-card">

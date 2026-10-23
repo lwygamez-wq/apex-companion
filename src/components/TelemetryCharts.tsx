@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import uPlot from "uplot";
 import { buildView, type Axis, type CompareView, type GapUnit } from "../lib/compareView";
-import { positionsAt, type ReplayStore } from "../lib/replay";
+import { at, positionsAt, type ReplayStore } from "../lib/replay";
 import type { Comparison } from "../lib/types";
 
 /** Vrai pendant qu'on place le curseur par programme (relecture) : on ignore alors l'événement. */
@@ -54,7 +54,8 @@ const fmtTime = (t: number) => {
 };
 
 /** Un graphique uPlot ; le curseur est partagé via `syncKey`. */
-function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
+function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }: {
+  syncKey: string;
   view: CompareView;
   spec: ChartSpec;
   onCursor: (idx: number | null) => void;
@@ -86,7 +87,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
       width: el.clientWidth,
       height: spec.height,
       padding: [spec.labels ? 18 : 6, 8, 0, 0],
-      cursor: { sync: { key: "apex", setSeries: false }, drag: { x: true, y: false }, points: { size: 5 } },
+      cursor: { sync: { key: syncKey, setSeries: false }, drag: { x: true, y: false }, points: { size: 5 } },
       legend: { show: false },
       scales: { x: { time: false }, y: spec.range ? { range: spec.range } : { auto: true } },
       axes: [
@@ -106,7 +107,8 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
               readout.current.textContent =
                 i == null ? "" : shown.map((s) => `${shown.length > 1 ? `${s.label} ` : ""}${fmt(u.data[spec.series.indexOf(s) + 1]?.[i] as number | null, s)}`).join("   ") + (spec.unit ? ` ${spec.unit}` : "");
             }
-            if (!programmatic) cursorCb.current(i ?? null);
+            // Seul un vrai survol (souris, doigt) déplace la lecture : pas les mises à jour internes de uPlot.
+            if (!programmatic && hovering) cursorCb.current(i ?? null);
           },
         ],
         drawClear: [
@@ -156,6 +158,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
         ],
       },
     };
+    let hovering = false;
     const data = [view.x, ...spec.series.map((s) => s.data)] as uPlot.AlignedData;
     plot.current = new uPlot(opts, data, el);
     ready.current(spec.key, plot.current);
@@ -166,6 +169,8 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
       const r = u0.over.getBoundingClientRect();
       u0.setCursor({ left: Math.max(0, Math.min(r.width, e.clientX - r.left)), top: r.height / 2 });
     };
+    u0.over.addEventListener("pointerenter", () => (hovering = true));
+    u0.over.addEventListener("pointerleave", () => (hovering = false));
     u0.over.style.touchAction = "pan-y";
     u0.over.addEventListener("pointerdown", onTouch);
     u0.over.addEventListener("pointermove", onTouch);
@@ -177,7 +182,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
       plot.current?.destroy();
       plot.current = null;
     };
-  }, [view, spec, showX]);
+  }, [view, spec, showX, syncKey]);
 
   // Virage choisi : simple redessin, sans recréer le graphique.
   useEffect(() => plot.current?.redraw(false), [selected]);
@@ -197,7 +202,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
  * Courbes de comparaison : écart, vitesse, pédales (gaz vers le haut, frein vers le bas) ;
  * trajectoire, rapport et volant en option. Référence en bleu pointillé, ton tour en trait plein.
  */
-export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit = "s", more = false, selected = null, store }: {
+export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit = "s", more = false, selected = null, store, variant = "analysis", fitHeight }: {
   cmp: Comparison;
   onCursorTime: (t: number | null) => void;
   axis?: Axis;
@@ -205,6 +210,9 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
   more?: boolean;
   selected?: number | null;
   store?: ReplayStore;
+  /** « studio » : une piste par canal (écart, gaz, frein, vitesse, volant, rapport), à la hauteur `fitHeight`. */
+  variant?: "analysis" | "studio";
+  fitHeight?: number;
 }) {
   const plots = useRef(new Map<string, uPlot>());
   const onReady = useCallback((key: string, u: uPlot | null) => {
@@ -219,6 +227,27 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
     const neg = (a: (number | null)[]) => a.map((v, i) => (v == null || (v < 0.5 && (a[i - 1] ?? 0) < 0.5 && (a[i + 1] ?? 0) < 0.5) ? null : -v));
     const pos = (a: (number | null)[]) => a.map((v) => (v == null ? null : Math.max(0, v)));
     const below = (a: (number | null)[]) => a.map((v) => (v == null ? null : Math.min(0, v)));
+    if (variant === "studio") {
+      const REFD = "rgba(255,255,255,0.75)";
+      const dash = [2, 3];
+      const st: ChartSpec[] = [
+        { key: "gap", title: gapUnit === "s" ? "Écart (s)" : "Écart (m)", unit: gapUnit, digits: gapUnit === "s" ? 2 : 0, height: 1.2, zeroLine: true, signed: true, labels: true, series: [
+          { label: "", color: "transparent", data: pos(view.gap), fill: "rgba(255,212,0,0.16)", width: 0, silent: true },
+          { label: "", color: "transparent", data: below(view.gap), fill: "rgba(43,213,118,0.18)", width: 0, silent: true },
+          { label: "Écart", color: LOSS, data: view.gap, width: 1.6 },
+        ] },
+        { key: "thr", title: "Gaz", unit: "%", digits: 0, height: 1, range: [0, 105], series: [{ label: "Réf.", color: REFD, data: view.ref.throttle, dash, width: 1.2 }, { label: "Toi", color: THR, data: view.cmp.throttle, width: 1.6, fill: "rgba(43,213,118,0.16)" }] },
+        { key: "brk", title: "Frein", unit: "%", digits: 0, height: 1, range: [0, 105], series: [{ label: "Réf.", color: REFD, data: view.ref.brake, dash, width: 1.2 }, { label: "Toi", color: BRK, data: view.cmp.brake, width: 1.6, fill: "rgba(255,90,78,0.16)" }] },
+        { key: "spd", title: "Vitesse", unit: "km/h", digits: 0, height: 1.3, series: [{ label: "Réf.", color: REFD, data: view.ref.speed, dash, width: 1.2 }, { label: "Toi", color: "#46c8e8", data: view.cmp.speed, width: 1.6, fill: "rgba(70,200,232,0.12)" }] },
+      ];
+      if (view.ref.steer && view.cmp.steer) st.push({ key: "str", title: "Volant", unit: "°", digits: 0, height: 0.9, zeroLine: true, series: [{ label: "Réf.", color: REFD, data: view.ref.steer, dash, width: 1.1 }, { label: "Toi", color: "#c9c9d4", data: view.cmp.steer, width: 1.4 }] });
+      if (view.ref.gear && view.cmp.gear) st.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 0.8, series: [{ label: "Réf.", color: REFD, data: view.ref.gear, dash, width: 1.1 }, { label: "Toi", color: "#5aa0ff", data: view.cmp.gear, width: 1.6, fill: "rgba(90,160,255,0.12)" }] });
+      // Hauteurs relatives → pixels : chaque piste a un titre (≈ 22 px), la dernière l'axe (24 px).
+      const total = st.reduce((a, x) => a + x.height, 0);
+      const avail = Math.max(st.length * 50, (fitHeight ?? 640) - st.length * 24 - 24);
+      for (const x of st) x.height = Math.max(40, Math.floor((x.height / total) * avail));
+      return st;
+    }
     const s: ChartSpec[] = [
       {
         key: "gap",
@@ -274,7 +303,7 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
       s.push({ key: "steer", title: "Volant", unit: "°", digits: 0, height: 90, zeroLine: true, series: [{ label: "Réf.", color: REF_COLOR, data: view.ref.steer, dash: [5, 4] }, { label: "Toi", color: CMP_COLOR, data: view.cmp.steer, width: 1.8 }] });
     }
     return s;
-  }, [view, gapUnit, more]);
+  }, [view, gapUnit, more, variant, fitHeight]);
 
   // Relecture : curseur qui suit la voiture et, si activé, fenêtre glissante autour d'elle.
   useEffect(() => {
@@ -286,7 +315,7 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
     const win = WINDOW[view.axis];
     const apply = () => {
       const st = store.get();
-      const xv = view.axis === "time" ? st.t : cmp.cmp_trace.dist[positionsAt(cmp, st.t).ci];
+      const xv = view.axis === "time" ? st.t : at(cmp.cmp_trace.dist, positionsAt(cmp, st.t).ci);
       if (xv == null) return;
       programmatic = true;
       try {
@@ -308,12 +337,13 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
   }, [store, cmp, view]);
 
   return (
-    <div className="charts">
+    <div className={`charts charts-${variant}`}>
       {specs.map((s, i) => (
         <SyncedChart
           key={`${s.key}-${view.axis}-${view.gapUnit}`}
           view={view}
           spec={s}
+          syncKey={`apex-${variant}`}
           selected={selected}
           onReady={onReady}
           showX={i === specs.length - 1}

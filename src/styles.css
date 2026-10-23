@@ -347,3 +347,43 @@ td.num, th.num { text-align: right; }
 .hud.compact .hud-car:nth-child(2) { border-left: 3px solid #ff3b30; }
 .hud.compact .hud-gap { font-size: 14px; }
 .trackmap-zoom button[aria-label*="lein"] { font-size: 16px; }
+
+/* ---- Relecture plein écran ---- */
+.studio { position: fixed; inset: 0; z-index: 1000; background: #07070a; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.studio-top { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(260px, 340px) minmax(260px, 340px) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #1c1c24; }
+.studio-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.studio-title b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.studio-title span { font-size: 12px; }
+.studio-driver { background: #111118; border: 1px solid #22222c; border-radius: 4px; padding: 7px 10px; }
+.sd-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.sd-head b { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd-lap { font-weight: 800; }
+.sd-vals { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center; margin-top: 5px; }
+.sd-bar { position: relative; height: 14px; background: #23232d; border-radius: 2px; overflow: hidden; }
+.sd-bar i { position: absolute; left: 0; top: 0; bottom: 0; }
+.sd-bar span { position: relative; font-size: 10px; font-weight: 700; padding-left: 4px; line-height: 14px; }
+.sd-speed { font-weight: 800; font-size: 15px; }
+.sd-speed small { font-size: 10px; color: var(--muted); font-weight: 500; }
+.sd-gear { background: #fff; color: #111; font-weight: 800; border-radius: 2px; padding: 0 6px; font-size: 13px; }
+.studio-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; min-height: 0; }
+.studio-map { position: relative; min-height: 0; border-right: 1px solid #1c1c24; }
+.trackmap.trackmap-studio { background: #07070a; padding: 0; clip-path: none; height: 100%; }
+.trackmap.trackmap-studio .trackmap-canvas { background: #07070a; border-radius: 0; }
+.studio-maptools { position: absolute; top: 10px; left: 10px; display: flex; gap: 4px; }
+.studio-maptools button { background: rgba(17,17,24,0.9); border: 1px solid #2a2a35; color: var(--muted); padding: 4px 10px; font-size: 12px; font-weight: 700; border-radius: 3px; cursor: pointer; }
+.studio-maptools button.on { color: #111; background: #fff; border-color: #fff; }
+.studio-seg { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; background: rgba(17,17,24,0.92); border: 1px solid #2a2a35; border-radius: 4px; padding: 6px 8px; }
+.studio-seg > div { display: flex; flex-direction: column; align-items: center; min-width: 130px; font-size: 13px; }
+.studio-seg button { background: transparent; border: 0; color: var(--text); font-size: 20px; cursor: pointer; padding: 0 6px; }
+.studio-charts { overflow: hidden; padding: 4px 10px 0 6px; min-height: 0; }
+.charts-studio .chart-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.studio-bottom { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid #1c1c24; flex-wrap: wrap; }
+.studio-play { width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; color: #111; font-size: 15px; font-weight: 900; cursor: pointer; }
+.studio-clock { font-size: 22px; font-weight: 800; min-width: 100px; }
+.studio-scrub { flex: 1; min-width: 160px; accent-color: #ff3b30; }
+.studio-delta { font-size: 13px; white-space: nowrap; }
+@media (max-width: 1100px) {
+  .studio-top { grid-template-columns: 1fr 1fr; }
+  .studio-main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+}
+.trackmap-studio .trackmap-overview { left: auto; right: 54px; bottom: 12px; width: 140px; height: 140px; }

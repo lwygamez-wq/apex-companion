@@ -9,7 +9,7 @@ import type { Comparison } from "../lib/types";
  * déplacement à la souris, caméra qui suit la voiture.
  */
 
-export type ColorMode = "delta" | "inputs" | "speed";
+export type ColorMode = "delta" | "inputs" | "speed" | "studio";
 /** Taille de la carte : dans la page, moitié de l'écran, ou plein écran. */
 export type MapSize = "normal" | "half" | "full";
 
@@ -176,6 +176,19 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Compariso
         if (k < -0.05) return `rgba(43,213,118,${(0.3 + 0.7 * q).toFixed(2)})`;
         return "#34344a";
       });
+    } else if (mode === "studio") {
+      band = [];
+      if (CX && CY) {
+        const t = c.cmp_trace;
+        cmpColored = bucketPaths(CX, CY, step, (i) => {
+          const b = t.brake[i] ?? 0;
+          const th = t.throttle[i] ?? 0;
+          if (b > 0.05) return "#ff3b30";
+          if (th > 0.9) return "#2bd576";
+          if (th > 0.05) return "#b7e86a";
+          return "#e8e8ee";
+        });
+      }
     } else {
       band = [["#2a2a3a", linePath(X, Y)]];
       if (CX && CY) {
@@ -209,6 +222,19 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode }: { c: Compariso
     return { band, refD, cmpD, cmpColored, cmpOff, refOff };
   }, [c, geo, mode]);
 
+  if (mode === "studio") {
+    // Piste sombre à sa largeur réelle (≈ 13 m autour de la trajectoire de référence), bords clairs ;
+    // référence en pointillés blancs, ton tour coloré selon les pédales (vert gaz, rouge frein, blanc roue libre).
+    return (
+      <g>
+        <path d={layers.refD} stroke="#3b3b46" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d={layers.refD} stroke="#1d1d24" strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d={layers.refD} stroke="rgba(255,255,255,0.85)" strokeWidth={1.6} strokeDasharray="2 4" fill="none" vectorEffect="non-scaling-stroke" />
+        {layers.cmpColored?.map(([col, d]) => <path key={col} d={d} stroke={col} strokeWidth={2.6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />)}
+        {layers.cmpOff && <path d={layers.cmpOff} stroke={OFF_COLOR} strokeWidth={6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />}
+      </g>
+    );
+  }
   return (
     <g>
       {layers.band.map(([col, d]) => (
@@ -272,7 +298,7 @@ const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y:
   );
 });
 
-export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize }: {
+export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false }: {
   cmp: Comparison;
   store: ReplayStore;
   selected: number | null;
@@ -280,19 +306,23 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   height?: number;
   size?: MapSize;
   onSize?: (s: MapSize) => void;
+  /** Relecture plein écran : piste sombre, lignes et pédales seulement, caméra embarquée. */
+  studio?: boolean;
 }) {
   const geo = useMemo(() => buildGeo(cmp), [cmp]);
   const labels = useMemo(() => (geo ? cornerLabels(cmp, geo) : []), [cmp, geo]);
   const host = useRef<HTMLDivElement>(null);
   const [px, setPx] = useState(400);
-  const [mode, setMode] = useState<ColorMode>("delta");
-  const [follow, setFollow] = useState(false);
+  const [mode, setMode] = useState<ColorMode>(studio ? "studio" : "delta");
+  const [follow, setFollow] = useState(studio);
+  /** Caméra inclinée « poursuite » (relecture plein écran). */
+  const [tilt, setTilt] = useState(false);
   const [marks, setMarks] = useState(true);
   const inputs = useMemo(() => (geo ? inputMarks(cmp, geo) : []), [cmp, geo]);
   /** Orientation en mode suivi : la voiture pointe toujours vers le haut. */
   const [carUp, setCarUp] = useState(true);
   /** Échelle du suivi rapproché (mètres par pixel), indépendante de la taille de la carte. */
-  const [zoomMpp, setZoomMpp] = useState(0.22);
+  const [zoomMpp, setZoomMpp] = useState(studio ? 0.12 : 0.22);
   const zoomW = zoomMpp * px;
   const full = useMemo<View | null>(() => {
     if (!geo) return null;
@@ -426,8 +456,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   const upright = (x: number, y: number) => `rotate(${(-rot).toFixed(2)} ${x} ${y})`;
 
   return (
-    <div className="trackmap">
-      <div className="trackmap-tools">
+    <div className={`trackmap ${studio ? "trackmap-studio" : ""}`}>
+      {!studio && <div className="trackmap-tools">
         <div className="seg">
           {([["delta", "Gain / perte"], ["inputs", "Frein / gaz"], ["speed", "Vitesse"]] as const).map(([k, l]) => (
             <button key={k} className={mode === k ? "on" : ""} onClick={() => setMode(k)}>{l}</button>
@@ -448,21 +478,27 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           <div className="seg" title="Taille de la carte (Échap : quitter le plein écran)">
             <button className={size === "normal" ? "on" : ""} onClick={() => onSize("normal")}>Normal</button>
             <button className={size === "half" ? "on" : ""} onClick={() => onSize("half")}>50 %</button>
-            <button className={size === "full" ? "on" : ""} onClick={() => onSize("full")}>Plein écran</button>
+            <button className={size === "full" ? "on" : ""} onClick={() => onSize("full")}>Relecture plein écran</button>
           </div>
         )}
-      </div>
+      </div>}
       <div
         ref={host}
         className="trackmap-canvas"
         style={{ height }}
-        onPointerDown={onDown}
+        onPointerDown={(e) => { if (!(tilt && follow)) onDown(e); }}
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        onDoubleClick={() => onSize?.(size === "full" ? "normal" : "full")}
+        onDoubleClick={() => !studio && onSize?.(size === "full" ? "normal" : "full")}
       >
-        <svg viewBox={vb} width="100%" height={height} preserveAspectRatio="xMidYMid meet">
+        <svg
+          viewBox={vb}
+          width="100%"
+          height={height}
+          preserveAspectRatio="xMidYMid meet"
+          style={tilt && follow ? { transform: "perspective(900px) rotateX(42deg) scale(1.35)", transformOrigin: "50% 62%" } : undefined}
+        >
           <g transform={g}>
             <StaticLayers c={cmp} geo={geo} mode={mode} />
             {(() => {
@@ -526,7 +562,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
             })()}
             {(() => {
               // Voitures à l'échelle réelle quand on est près, jamais plus petites que 24 px à l'écran.
-              const sc = Math.max(1, ((follow ? 54 : 32) * mPerPx) / 5);
+              const sc = Math.max(studio ? 1.6 : 1, ((follow ? (studio ? 30 : 54) : 32) * mPerPx) / 5);
               // « Même endroit » : les deux voitures roulent côte à côte (décalées de part et d'autre de la
               // trajectoire) pour qu'on voie qui freine ou remet les gaz en premier.
               const side = (p: { x: number; y: number; h: number }, k: number) => {
@@ -547,14 +583,22 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           </g>
         </svg>
         {zoomed && car && <Overview geo={geo} x={car.x} y={car.y} />}
-        <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} compact={px < 560} />
-        {px >= 560 && <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>}
+        {!studio && <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} compact={px < 560} />}
+        {!studio && px >= 560 && <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>}
+        {studio && (
+          <div className="studio-maptools" onPointerDown={(e) => e.stopPropagation()}>
+            <button className={tilt && follow ? "on" : ""} onClick={() => { setFollow(true); setCarUp(true); setTilt((x) => !x); }} title="Caméra inclinée derrière la voiture">3D</button>
+            <button className={follow && !tilt ? "on" : ""} onClick={() => { setFollow(true); setCarUp(true); setTilt(false); }} title="Vue du dessus qui suit la voiture">Dessus</button>
+            <button className={!follow ? "on" : ""} onClick={() => { setFollow(false); setTilt(false); setView(null); }} title="Tout le circuit">Circuit</button>
+            <button className={marks ? "on" : ""} onClick={() => setMarks((m) => !m)} title="Points de freinage (F) et de remise des gaz (G)">F / G</button>
+          </div>
+        )}
         <div className="trackmap-zoom">
           {onSize && (
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => onSize(size === "full" ? "normal" : "full")}
-              aria-label={size === "full" ? "Quitter le plein écran" : "Plein écran"}
+              aria-label={size === "full" ? "Quitter le plein écran" : "Relecture plein écran"}
               title={size === "full" ? "Quitter le plein écran (Échap)" : "Plein écran (double-clic sur la carte)"}
             >
               {size === "full" ? "⤡" : "⤢"}
@@ -564,7 +608,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(1.4)} aria-label="Dézoomer">−</button>
         </div>
       </div>
-      <div className="trackmap-legend">
+      {!studio && <div className="trackmap-legend">
         <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture bleue transparente</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
         {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
@@ -572,7 +616,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         {mode === "inputs" && <span><i style={{ background: "#ff2a1f" }} />frein <i style={{ background: "#ffd400", marginLeft: 6 }} />gaz partiel <i style={{ background: "#2bd576", marginLeft: 6 }} />plein gaz <i style={{ background: "#fff", marginLeft: 6 }} />roue libre</span>}
         {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 6 }} />G gaz · contour bleu = réf., blanc = toi</span>}
         {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
-      </div>
+      </div>}
     </div>
   );
 }
