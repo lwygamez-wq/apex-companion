@@ -59,6 +59,11 @@ pub struct G61Lap {
     pub lap_time: f64,
     #[serde(default)]
     pub clean: bool,
+    /// Début du tour, ISO 8601 UTC (« 2026-10-23T09:00:14Z »).
+    #[serde(rename = "startTime", default)]
+    pub start_time: Option<String>,
+    #[serde(rename = "lapNumber", default)]
+    pub lap_number: Option<i64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -163,9 +168,54 @@ impl G61Api {
         Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items.len())
     }
 
+    /// Tous tes tours lancés (propres ou non) sur ce circuit et cette voiture depuis `after` (ISO UTC).
+    pub fn my_laps(&self, track_id: i64, car_id: i64, after: &str) -> Result<Vec<G61Lap>, String> {
+        let q = vec![
+            ("tracks", track_id.to_string()),
+            ("cars", car_id.to_string()),
+            ("drivers", "me".to_string()),
+            ("group", "none".to_string()),
+            ("unclean", "true".to_string()),
+            ("lapTypes", "1".to_string()),
+            ("after", after.to_string()),
+            ("limit", "1000".to_string()),
+        ];
+        Ok(self.get_json::<Items<G61Lap>>("/laps", &q)?.items)
+    }
+
     pub fn lap_csv(&self, lap_id: &str) -> Result<String, String> {
         self.get(&format!("/laps/{lap_id}/csv"), &[])
     }
+}
+
+/// Date ISO 8601 (« 2026-10-23T09:00:14Z », « …14.123Z », « …14+02:00 ») → secondes Unix UTC.
+pub fn parse_iso_utc(s: &str) -> Option<i64> {
+    let s = s.trim();
+    let (date, rest) = s.split_once(['T', ' '])?;
+    let mut d = date.split('-').map(|x| x.parse::<i64>().ok());
+    let (y, mo, da) = (d.next()??, d.next()??, d.next()??);
+    let tz_at = rest.find(['Z', '+', '-']).unwrap_or(rest.len());
+    let (time, tz) = rest.split_at(tz_at);
+    let mut t = time.split(':');
+    let h: i64 = t.next()?.parse().ok()?;
+    let mi: i64 = t.next()?.parse().ok()?;
+    let sec: f64 = t.next().unwrap_or("0").parse().ok()?;
+    let off = match tz.chars().next() {
+        Some(c @ ('+' | '-')) => {
+            let (oh, om) = tz[1..].split_once(':').unwrap_or((&tz[1..3.min(tz.len())], tz.get(3..).unwrap_or("0")));
+            let v = oh.parse::<i64>().ok()? * 3600 + om.parse::<i64>().unwrap_or(0) * 60;
+            if c == '+' { v } else { -v }
+        }
+        _ => 0,
+    };
+    // Jours depuis 1970-01-01 (algorithme de H. Hinnant).
+    let (yy, m) = if mo <= 2 { (y - 1, mo + 9) } else { (y, mo - 3) };
+    let era = yy.div_euclid(400);
+    let yoe = yy - era * 400;
+    let doy = (153 * m + 2) / 5 + da - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146097 + doe - 719468;
+    Some(days * 86400 + h * 3600 + mi * 60 + sec as i64 - off)
 }
 
 /// Identifiant Garage 61 d'un pilote à partir de ce que l'utilisateur colle : l'identifiant lui-même
@@ -234,6 +284,10 @@ mod tests {
         assert_eq!(driver_slug("https://garage61.net/app/drivers/luke-fleming/").as_deref(), Some("luke-fleming"));
         assert_eq!(driver_slug(" luke-fleming ").as_deref(), Some("luke-fleming"));
         assert!(driver_slug("").is_none());
+        assert_eq!(laps.items[0].start_time.as_deref().and_then(parse_iso_utc), Some(1_790_848_800));
+        assert_eq!(parse_iso_utc("2026-10-23T11:00:14.250+02:00"), Some(1_792_746_014));
+        assert_eq!(parse_iso_utc("2026-10-23T09:00:14Z"), Some(1_792_746_014));
+        assert!(parse_iso_utc("hier").is_none());
         let n = lap_name(&laps.items[0]);
         assert_eq!((n.driver.as_str(), n.track.as_str()), ("Luke Fleming", "Circuit of the Americas Grand Prix"));
     }

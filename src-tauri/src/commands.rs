@@ -154,6 +154,11 @@ pub async fn find_garage61_references_all(state: State<'_, AppState>) -> R<Vec<S
 }
 
 #[tauri::command]
+pub async fn recover_garage61_sessions(state: State<'_, AppState>, days: i64) -> R<apex_core::service::RecoverReport> {
+    blocking(state.svc.clone(), move |s| s.recover_garage61_sessions(days)).await
+}
+
+#[tauri::command]
 pub async fn find_garage61_reference(state: State<'_, AppState>, session_id: i64) -> R<String> {
     blocking(state.svc.clone(), move |s| s.find_garage61_reference(session_id)).await
 }

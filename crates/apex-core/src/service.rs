@@ -136,6 +136,98 @@ pub struct ExternalImportReport {
     pub result: std::result::Result<ExternalImport, String>,
 }
 
+/// Résultat de la récupération de tes sessions depuis Garage 61.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct RecoverReport {
+    /// Sessions recréées dans Apex.
+    pub sessions: usize,
+    pub laps: usize,
+    /// Une ligne lisible par combinaison circuit/voiture.
+    pub messages: Vec<String>,
+}
+
+/// Un de tes tours sur Garage 61, ramené à l'heure locale du PC (comme les sessions iRacing).
+#[derive(Debug, Clone)]
+struct RemoteLap {
+    id: String,
+    start: i64,
+    lap_time: f64,
+    clean: bool,
+    number: Option<i64>,
+}
+
+/// Circuit, configuration, voiture.
+type ComboKey = (String, Option<String>, String);
+
+/// Session Apex reconstruite à partir de tours Garage 61 (`csv` : télémétrie d'un tour par son id).
+/// `Err` : téléchargement impossible (on s'arrête) ; `Ok(None)` : aucun tour lisible.
+fn recovered_session(meta0: &SessionMeta, length: f32, g: &[RemoteLap], mut csv: impl FnMut(&str) -> std::result::Result<String, String>) -> std::result::Result<Option<ImportedSession>, String> {
+    let mut out_laps = vec![];
+    for l in g {
+        let text = csv(&l.id)?;
+        match crate::ingest::garage61::parse_csv(&text, length, l.lap_time) {
+            Ok(p) => {
+                let invalid = !l.clean || p.off_track;
+                out_laps.push(ImportedLap {
+                    meta: LapMeta {
+                        number: l.number.map(|n| n.max(0) as i32).unwrap_or(out_laps.len() as i32 + 1),
+                        kind: LapKind::Flying,
+                        lap_time_s: Some(l.lap_time),
+                        sector_times_s: vec![],
+                        flags: LapFlags { off_track: p.off_track, ..Default::default() },
+                        validity: if invalid { Validity::Invalid } else { Validity::Valid },
+                        validity_source: ValiditySource::Derived,
+                        fuel_start_l: None,
+                        fuel_used_l: None,
+                    },
+                    trace: p.trace,
+                });
+            }
+            Err(e) => log::warn!("tour Garage 61 {} illisible : {e}", l.id),
+        }
+    }
+    if out_laps.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(ImportedSession {
+        meta: SessionMeta {
+            sim: SimId::Iracing,
+            track: meta0.track.clone(),
+            track_config: meta0.track_config.clone(),
+            track_length_m: Some(length),
+            car: meta0.car.clone(),
+            kind: SessionKind::Unknown,
+            started_at_unix: g[0].start,
+            weather: Weather::default(),
+            source_fingerprint: format!("garage61-session:{}", g[0].id),
+            source_path: Some(format!("Garage 61 (récupérée) {}", g[0].id)),
+        },
+        laps: out_laps,
+        sample_rate_hz: Some(60.0),
+    }))
+}
+
+/// Regroupe des tours (triés par heure de début) en sessions : nouvelle session dès qu'il s'écoule
+/// plus de `gap_s` entre la fin d'un tour et le début du suivant (retour au stand prolongé, autre séance).
+fn group_into_sessions(mut laps: Vec<RemoteLap>, gap_s: i64) -> Vec<Vec<RemoteLap>> {
+    laps.sort_by_key(|l| l.start);
+    let mut out: Vec<Vec<RemoteLap>> = vec![];
+    for l in laps {
+        match out.last_mut() {
+            Some(cur) if l.start - cur.last().map(|p| p.start + p.lap_time.ceil() as i64).unwrap_or(l.start) <= gap_s => cur.push(l),
+            _ => out.push(vec![l]),
+        }
+    }
+    out
+}
+
+/// Décalage (s) de l'heure locale du PC à une date donnée : iRacing horodate ses fichiers en heure
+/// locale, les sessions récupérées doivent l'être aussi pour être comparables.
+fn local_offset_at(utc: i64) -> i64 {
+    use chrono::{Local, Offset, TimeZone};
+    Local.timestamp_opt(utc, 0).single().map(|d| d.offset().fix().local_minus_utc() as i64).unwrap_or(0)
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ExternalImport {
     pub session_id: i64,
@@ -751,6 +843,131 @@ impl AppService {
         }
         self.db().set_setting("garage61_last_full_scan", &now_secs().to_string())?;
         Ok(out)
+    }
+
+    /// Récupère depuis Garage 61 tes sessions des `days` derniers jours absentes d'Apex (fichiers .ibt
+    /// effacés avant import, par exemple par l'agent Garage 61). Pour chaque circuit/voiture déjà roulé :
+    /// liste de tes tours, regroupement en sessions, et téléchargement de la télémétrie des tours qui ne
+    /// sont couverts par aucune session existante. Données Garage 61 : 60 Hz, sans carburant ni secteurs.
+    pub fn recover_garage61_sessions(&self, days: i64) -> Result<RecoverReport> {
+        use crate::garage61_api::{match_car, match_track, parse_iso_utc};
+        let api = self.g61_api()?;
+        let own = self.list_sessions(&SessionFilter { sim: Some(SimId::Iracing), ..Default::default() })?;
+        {
+            let mut cat = self.g61_catalog.lock().unwrap_or_else(|p| p.into_inner());
+            if cat.is_none() {
+                *cat = Some((api.tracks().map_err(ServiceError::User)?, api.cars().map_err(ServiceError::User)?));
+            }
+        }
+        // Fenêtres déjà couvertes par tes sessions (heure locale) : début → fin du dernier tour + 5 min.
+        let mut windows: std::collections::HashMap<ComboKey, Vec<(i64, i64)>> = Default::default();
+        for s in &own {
+            let total: f64 = self.db().laps(s.id)?.iter().filter_map(|l| l.meta.lap_time_s).sum();
+            windows.entry((s.track.clone(), s.track_config.clone(), s.car.clone())).or_default().push((s.started_at_unix - 120, s.started_at_unix + total.ceil() as i64 + 300));
+        }
+        let now = now_secs();
+        let after = {
+            let t = now - days * 86400;
+            let r = t.rem_euclid(86400);
+            let (y, m, dd) = civil_date(t);
+            format!("{y:04}-{m:02}-{dd:02}T{:02}:{:02}:00Z", r / 3600, r % 3600 / 60)
+        };
+        let mut rep = RecoverReport::default();
+        let mut first_call = true;
+        let pause = |first: &mut bool| {
+            // Espacement des requêtes : l'API gratuite limite fortement le débit.
+            if !std::mem::take(first) {
+                std::thread::sleep(std::time::Duration::from_millis(1200));
+            }
+        };
+        let mut combos: Vec<&SessionSummary> = vec![];
+        for s in &own {
+            if !combos.iter().any(|c| c.track == s.track && c.track_config == s.track_config && c.car == s.car) {
+                combos.push(s);
+            }
+        }
+        for c in combos {
+            let label = format!("{} / {}", c.track, c.car);
+            let (track, car) = {
+                let cat = self.g61_catalog.lock().unwrap_or_else(|p| p.into_inner());
+                let (tracks, cars) = cat.as_ref().unwrap();
+                (match_track(tracks, &c.track, c.track_config.as_deref()).cloned(), match_car(cars, &c.car).cloned())
+            };
+            let (Some(track), Some(car)) = (track, car) else {
+                rep.messages.push(format!("{label} : circuit ou voiture introuvable sur Garage 61"));
+                continue;
+            };
+            pause(&mut first_call);
+            let laps = match api.my_laps(track.id, car.id, &after) {
+                Ok(v) => v,
+                Err(e) => {
+                    rep.messages.push(format!("{label} : {e}"));
+                    if e.contains("trop de requêtes") || e.contains("jeton") {
+                        break;
+                    }
+                    continue;
+                }
+            };
+            let remote: Vec<RemoteLap> = laps
+                .iter()
+                .filter_map(|l| {
+                    let utc = parse_iso_utc(l.start_time.as_deref()?)?;
+                    Some(RemoteLap { id: l.id.clone(), start: utc + local_offset_at(utc), lap_time: l.lap_time, clean: l.clean, number: l.lap_number })
+                })
+                .filter(|l| l.lap_time > 0.0)
+                .collect();
+            let key = (c.track.clone(), c.track_config.clone(), c.car.clone());
+            let covered = |t: i64| windows.get(&key).is_some_and(|w| w.iter().any(|(a, b)| t >= *a && t <= *b));
+            let missing: Vec<Vec<RemoteLap>> = group_into_sessions(remote.clone(), 1200)
+                .into_iter()
+                .map(|g| g.into_iter().filter(|l| !covered(l.start)).collect::<Vec<_>>())
+                .filter(|g| !g.is_empty())
+                .collect();
+            if missing.is_empty() {
+                rep.messages.push(format!("{label} : {} tour(s) sur Garage 61, tous déjà dans Apex", remote.len()));
+                continue;
+            }
+            let meta0 = self.db().session_meta(c.id)?;
+            let Some(length) = meta0.track_length_m else { continue };
+            let mut made = 0;
+            let mut fail: Option<String> = None;
+            for g in missing {
+                let fetch = |id: &str| {
+                    pause(&mut first_call);
+                    api.lap_csv(id)
+                };
+                let session = match recovered_session(&meta0, length, &g, fetch) {
+                    Ok(Some(x)) => x,
+                    Ok(None) => continue,
+                    Err(e) => {
+                        fail = Some(e);
+                        break;
+                    }
+                };
+                let n = session.laps.len();
+                if let InsertOutcome::Inserted(id) = self.insert_imported(&session)? {
+                    made += 1;
+                    rep.sessions += 1;
+                    rep.laps += n;
+                    windows.entry(key.clone()).or_default().push((g[0].start - 120, g[0].start + session.laps.iter().filter_map(|l| l.meta.lap_time_s).sum::<f64>() as i64 + 300));
+                    if let Err(e) = self.export_to_mobile_dir(id) {
+                        log::warn!("copie pour le mobile : {e}");
+                    }
+                }
+            }
+            let mut m = format!("{label} : {made} session(s) récupérée(s)");
+            if let Some(e) = fail {
+                m += &format!(" — arrêt : {e}");
+                rep.messages.push(m);
+                if e.contains("trop de requêtes") {
+                    rep.messages.push("Relance dans quelques minutes : les sessions déjà récupérées ne seront pas retéléchargées.".into());
+                    break;
+                }
+                continue;
+            }
+            rep.messages.push(m);
+        }
+        Ok(rep)
     }
 
     /// Vrai si la dernière recherche complète Garage 61 date de plus de `hours` heures (ou n'a jamais eu lieu).
@@ -1663,6 +1880,61 @@ mod tests {
     }
 
     #[test]
+    fn sessions_recovered_from_garage61_are_own_sessions() {
+        let svc = AppService::in_memory().unwrap();
+        let mut s = demo_session(9, 1_760_000_000);
+        s.meta.sim = SimId::Iracing;
+        s.meta.track = "Miami International Autodrome".into();
+        s.meta.track_config = Some("Grand Prix".into());
+        s.meta.car = "Super Formula Lights 324".into();
+        s.meta.source_fingerprint = "ibt:miami".into();
+        svc.insert_imported(&s).unwrap();
+        let len = s.meta.track_length_m.unwrap();
+        // Télémétrie Garage 61 de chaque tour (format CSV réel), à partir des tours de la session de démo.
+        let flying: Vec<&ImportedLap> = s.laps.iter().filter(|l| l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some()).collect();
+        let csv_of = |lap: &LapTrace| {
+            let mut csv = String::from("Speed,LapDistPct,Lat,Lon,Brake,Throttle,RPM,SteeringWheelAngle,Gear,Clutch,ABSActive,DRSActive,P2PActive,LatAccel,LongAccel,VertAccel,Yaw,YawRate,PositionType\n");
+            let mut t = 0.0f32;
+            while t < *lap.time_s.last().unwrap() {
+                let i = lap.time_s.partition_point(|x| *x < t).min(lap.len() - 1);
+                csv += &format!("{},{},0,0,{},{},6000,0,3,1,false,false,false,0,0,9.8,0,0,3\n", lap.speed_mps[i], (lap.dist_m[i] / len).min(0.99999), lap.brake[i], lap.throttle[i]);
+                t += 1.0 / 60.0;
+            }
+            csv
+        };
+        let start = 1_760_090_000;
+        let mut t = start;
+        let remote: Vec<RemoteLap> = flying
+            .iter()
+            .enumerate()
+            .map(|(i, l)| {
+                let r = RemoteLap { id: format!("L{i}"), start: t, lap_time: l.meta.lap_time_s.unwrap(), clean: l.meta.is_clean(), number: Some(i as i64 + 1) };
+                t += r.lap_time.ceil() as i64;
+                r
+            })
+            .collect();
+        let groups = group_into_sessions(remote.clone(), 1200);
+        assert_eq!(groups.len(), 1);
+        let meta0 = s.meta.clone();
+        let rs = recovered_session(&meta0, len, &groups[0], |id| Ok(csv_of(&flying[id[1..].parse::<usize>().unwrap()].trace))).unwrap().unwrap();
+        assert_eq!(rs.laps.len(), flying.len());
+        assert_eq!(rs.meta.started_at_unix, start);
+        let InsertOutcome::Inserted(id) = svc.insert_imported(&rs).unwrap() else { panic!() };
+        // Session à toi (pas une référence externe) : comptée dans l'historique et les records.
+        let d = svc.session_detail(id).unwrap();
+        assert!(d.reference_label.is_none_or(|l| !l.contains("Garage 61 (récupérée)")));
+        assert!(svc.list_sessions(&SessionFilter::default()).unwrap().iter().any(|x| x.id == id && x.external_driver.is_none()));
+        let h = svc.lap_history(SimId::Iracing, "Miami International Autodrome", Some("Grand Prix"), "Super Formula Lights 324").unwrap();
+        assert_eq!(h.iter().filter(|l| l.session_id == id).count(), flying.len());
+        // Les tours invalides restent invalides (carte de risque juste).
+        assert_eq!(rs.laps.iter().filter(|l| l.meta.validity == Validity::Invalid).count(), flying.iter().filter(|l| !l.meta.is_clean()).count());
+        // Deuxième récupération : même empreinte, pas de doublon.
+        assert!(matches!(svc.insert_imported(&rs).unwrap(), InsertOutcome::Duplicate(_)));
+        // Téléchargement refusé (limite de débit) : on s'arrête net, sans session partielle.
+        assert!(recovered_session(&meta0, len, &groups[0], |_| Err("trop de requêtes".into())).is_err());
+    }
+
+    #[test]
     fn duplicate_sessions_from_same_file_are_merged() {
         let mut st = Store::open_in_memory().unwrap();
         let mut s = demo_session(3, 1_760_000_000);
@@ -1887,6 +2159,15 @@ mod tests {
         std::fs::remove_file(&f).unwrap();
         assert_eq!(std::fs::read(root.path().join("garde").join("w.ibt")).unwrap(), ibt);
         assert_eq!(svc.sync_iracing_folder(std::time::Duration::ZERO).unwrap().imported, 1);
+    }
+
+    #[test]
+    fn remote_laps_are_grouped_into_sessions() {
+        let l = |id: &str, start: i64| RemoteLap { id: id.into(), start, lap_time: 111.0, clean: true, number: None };
+        // Deux relais de la même séance (arrêt de 6 min) puis une autre séance 1 h plus tard.
+        let g = group_into_sessions(vec![l("c", 1000 + 111 * 2), l("a", 1000), l("b", 1111), l("d", 1000 + 111 * 3 + 360), l("e", 9000)], 1200);
+        assert_eq!(g.iter().map(|s| s.iter().map(|x| x.id.as_str()).collect::<String>()).collect::<Vec<_>>(), vec!["abcd", "e"]);
+        assert!(local_offset_at(1_792_746_014).abs() <= 14 * 3600);
     }
 
     #[test]

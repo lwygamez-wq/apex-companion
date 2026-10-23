@@ -61,6 +61,7 @@ pub fn run() {
             commands::lap_history,
             commands::find_garage61_reference,
             commands::find_garage61_references_all,
+            commands::recover_garage61_sessions,
             commands::set_corner_name,
             commands::create_goal,
             commands::archive_goal,

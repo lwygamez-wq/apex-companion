@@ -411,3 +411,10 @@ export interface HistoryLap {
   delta_to_best_s: number | null;
   personal_best_at_time: boolean;
 }
+
+/** Récupération de tes sessions depuis Garage 61. */
+export interface RecoverReport {
+  sessions: number;
+  laps: number;
+  messages: string[];
+}

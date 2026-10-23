@@ -63,6 +63,18 @@ export function SettingsPage() {
       setG61Msg(e instanceof Error ? e.message : String(e));
     }
   };
+  const recoverG61 = async () => {
+    if (!s) return;
+    setG61Msg("Récupération de tes sessions des 30 derniers jours sur Garage 61… (quelques minutes : une requête par tour, espacées pour respecter la limite de l'API)");
+    try {
+      await api.saveSettings(s);
+      const r = await api.recoverGarage61Sessions(30);
+      const head = r.sessions > 0 ? `${r.sessions} session(s) récupérée(s), ${r.laps} tours. Elles apparaissent dans Sessions et Historique.` : "Aucune session manquante à récupérer.";
+      setG61Msg([head, ...r.messages].join("\n"));
+    } catch (e) {
+      setG61Msg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const upd = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => setS((x) => (x ? { ...x, [k]: v } : x));
   const saveAll = async () => {
     if (!s) return;
@@ -199,6 +211,7 @@ export function SettingsPage() {
             <div className="row">
               <input type="password" style={{ flex: 1, minWidth: 280 }} value={s.garage61_token ?? ""} placeholder="non configuré" onChange={(e) => upd("garage61_token", e.target.value || null)} />
               <button className="btn" onClick={() => void checkG61()} disabled={!s.garage61_token} title="Vérifie le jeton puis cherche une référence pour chaque circuit/voiture déjà roulé">Vérifier et chercher</button>
+              <button className="btn" onClick={() => void recoverG61()} disabled={!s.garage61_token} title="Recrée dans Apex tes sessions envoyées sur Garage 61 dont le fichier .ibt a disparu (30 derniers jours)">Récupérer mes sessions</button>
             </div>
           </div>
           {g61Msg && <div className="muted" style={{ padding: "4px 0 8px", whiteSpace: "pre-line" }}>{g61Msg}</div>}
