@@ -82,5 +82,6 @@ géométrie publique des tracés (lignes médianes issues d'OpenStreetMap) :
 
 - [TUMFTM racetrack-database](https://github.com/TUMFTM/racetrack-database) (LGPL-3.0)
 - [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (MIT, © Tomislav Bacinger)
+- [markthebault/open-racetrack-db](https://github.com/markthebault/open-racetrack-db) (ODbL 1.0) — données © [contributeurs OpenStreetMap](https://www.openstreetmap.org/copyright) : Fuji, Motegi, Bathurst, Road Atlanta, Monaco, Albert Park
 
 Seules des valeurs dérivées (position et sens de chaque virage) sont intégrées à l'application.

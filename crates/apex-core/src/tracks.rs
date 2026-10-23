@@ -61,10 +61,32 @@ const TRACKS: &[TrackCorners] = &[
             (5262.0, "Virage 20"),
         ],
     },
+    // Relevé : sessions iRacing du 22/10/2026, Super Formula Lights 324, tracé GPS du meilleur tour propre.
+    // Sens vérifié (D, G, D, esses G D, G, puis G 11, D 12, chicane G-D 14-15, G 16, G 17).
+    // Virages pris à fond (6, 8-10, 13, 18-19) non nommés : pas d'apex détectable.
+    TrackCorners {
+        sim: SimId::Iracing,
+        name_contains: &["miami"],
+        config_contains: Some("grand prix"),
+        corners: &[
+            (398.0, "Virage 1"),
+            (496.0, "Virage 2"),
+            (592.0, "Virage 3"),
+            (1175.0, "Virage 4"),
+            (1280.0, "Virage 5"),
+            (1630.0, "Virage 7"),
+            (3105.0, "Virage 11"),
+            (3213.0, "Virage 12"),
+            (3436.0, "Virages 14-15"),
+            (3524.0, "Virage 16"),
+            (4859.0, "Virage 17"),
+        ],
+    },
 ];
 
 /// Circuits sans relevé sur session réelle : virages extraits de la géométrie publique du tracé
-/// (ligne médiane OpenStreetMap : base TUMFTM racetrack-database, LGPL-3.0 ; GeoJSON bacinger/f1-circuits, MIT).
+/// (ligne médiane OpenStreetMap : base TUMFTM racetrack-database, LGPL-3.0 ; GeoJSON bacinger/f1-circuits, MIT ;
+/// open-racetrack-db de markthebault, ODbL, © contributeurs OpenStreetMap).
 /// Position = fraction du tour depuis le début du tracé de référence, sens : +1 gauche, -1 droite,
 /// angle = changement de cap total du virage (une épingle ≥ 140° n'est jamais passée à fond).
 /// Les noms sont placés par alignement (ordre, sens, espacement) sur les virages détectés : voir `align`.
@@ -470,7 +492,123 @@ const SEQ_TRACKS: &[TrackSeq] = &[
             (0.8516, 1, 30, "Arquibancadas"),
         ],
     },
-
+    // Fuji : 9 virages nommés sur 11 relevés sur le tracé.
+    TrackSeq {
+        name_contains: &["fuji"],
+        corners: &[
+            (0.0118, -1, 132, "TGR Corner"),
+            (0.0454, -1, 18, ""),
+            (0.1379, 1, 66, "Coca-Cola"),
+            (0.2180, -1, 146, "100R"),
+            (0.2883, 1, 149, "Épingle ADVAN"),
+            (0.4678, -1, 103, "300R"),
+            (0.4823, 1, 74, "Dunlop"),
+            (0.4994, -1, 36, "Dunlop"),
+            (0.5303, -1, 116, ""),
+            (0.5971, 1, 200, "GR Supra"),
+            (0.6556, -1, 179, "Panasonic"),
+        ],
+    },
+    // Mobility Resort Motegi (sens inverse du tracé OSM) : 5 virages nommés sur 12 relevés sur le tracé.
+    TrackSeq {
+        name_contains: &["motegi"],
+        corners: &[
+            (0.0038, 1, 69, "Victory"),
+            (0.0162, -1, 93, "Victory"),
+            (0.0842, 1, 96, "Virage à 90°"),
+            (0.2571, 1, 182, "Épingle"),
+            (0.3504, -1, 111, ""),
+            (0.4182, 1, 104, ""),
+            (0.4411, -1, 75, ""),
+            (0.5150, 1, 47, ""),
+            (0.5785, 1, 130, ""),
+            (0.7238, -1, 176, ""),
+            (0.8675, 1, 156, "Virage 1"),
+            (0.9998, 1, 13, ""),
+        ],
+    },
+    // Mount Panorama Bathurst (sens inverse du tracé OSM) : 13 virages nommés sur 16 relevés sur le tracé.
+    TrackSeq {
+        name_contains: &["mount panorama", "bathurst"],
+        corners: &[
+            (0.0000, -1, 45, "Murray's Corner"),
+            (0.0775, 1, 46, "The Chase"),
+            (0.0891, -1, 64, "The Chase"),
+            (0.3531, -1, 102, "Forrest's Elbow"),
+            (0.3748, 1, 20, "The Esses"),
+            (0.4051, 1, 17, "The Esses"),
+            (0.4134, -1, 27, "The Esses"),
+            (0.4214, 1, 41, "Skyline"),
+            (0.4963, -1, 39, "McPhillamy Park"),
+            (0.5457, -1, 40, ""),
+            (0.6032, 1, 49, ""),
+            (0.6373, 1, 46, ""),
+            (0.6560, -1, 159, "The Cutting"),
+            (0.7343, 1, 100, "Griffins Bend"),
+            (0.9200, -1, 89, "Hell Corner"),
+            (0.9999, -1, 41, "Murray's Corner"),
+        ],
+    },
+    // Road Atlanta : 10 virages nommés sur 13 relevés sur le tracé.
+    TrackSeq {
+        name_contains: &["road atlanta"],
+        corners: &[
+            (0.1371, -1, 87, "Virage 6"),
+            (0.1715, -1, 92, "Virage 7"),
+            (0.5067, 1, 45, "Virage 10a"),
+            (0.5218, -1, 64, "Virage 10b"),
+            (0.6102, -1, 42, "Virage 11"),
+            (0.7516, -1, 83, "Virage 12"),
+            (0.8272, 1, 18, ""),
+            (0.8454, -1, 45, "Virage 1"),
+            (0.8758, 1, 46, "Virage 2"),
+            (0.9270, -1, 40, "Virage 3"),
+            (0.9529, 1, 29, "Virage 4"),
+            (0.9690, -1, 36, ""),
+            (0.9882, 1, 60, ""),
+        ],
+    },
+    // Monaco : 14 virages nommés sur 15 relevés sur le tracé.
+    TrackSeq {
+        name_contains: &["monaco", "monte carlo"],
+        corners: &[
+            (0.0448, 1, 122, "Massenet"),
+            (0.0692, -1, 84, "Casino"),
+            (0.1431, -1, 119, "Mirabeau"),
+            (0.1805, 1, 197, "Épingle du Grand Hôtel"),
+            (0.2027, -1, 219, "Portier"),
+            (0.4271, 1, 29, "Nouvelle Chicane"),
+            (0.4373, -1, 47, "Nouvelle Chicane"),
+            (0.4534, 1, 13, ""),
+            (0.5149, 1, 61, "Tabac"),
+            (0.5581, 1, 47, "Piscine"),
+            (0.5776, -1, 30, "Piscine"),
+            (0.6076, -1, 38, "Piscine"),
+            (0.6209, 1, 77, "Piscine"),
+            (0.6774, -1, 205, "Rascasse"),
+            (0.8715, -1, 65, "Sainte-Dévote"),
+        ],
+    },
+    // Albert Park (sens inverse du tracé OSM) : 4 virages nommés sur 14 relevés sur le tracé.
+    TrackSeq {
+        name_contains: &["albert park", "melbourne"],
+        corners: &[
+            (0.0006, 1, 45, ""),
+            (0.0797, 1, 52, ""),
+            (0.1239, -1, 79, "Virage 4"),
+            (0.1486, 1, 102, "Virage 3"),
+            (0.2645, -1, 55, "Virage 2"),
+            (0.2883, 1, 61, "Virage 1"),
+            (0.4492, 1, 86, ""),
+            (0.4757, -1, 105, ""),
+            (0.5180, 1, 78, ""),
+            (0.5715, 1, 90, ""),
+            (0.7030, 1, 45, ""),
+            (0.7316, -1, 37, ""),
+            (0.9843, -1, 36, ""),
+            (0.9999, 1, 30, ""),
+        ],
+    },
 ];
 
 /// Virage de table orienté : (position, sens, angle, nom).
@@ -684,6 +822,16 @@ mod tests {
         assert_eq!(n.len(), 7);
         assert_eq!(n[0].1, "S do Senna");
         assert!(builtin_corner_names(&meta("Spa-Francorchamps", Some("Grand Prix"))).is_empty());
+    }
+
+    #[test]
+    fn miami_and_calendar_tracks_are_known() {
+        let n = builtin_corner_names(&meta("Miami International Autodrome", Some("Grand Prix")));
+        assert_eq!(n.first().map(|x| x.1.as_str()), Some("Virage 1"));
+        assert!(n.windows(2).all(|w| w[0].0 < w[1].0));
+        for t in ["Fuji International Speedway", "Mobility Resort Motegi", "Mount Panorama Circuit", "Michelin Raceway Road Atlanta", "Circuit de Monaco", "Albert Park Circuit"] {
+            assert!(has_geometry(&meta(t, None)), "{t}");
+        }
     }
 
     /// Virages « détectés » simulés à partir d'une table : décalage de ligne de départ, bruit de position,
