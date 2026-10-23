@@ -90,7 +90,8 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 "Radio reprise.".into()
             }
             (Some(VoiceCommand::Plan), _) => status.lock().ok().and_then(|s| s.coach_plan.clone()).unwrap_or_else(|| "Pas de plan pour cette séance.".into()),
-            (None, Ok(_)) => "Pas compris. Répète, silence, reprends, point ou plan.".into(),
+            (Some(VoiceCommand::Fuel), _) => status.lock().ok().and_then(|s| s.coach_fuel.clone()).unwrap_or_else(|| "Pas encore de mesure de carburant.".into()),
+            (None, Ok(_)) => "Pas compris. Répète, point, plan, carburant, silence ou reprends.".into(),
         };
         let _ = app.emit("apex://ptt", PttEvent { state: "done", heard: text, command: cmd, error: heard.as_ref().err().map(|e| e.to_string()) });
         // Une réponse demandée est toujours prononcée, même radio coupée.

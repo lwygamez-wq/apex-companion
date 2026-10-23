@@ -39,6 +39,8 @@ pub enum CoachMessageKind {
     Callout,
     /// Réponse à une commande vocale.
     Reply,
+    /// Bip de freinage (texte : « bip » ou « long » pour le dernier, au point de freinage de la référence).
+    Beep,
 }
 
 /// Message radio, prononcé au début du tour suivant.
@@ -76,6 +78,8 @@ struct CornerStat {
     exit_deficit_kmh: f32,
     /// Distance où annoncer le virage : ~3,5 s avant son entrée, à la vitesse de la référence (m).
     trigger_m: f32,
+    /// Point de freinage de la référence et sa vitesse à cet endroit (m, m/s), si elle freine vraiment.
+    ref_brake: Option<(f32, f32)>,
 }
 
 #[derive(Debug, Clone)]
@@ -204,6 +208,7 @@ fn analyse(c: &Comparison) -> LapAnalysis {
                     let v = c.ref_trace.speed_kmh.get(c.ref_trace.idx(k.corner.entry_m)).copied().unwrap_or(150.0);
                     k.corner.entry_m - v / 3.6 * 3.5
                 },
+                ref_brake: rf.brake_on_m.filter(|_| rb).map(|b| (b, c.ref_trace.speed_kmh.get(c.ref_trace.idx(b)).copied().unwrap_or(150.0) / 3.6)),
             }
         })
         .collect();
@@ -268,6 +273,15 @@ pub struct LiveCoach {
     last_delta: Option<f64>,
     last_advice: Option<String>,
     last_cue: Option<String>,
+    /// Programme du jour : texte radio et virages à privilégier comme focus.
+    plan_text: Option<String>,
+    plan_apexes: Vec<f32>,
+    /// Bips de freinage du virage focus : (point de freinage, vitesse) et bips déjà joués ce tour-ci.
+    beeps: Option<(f32, f32)>,
+    beep_stage: u8,
+    /// Carburant : niveau actuel (l) et consommation des derniers tours complets (l).
+    fuel_now: f64,
+    fuel_laps: VecDeque<f64>,
 }
 
 /// Tours propres pris en compte dans la synthèse.
@@ -295,16 +309,24 @@ fn meta_from(si: &SessionInfo) -> SessionMeta {
 impl LiveCoach {
     /// `reference` : tour de référence du même circuit et de la même voiture (perso ou externe),
     /// `None` si aucun : le coach prendra ton meilleur tour propre de la session.
-    pub fn new(session_yaml: &str, reference: Option<ReferenceLap>, user_names: Vec<CornerName>) -> (Self, CoachMessage) {
+    /// `plan` : programme du jour (texte radio, virages à privilégier), s'il y en a un pour ce circuit.
+    pub fn new(session_yaml: &str, reference: Option<ReferenceLap>, user_names: Vec<CornerName>, plan: Option<(String, Vec<f32>)>) -> (Self, CoachMessage) {
         let builder = LiveLapBuilder::new(session_yaml);
         let meta = meta_from(builder.session_info());
-        let text = match &reference {
+        let mut text = match &reference {
             Some(r) => format!("Coach prêt. Référence : {}.", r.label),
             None => "Coach prêt. Pas de référence enregistrée ici : je prends ton meilleur tour propre de la session.".into(),
         };
+        if let Some((p, _)) = &plan {
+            text = format!("{text} {p}");
+        }
+        let (plan_text, plan_apexes) = match plan {
+            Some((t, a)) => (Some(t), a),
+            None => (None, vec![]),
+        };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new() },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -328,6 +350,7 @@ impl LiveCoach {
             self.last_focus = None;
             self.offs.clear();
             self.callout = None;
+            self.beeps = None;
             self.best_lap = None;
         }
         // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
@@ -340,14 +363,54 @@ impl LiveCoach {
                 callout = Some(CoachMessage { kind: CoachMessageKind::Callout, lap: row[6] as i32, text: text.clone(), focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
             }
         }
+        // Bips de freinage : à 1 s, à 0,5 s, puis long au point de freinage de la référence.
+        if callout.is_none() {
+            if let Some((brake, v)) = self.beeps {
+                let marks = [brake - v * 1.0, brake - v * 0.5, brake];
+                let stage = self.beep_stage as usize;
+                if stage < 3 && self.last_dist < marks[stage] as f64 && dist >= marks[stage] as f64 && dist - self.last_dist < 100.0 {
+                    self.beep_stage += 1;
+                    callout = Some(CoachMessage { kind: CoachMessageKind::Beep, lap: row[6] as i32, text: if stage == 2 { "long".into() } else { "bip".into() }, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
+                }
+            }
+        }
         self.last_dist = dist;
+        if row[12] > 0.0 {
+            self.fuel_now = row[12];
+        }
         match self.builder.push(row) {
             Some(lap) => {
                 self.callout_done = false;
+                self.beep_stage = 0;
+                if let Some(u) = lap.meta.fuel_used_l.filter(|u| *u > 0.05 && lap.meta.kind == LapKind::Flying) {
+                    self.fuel_laps.push_back(u as f64);
+                    while self.fuel_laps.len() > 3 {
+                        self.fuel_laps.pop_front();
+                    }
+                }
                 Some(self.on_lap(lap))
             }
             None => callout,
         }
+    }
+
+    /// Programme du jour (commande « plan »).
+    pub fn plan_text(&self) -> String {
+        self.plan_text.clone().unwrap_or_else(|| "Pas de plan pour cette séance.".into())
+    }
+
+    /// Carburant restant (commande « carburant ») : niveau, consommation moyenne, tours possibles.
+    pub fn fuel_text(&self) -> String {
+        if self.fuel_now <= 0.0 {
+            return "Pas de mesure de carburant.".into();
+        }
+        let litres = format!("{:.1}", self.fuel_now).replace('.', ",");
+        if self.fuel_laps.is_empty() {
+            return format!("Carburant : {litres} litres. Consommation au prochain tour complet.");
+        }
+        let per = self.fuel_laps.iter().sum::<f64>() / self.fuel_laps.len() as f64;
+        let laps = (self.fuel_now / per).floor() as i64;
+        format!("Carburant : {litres} litres, environ {laps} tour{}. {} litre par tour.", if laps > 1 { "s" } else { "" }, format!("{per:.1}").replace('.', ","))
     }
 
     /// Dernier conseil (commande « répète »).
@@ -436,6 +499,7 @@ impl LiveCoach {
             self.history.clear();
             self.last_focus = None;
             self.callout = None;
+            self.beeps = None;
             self.best_lap = t;
             return msg(CoachMessageKind::Info, format!("Meilleur tour, {}. Nouvelle référence.", say_lap(t)), None, None, delta);
         }
@@ -461,12 +525,17 @@ impl LiveCoach {
         let length = self.meta.track_length_m.unwrap_or(c.length_m);
         // Synthèse : perte moyenne par virage sur les derniers tours propres, perte répétée exigée.
         let mut best: Option<(f32, Vec<&CornerStat>)> = None;
+        let mut best_score = 0.0f32;
         let ids: Vec<u32> = self.history.back().map(|h| h.corners.iter().map(|s| s.id).collect()).unwrap_or_default();
         for id in ids {
             let stats: Vec<&CornerStat> = self.history.iter().filter_map(|h| h.corners.iter().find(|s| s.id == id)).collect();
             let mean = stats.iter().map(|s| s.loss_s).sum::<f32>() / stats.len() as f32;
             let repeated = stats.iter().filter(|s| s.loss_s >= LOSS_MIN_S).count() >= laps.min(2);
-            if repeated && mean >= FOCUS_MIN_S && best.as_ref().is_none_or(|(m, _)| mean > *m) {
+            // Virage du programme du jour : privilégié comme focus (à perte comparable).
+            let in_plan = stats.first().is_some_and(|s| self.plan_apexes.iter().any(|a| (a - s.apex_m).abs() < 60.0));
+            let score = if in_plan { mean * 1.3 } else { mean };
+            if repeated && mean >= FOCUS_MIN_S && best_score < score {
+                best_score = score;
                 best = Some((mean, stats));
             }
         }
@@ -506,11 +575,13 @@ impl LiveCoach {
                 // Annonce juste avant le virage, sauf s'il suit de près la ligne (le message du tour suffit).
                 let trig = s0.trigger_m;
                 self.callout = (trig >= 400.0).then(|| (trig, format!("{}, {}.", capitalize(&name), cue.short())));
+                self.beeps = s0.ref_brake.filter(|(b, v)| *b - v * 1.2 > 150.0);
                 msg(CoachMessageKind::Focus, text.trim().to_string(), Some(name), Some(mean), delta)
             }
             None => {
                 self.last_focus = None;
                 self.callout = None;
+                self.beeps = None;
                 self.last_advice = Some("Rien de significatif à corriger, garde ce rythme.".into());
                 msg(CoachMessageKind::Focus, format!("{head} {solved}Rien de significatif à corriger, garde ce rythme.").trim().to_string(), None, None, delta)
             }
@@ -588,7 +659,7 @@ mod tests {
     }
 
     fn stat(loss: f32, brake: Option<f32>, vmin: f32) -> CornerStat {
-        CornerStat { id: 1, name: "V1".into(), apex_m: 100.0, loss_s: loss, brake_early_m: brake, needless_brake: false, turn_in_late_m: None, vmin_deficit_kmh: vmin, throttle_late_m: None, exit_deficit_kmh: 0.0, trigger_m: 0.0 }
+        CornerStat { id: 1, name: "V1".into(), apex_m: 100.0, loss_s: loss, brake_early_m: brake, needless_brake: false, turn_in_late_m: None, vmin_deficit_kmh: vmin, throttle_late_m: None, exit_deficit_kmh: 0.0, trigger_m: 0.0, ref_brake: None }
     }
 
     #[test]
@@ -617,7 +688,7 @@ mod tests {
         let b = writer::synthetic();
         let (yaml, rows) = ibt_live_rows(&b).unwrap();
         let file = crate::ingest::ibt::import_ibt_bytes(&b).unwrap();
-        let (mut coach, hello) = LiveCoach::new(&yaml, None, vec![]);
+        let (mut coach, hello) = LiveCoach::new(&yaml, None, vec![], None);
         assert!(hello.text.contains("meilleur tour propre"));
         let msgs: Vec<CoachMessage> = rows.into_iter().filter_map(|r| coach.push(r)).collect();
         assert_eq!(msgs.len(), file.laps.iter().filter(|l| l.meta.lap_time_s.is_some()).count());

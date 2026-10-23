@@ -28,6 +28,7 @@ pub struct StatusPayload {
     pub coach_repeat: Option<String>,
     pub coach_point: Option<String>,
     pub coach_plan: Option<String>,
+    pub coach_fuel: Option<String>,
 }
 
 /// Message radio envoyé à l'interface, qui le prononce si `speak`.
@@ -51,6 +52,7 @@ impl Default for StatusPayload {
             coach_repeat: None,
             coach_point: None,
             coach_plan: None,
+            coach_fuel: None,
         }
     }
 }
@@ -170,7 +172,14 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                         log::warn!("référence du coach : {e}");
                                         None
                                     });
-                                    let (c, hello) = LiveCoach::new(yaml, reference, svc.user_corner_names(&meta));
+                                    let plan = svc.live_plan(&meta);
+                                    let (c, hello) = LiveCoach::new(yaml, reference, svc.user_corner_names(&meta), plan);
+                                    if let Ok(mut s) = status.lock() {
+                                        s.coach_plan = Some(c.plan_text());
+                                        s.coach_repeat = None;
+                                        s.coach_point = None;
+                                        s.coach_fuel = None;
+                                    }
                                     coach = Some((key, c));
                                     radio(&app, &status, hello, settings.coach_audio);
                                 }
@@ -178,12 +187,23 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                             if let (Some(row), Some((_, c))) = (snap.channels, coach.as_mut()) {
                                 if let Some(m) = c.push(row) {
                                     let kind = c.current_kind();
+                                    // Bips de freinage : un son, pas un message (ni journal ni voix).
+                                    if m.kind == apex_core::live_coach::CoachMessageKind::Beep {
+                                        let muted = status.lock().map(|s| s.muted).unwrap_or(false);
+                                        let quiet = (kind == SessionKind::Race && !settings.coach_in_race) || kind == SessionKind::Qualifying;
+                                        if settings.coach_brake_beeps && settings.coach_audio && !muted && !quiet {
+                                            let _ = app.emit("apex://beep", m.text == "long");
+                                        }
+                                        latest = Ok(Some(snap));
+                                        continue;
+                                    }
                                     // Course (si désactivé) et qualification : silence radio, les messages restent affichés.
                                     let mute = (kind == SessionKind::Race && !settings.coach_in_race) || kind == SessionKind::Qualifying;
                                     let callout_off = m.kind == apex_core::live_coach::CoachMessageKind::Callout && !settings.coach_callouts;
                                     if let Ok(mut s) = status.lock() {
                                         s.coach_repeat = Some(c.repeat_text());
                                         s.coach_point = Some(c.status_text());
+                                        s.coach_fuel = Some(c.fuel_text());
                                     }
                                     if !callout_off {
                                         radio(&app, &status, m, settings.coach_audio && !mute);

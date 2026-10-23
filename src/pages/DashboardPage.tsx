@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
+import { PlanCard } from "../components/PlanCard";
 import { api, onSessionsChanged } from "../lib/api";
 import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
@@ -105,17 +106,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
             </div>
           )}
 
-          {d.next_goal && (
-            <div className="card" style={{ borderColor: "#5c2a1e" }}>
-              <h2>Prochain objectif</h2>
-              <div>{d.next_goal}</div>
-              {d.next_goal_suggestion && !d.active_goal && (
-                <button className="btn" style={{ marginTop: 10 }} onClick={() => run(api.createGoal(s.id, d.next_goal_suggestion!), "Objectif enregistré.")}>
-                  Fixer comme objectif : {d.next_goal_suggestion.title}
-                </button>
-              )}
-            </div>
-          )}
+          <PlanCard sessionId={s.id} />
 
           <div className="grid cols-2">
             <div className="card">

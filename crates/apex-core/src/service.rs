@@ -69,6 +69,9 @@ pub struct AppSettings {
     /// Annonce courte juste avant le virage du focus.
     #[serde(default = "default_true")]
     pub coach_callouts: bool,
+    /// Bips de freinage sur le virage du focus (point de freinage de la référence).
+    #[serde(default = "default_true")]
+    pub coach_brake_beeps: bool,
     /// Commandes vocales au volant (bouton maintenu + mot-clé).
     pub voice_commands: bool,
     /// Bouton « radio » du volant (ou touche clavier).
@@ -111,6 +114,7 @@ impl Default for AppSettings {
             coach_voice: default_voice(),
             coach_volume: default_volume(),
             coach_callouts: true,
+            coach_brake_beeps: true,
             voice_commands: false,
             ptt_binding: None,
         }
@@ -339,6 +343,27 @@ pub struct SessionDetail {
     pub risk_headline: Option<String>,
     /// Coach de course (courses iRacing) : grille, positions, incidents, points à travailler.
     pub race: Option<crate::analysis::race::RaceReport>,
+}
+
+/// Objectif du programme et son résultat sur la séance suivante.
+#[derive(Debug, Clone, Serialize)]
+pub struct PlanItem {
+    #[serde(flatten)]
+    pub objective: crate::analysis::plan::PlanObjective,
+    pub result: Option<GoalResult>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PlanView {
+    pub id: i64,
+    pub created_at_unix: i64,
+    pub track: String,
+    pub car: String,
+    pub objectives: Vec<PlanItem>,
+    /// Séance sur laquelle le programme a été évalué (la première après sa création).
+    pub evaluated_session_id: Option<i64>,
+    /// Version radio.
+    pub spoken: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1695,31 +1720,127 @@ impl AppService {
         Ok(self.db().delete_all()?)
     }
 
+    /// Pertes récurrentes des tours propres d'une séance face à son meilleur tour.
+    fn zones_for(&self, detail: &SessionDetail) -> Result<Vec<ProgressZone>> {
+        let db = self.db();
+        let user_names = db.corner_names(&track_key(&detail.meta))?;
+        let traces: Vec<(i64, LapMeta, LapTrace)> = detail
+            .laps
+            .iter()
+            .filter(|l| l.clean)
+            .filter_map(|l| db.trace(l.id).ok().map(|t| (l.id, l.meta.clone(), t)))
+            .collect();
+        drop(db);
+        let laps: Vec<SessionLap> = traces.iter().map(|(id, m, t)| SessionLap { lap_id: *id, meta: m, trace: t }).collect();
+        Ok(match detail.best_lap_id.and_then(|b| laps.iter().position(|l| l.lap_id == b)) {
+            Some(bi) => {
+                let names = crate::tracks::corner_names_for(&detail.meta, Some(laps[bi].trace), user_names.clone());
+                progress_zones_named(&detail.meta, &laps[bi], &laps, 2.0, &names)
+            }
+            None => vec![],
+        })
+    }
+
+    /// Programme d'entraînement de ce circuit et de cette voiture (créé à partir de la dernière séance
+    /// s'il n'y en a pas), avec l'évaluation de chaque objectif sur la séance roulée après sa création.
+    pub fn training_plan(&self, session_id: i64) -> Result<PlanView> {
+        let meta = self.db().session_meta(session_id)?;
+        let key = track_key(&meta);
+        if self.db().active_plan(&key, &meta.car)?.is_none() {
+            self.generate_plan(&meta)?;
+        }
+        self.plan_view(&meta)
+    }
+
+    /// Nouveau programme à partir de la dernière séance (le précédent est archivé).
+    pub fn new_training_plan(&self, session_id: i64) -> Result<PlanView> {
+        let meta = self.db().session_meta(session_id)?;
+        self.generate_plan(&meta)?;
+        self.plan_view(&meta)
+    }
+
+    fn combo_sessions(&self, meta: &SessionMeta) -> Result<Vec<SessionSummary>> {
+        Ok(self
+            .list_sessions(&SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() })?
+            .into_iter()
+            .filter(|s| s.track_config == meta.track_config)
+            .collect())
+    }
+
+    fn generate_plan(&self, meta: &SessionMeta) -> Result<()> {
+        let combo = self.combo_sessions(meta)?;
+        let last = combo.first().ok_or_else(|| ServiceError::User("aucune séance sur ce circuit avec cette voiture".into()))?;
+        let detail = self.session_detail(last.id)?;
+        let zones = self.zones_for(&detail)?;
+        let timed = detail.laps.iter().filter(|l| l.meta.kind == LapKind::Flying && l.meta.lap_time_s.is_some()).count();
+        let clean = detail.laps.iter().filter(|l| l.clean).count();
+        let objectives = crate::analysis::plan::build_plan(&crate::analysis::plan::PlanInput { risk: &detail.risk, zones: &zones, timed_laps: timed, clean_laps: clean, stddev_s: last.stddev_clean_s });
+        let json = serde_json::to_string(&objectives).map_err(|e| ServiceError::User(e.to_string()))?;
+        self.db().create_plan(&track_key(meta), &meta.car, last.id, &json)?;
+        Ok(())
+    }
+
+    fn plan_view(&self, meta: &SessionMeta) -> Result<PlanView> {
+        let (id, created, source, json) = self.db().active_plan(&track_key(meta), &meta.car)?.ok_or_else(|| ServiceError::User("pas de programme".into()))?;
+        let objectives: Vec<crate::analysis::plan::PlanObjective> = serde_json::from_str(&json).map_err(|e| ServiceError::User(format!("programme illisible : {e}")))?;
+        // Séance évaluée : la première roulée après la création du programme.
+        // Importée après la séance source du programme ET roulée après sa création (à un fuseau horaire
+        // près : iRacing horodate en heure locale) : une vieille séance récupérée de Garage 61 ne compte pas.
+        let after: Vec<SessionSummary> = self.combo_sessions(meta)?.into_iter().filter(|s| s.id > source && s.started_at_unix >= created - 14 * 3600).collect();
+        let evaluated = after.last().cloned();
+        let results: Vec<Option<GoalResult>> = match &evaluated {
+            Some(s) => {
+                let m = self.db().session_meta(s.id)?;
+                let db = self.db();
+                let rows = db.laps(s.id)?;
+                let traces: Vec<(LapMeta, LapTrace)> = rows.iter().filter_map(|r| db.trace(r.id).ok().map(|t| (r.meta.clone(), t))).collect();
+                drop(db);
+                let pairs: Vec<(&LapMeta, &LapTrace)> = traces.iter().map(|(m, t)| (m, t)).collect();
+                let length = m.track_length_m.or_else(|| traces.iter().map(|(_, t)| t.max_dist()).reduce(f32::max)).unwrap_or(0.0);
+                objectives.iter().map(|o| Some(evaluate_goal(&o.metric, &pairs, length))).collect()
+            }
+            None => objectives.iter().map(|_| None).collect(),
+        };
+        Ok(PlanView {
+            id,
+            created_at_unix: created,
+            track: meta.track.clone(),
+            car: meta.car.clone(),
+            spoken: crate::analysis::plan::spoken_plan(&objectives),
+            objectives: objectives.into_iter().zip(results).map(|(objective, result)| PlanItem { objective, result }).collect(),
+            evaluated_session_id: evaluated.map(|s| s.id),
+        })
+    }
+
+    /// Ajoute un conseil au programme de ce circuit (bouton « Ajouter au programme »).
+    pub fn add_plan_objective(&self, session_id: i64, goal: &GoalSuggestion) -> Result<PlanView> {
+        let meta = self.db().session_meta(session_id)?;
+        let key = track_key(&meta);
+        if self.db().active_plan(&key, &meta.car)?.is_none() {
+            self.generate_plan(&meta)?;
+        }
+        let (_, _, source, json) = self.db().active_plan(&key, &meta.car)?.ok_or_else(|| ServiceError::User("pas de programme".into()))?;
+        let objectives: Vec<crate::analysis::plan::PlanObjective> = serde_json::from_str(&json).map_err(|e| ServiceError::User(e.to_string()))?;
+        let objectives = crate::analysis::plan::add_objective(objectives, goal.clone(), "Ajouté depuis un conseil de l'analyse.".into());
+        let json = serde_json::to_string(&objectives).map_err(|e| ServiceError::User(e.to_string()))?;
+        self.db().create_plan(&key, &meta.car, source, &json)?;
+        self.plan_view(&meta)
+    }
+
+    /// Programme actif pour le coach en direct : texte radio et virages à privilégier (sans en créer).
+    pub fn live_plan(&self, meta: &SessionMeta) -> Option<(String, Vec<f32>)> {
+        let (_, _, _, json) = self.db().active_plan(&track_key(meta), &meta.car).ok()??;
+        let objectives: Vec<crate::analysis::plan::PlanObjective> = serde_json::from_str(&json).ok()?;
+        Some((crate::analysis::plan::spoken_plan(&objectives), objectives.iter().filter_map(|o| o.apex_m).collect()))
+    }
+
     pub fn dashboard(&self) -> Result<Dashboard> {
         let all = self.list_sessions(&SessionFilter::default())?;
         let Some(last) = all.first().cloned() else {
             return Ok(Dashboard { active_goal: None, next_goal_suggestion: None, last_session: None, theoretical_best_s: None, progress_zones: vec![], consistency_trend: vec![], next_goal: None, total_sessions: 0 });
         };
         let detail = self.session_detail(last.id)?;
-        let zones = {
-            let db = self.db();
-            let user_names = db.corner_names(&track_key(&detail.meta))?;
-            let traces: Vec<(i64, LapMeta, LapTrace)> = detail
-                .laps
-                .iter()
-                .filter(|l| l.clean)
-                .filter_map(|l| db.trace(l.id).ok().map(|t| (l.id, l.meta.clone(), t)))
-                .collect();
-            drop(db);
-            let laps: Vec<SessionLap> = traces.iter().map(|(id, m, t)| SessionLap { lap_id: *id, meta: m, trace: t }).collect();
-            match detail.best_lap_id.and_then(|b| laps.iter().position(|l| l.lap_id == b)) {
-                Some(bi) => {
-                    let names = crate::tracks::corner_names_for(&detail.meta, Some(laps[bi].trace), user_names.clone());
-                    progress_zones_named(&detail.meta, &laps[bi], &laps, 2.0, &names)
-                }
-                None => vec![],
-            }
-        };
+        let zones = self.zones_for(&detail)?;
         let mut trend: Vec<(i64, f64)> = all
             .iter()
             .filter(|s| s.sim == last.sim && s.track == last.track && s.car == last.car)
@@ -2074,6 +2195,31 @@ mod tests {
         assert!(matches!(svc.insert_imported(&rs).unwrap(), InsertOutcome::Duplicate(_)));
         // Téléchargement refusé (limite de débit) : on s'arrête net, sans session partielle.
         assert!(recovered_session(&meta0, len, &groups[0], |_| Err("trop de requêtes".into())).is_err());
+    }
+
+    #[test]
+    fn training_plan_is_created_then_evaluated_on_the_next_session() {
+        let svc = AppService::in_memory().unwrap();
+        let now = now_secs();
+        let InsertOutcome::Inserted(a) = svc.insert_imported(&demo_session(21, now - 3600)).unwrap() else { panic!() };
+        let p = svc.training_plan(a).unwrap();
+        assert!(!p.objectives.is_empty() && p.objectives.len() <= 3, "{:?}", p.objectives.iter().map(|o| &o.objective.title).collect::<Vec<_>>());
+        assert!(p.evaluated_session_id.is_none(), "pas encore de séance après le programme");
+        assert!(p.spoken.starts_with("Plan du jour. Un, "), "{}", p.spoken);
+        // Même programme tant qu'on ne demande pas de nouveau.
+        assert_eq!(svc.training_plan(a).unwrap().id, p.id);
+        let meta_a = svc.db().session_meta(a).unwrap();
+        assert!(svc.live_plan(&meta_a).is_some());
+        // Séance suivante sur le même circuit : chaque objectif est évalué.
+        let InsertOutcome::Inserted(b) = svc.insert_imported(&demo_session(22, now)).unwrap() else { panic!() };
+        let v = svc.training_plan(b).unwrap();
+        assert_eq!(v.id, p.id);
+        assert_eq!(v.evaluated_session_id, Some(b));
+        assert!(v.objectives.iter().all(|o| o.result.is_some()));
+        // Nouveau programme : le précédent est archivé.
+        let n = svc.new_training_plan(b).unwrap();
+        assert_ne!(n.id, p.id);
+        assert!(n.evaluated_session_id.is_none());
     }
 
     #[test]

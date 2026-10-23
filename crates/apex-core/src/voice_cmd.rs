@@ -14,7 +14,7 @@ const MODEL_URL: &str = "https://alphacephei.com/vosk/models/vosk-model-small-fr
 const MODEL_DIR: &str = "vosk-model-small-fr-0.22";
 
 /// Mots reconnus (tout le reste est rejeté comme « [unk] »).
-pub const GRAMMAR: &[&str] = &["répète", "répéter", "redis", "silence", "tais-toi", "stop", "reprends", "reprise", "radio", "point", "écart", "plan", "objectif", "objectifs"];
+pub const GRAMMAR: &[&str] = &["répète", "répéter", "redis", "silence", "tais-toi", "stop", "reprends", "reprise", "radio", "point", "écart", "plan", "objectif", "objectifs", "carburant", "essence"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -29,6 +29,8 @@ pub enum VoiceCommand {
     Status,
     /// Rappel des objectifs de la séance.
     Plan,
+    /// Carburant restant et tours possibles.
+    Fuel,
 }
 
 /// Commande correspondant au texte reconnu.
@@ -45,6 +47,8 @@ pub fn parse_command(text: &str) -> Option<VoiceCommand> {
         Some(VoiceCommand::Status)
     } else if has(&["plan", "objectif", "objectifs"]) {
         Some(VoiceCommand::Plan)
+    } else if has(&["carburant", "essence"]) {
+        Some(VoiceCommand::Fuel)
     } else {
         None
     }
@@ -259,6 +263,7 @@ mod tests {
         assert_eq!(parse_command("radio"), Some(VoiceCommand::Resume));
         assert_eq!(parse_command("point"), Some(VoiceCommand::Status));
         assert_eq!(parse_command("plan"), Some(VoiceCommand::Plan));
+        assert_eq!(parse_command("carburant"), Some(VoiceCommand::Fuel));
         assert_eq!(parse_command(""), None);
         assert_eq!(parse_command("bonjour"), None);
         assert!(grammar_json().starts_with("[\"répète\"") && grammar_json().ends_with("\"[unk]\"]"));
@@ -291,7 +296,7 @@ mod tests {
         }
         let tts = crate::tts::Tts::new(std::env::temp_dir().join("apex-tts-e2e"));
         let rec = VoiceRecognizer::new(std::env::temp_dir().join("apex-voice-e2e"));
-        for (word, cmd) in [("Répète.", VoiceCommand::Repeat), ("Silence.", VoiceCommand::Mute), ("Reprends.", VoiceCommand::Resume), ("Point.", VoiceCommand::Status), ("Plan.", VoiceCommand::Plan)] {
+        for (word, cmd) in [("Répète.", VoiceCommand::Repeat), ("Silence.", VoiceCommand::Mute), ("Reprends.", VoiceCommand::Resume), ("Point.", VoiceCommand::Status), ("Plan.", VoiceCommand::Plan), ("Carburant.", VoiceCommand::Fuel)] {
             let wav = tts.synthesize("tom", word).unwrap();
             let (pcm, rate) = wav_pcm16(&wav).unwrap();
             let text = rec.recognize(&resample_to_16k(&pcm, rate)).unwrap();

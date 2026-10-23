@@ -5,6 +5,7 @@ import type {
   AppSettings,
   CircuitOverview,
   HistoryLap,
+  PlanView,
   PttBinding,
   PttEvent,
   VoiceInfo,
@@ -62,6 +63,9 @@ export const api = {
   ttsInstall: (voice: string) => call<void>("tts_install", { voice }),
   ttsSpeak: (voice: string, text: string) => call<ArrayBuffer>("tts_speak", { voice, text }),
   pttLearn: () => call<PttBinding | null>("ptt_learn"),
+  trainingPlan: (sessionId: number) => call<PlanView>("training_plan", { sessionId }),
+  newTrainingPlan: (sessionId: number) => call<PlanView>("new_training_plan", { sessionId }),
+  addPlanObjective: (sessionId: number, goal: GoalSuggestion) => call<PlanView>("add_plan_objective", { sessionId, goal }),
   pttDevices: () => call<string[]>("ptt_devices"),
   voiceInstalled: () => call<boolean>("voice_installed"),
   voiceInstall: () => call<void>("voice_install"),
@@ -94,6 +98,11 @@ export function onCoach(cb: (e: CoachEvent) => void): Promise<UnlistenFn> {
 export function onPtt(cb: (e: PttEvent) => void): Promise<UnlistenFn> {
   if (!isTauri()) return Promise.resolve(() => undefined);
   return listen<PttEvent>("apex://ptt", (e) => cb(e.payload));
+}
+
+export function onBeep(cb: (long: boolean) => void): Promise<UnlistenFn> {
+  if (!isTauri()) return Promise.resolve(() => undefined);
+  return listen<boolean>("apex://beep", (e) => cb(e.payload));
 }
 
 export function onCoachStop(cb: () => void): Promise<UnlistenFn> {

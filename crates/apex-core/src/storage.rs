@@ -102,6 +102,18 @@ ALTER TABLE sessions ADD COLUMN external_driver TEXT;
 "#, r#"
 -- v7 : contexte de course (grille, positions, incidents) en JSON.
 ALTER TABLE sessions ADD COLUMN race_json TEXT;
+"#, r#"
+-- v8 : programmes d'entraînement (objectifs de la prochaine séance) par circuit et voiture.
+CREATE TABLE plans (
+    id INTEGER PRIMARY KEY,
+    track_key TEXT NOT NULL,
+    car TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    source_session_id INTEGER NOT NULL DEFAULT 0,
+    objectives_json TEXT NOT NULL,
+    archived INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_plans_combo ON plans(track_key, car, archived);
 "#];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
@@ -479,7 +491,7 @@ impl Store {
     /// Suppression totale des données (droit à l'effacement).
     pub fn delete_all(&mut self) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
-        tx.execute_batch("DELETE FROM lap_traces; DELETE FROM laps; DELETE FROM sessions; DELETE FROM imported_files; DELETE FROM corner_names; DELETE FROM goals;")?;
+        tx.execute_batch("DELETE FROM lap_traces; DELETE FROM laps; DELETE FROM sessions; DELETE FROM imported_files; DELETE FROM corner_names; DELETE FROM goals; DELETE FROM plans;")?;
         tx.commit()?;
         self.conn.execute_batch("VACUUM;")?;
         Ok(())
@@ -597,6 +609,31 @@ impl Store {
     pub fn archive_goal(&self, id: i64) -> Result<(), StoreError> {
         self.conn.execute("UPDATE goals SET archived = 1 WHERE id = ?1", [id])?;
         Ok(())
+    }
+
+    /// Nouveau programme actif pour ce circuit et cette voiture (le précédent est archivé).
+    pub fn create_plan(&mut self, track_key: &str, car: &str, source_session_id: i64, objectives_json: &str) -> Result<i64, StoreError> {
+        let tx = self.conn.transaction()?;
+        tx.execute("UPDATE plans SET archived = 1 WHERE track_key = ?1 AND car = ?2 AND archived = 0", params![track_key, car])?;
+        tx.execute(
+            "INSERT INTO plans (track_key, car, created_at, source_session_id, objectives_json) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![track_key, car, now_unix(), source_session_id, objectives_json],
+        )?;
+        let id = tx.last_insert_rowid();
+        tx.commit()?;
+        Ok(id)
+    }
+
+    /// (id, date de création, séance source, objectifs JSON) du programme actif.
+    pub fn active_plan(&self, track_key: &str, car: &str) -> Result<Option<(i64, i64, i64, String)>, StoreError> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT id, created_at, source_session_id, objectives_json FROM plans WHERE track_key = ?1 AND car = ?2 AND archived = 0 ORDER BY id DESC LIMIT 1",
+                params![track_key, car],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .optional()?)
     }
 
     pub fn get_setting(&self, key: &str) -> Result<Option<String>, StoreError> {

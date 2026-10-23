@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, onCoach, onCoachStop, onStatus } from "./api";
-import { setCoachVoice, setCoachVolume, speak, stopVoice } from "./voice";
+import { api, onBeep, onCoach, onCoachStop, onStatus } from "./api";
+import { beep, setCoachVoice, setCoachVolume, speak, stopVoice } from "./voice";
 import type { StatusPayload } from "./types";
 
 export interface Async<T> {
@@ -40,9 +40,11 @@ export function useCoachVoice(): void {
       if (e.speak) void speak(e.message.text);
     });
     const un2 = onCoachStop(() => stopVoice());
+    const un3 = onBeep((long) => beep(long));
     return () => {
       void un.then((f) => f());
       void un2.then((f) => f());
+      void un3.then((f) => f());
     };
   }, []);
 }

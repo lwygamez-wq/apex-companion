@@ -95,3 +95,28 @@ export async function speak(text: string, voice: string = current): Promise<void
     speakWindows(text);
   }
 }
+
+let audioCtx: AudioContext | null = null;
+
+/** Bip de freinage : court (repère) ou long (point de freinage), au volume du coach. */
+export function beep(long: boolean): void {
+  try {
+    audioCtx ??= new AudioContext();
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = long ? 1320 : 880;
+    const d = long ? 0.28 : 0.08;
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume * 0.6, now + 0.01);
+    gain.gain.setValueAtTime(volume * 0.6, now + d - 0.02);
+    gain.gain.linearRampToValueAtTime(0, now + d);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + d + 0.02);
+  } catch (e) {
+    console.warn("bip impossible :", e);
+  }
+}

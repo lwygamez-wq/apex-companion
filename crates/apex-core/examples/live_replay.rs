@@ -18,9 +18,9 @@ fn main() {
     }
     let b = std::fs::read(&args[0]).unwrap();
     let (yaml, rows) = apex_core::ingest::ibt::ibt_live_rows(&b).unwrap();
-    let meta = { let (c, _) = LiveCoach::new(&yaml, None, vec![]); c.session().clone() };
+    let meta = { let (c, _) = LiveCoach::new(&yaml, None, vec![], None); c.session().clone() };
     let reference = svc.live_reference(&meta).unwrap();
-    let (mut coach, hello) = LiveCoach::new(&yaml, reference, vec![]);
+    let (mut coach, hello) = LiveCoach::new(&yaml, reference, vec![], None);
     println!("[radio] {}", hello.text);
     let t0 = std::time::Instant::now();
     for r in rows {
@@ -28,6 +28,6 @@ fn main() {
             println!("[tour {:>2} {:>8}] {:?} {}", m.lap, m.lap_time_s.map(|t| format!("{t:.3}")).unwrap_or_default(), m.kind, m.text);
         }
     }
-    println!("« répète » → {}\n« point » → {}", coach.repeat_text(), coach.status_text());
+    println!("« répète » → {}\n« point » → {}\n« carburant » → {}", coach.repeat_text(), coach.status_text(), coach.fuel_text());
     println!("({} ms pour toute la session)", t0.elapsed().as_millis());
 }

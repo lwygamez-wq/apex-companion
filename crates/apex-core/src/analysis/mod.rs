@@ -5,6 +5,7 @@ pub mod corners;
 pub mod goals;
 pub mod insights;
 pub mod offtrack;
+pub mod plan;
 pub mod progress;
 pub mod race;
 pub mod resample;

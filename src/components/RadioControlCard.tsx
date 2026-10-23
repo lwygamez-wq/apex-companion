@@ -8,6 +8,7 @@ const COMMANDS: [string, string][] = [
   ["silence", "coupe les messages automatiques"],
   ["reprends", "remet la radio"],
   ["plan", "rappelle les objectifs de la séance"],
+  ["carburant", "litres restants et tours possibles"],
 ];
 
 function bindingLabel(s: AppSettings | null): string {
@@ -95,6 +96,10 @@ export function RadioControlCard({ status }: { status: StatusPayload | null }) {
       <div className="form-row">
         <div>Annonce avant le virage<div className="hint">« Virage 16, freine plus tard » ~3 s avant le freinage du focus</div></div>
         <input type="checkbox" checked={s?.coach_callouts ?? true} onChange={(e) => void save({ coach_callouts: e.target.checked })} />
+      </div>
+      <div className="form-row">
+        <div>Bips de freinage<div className="hint">Bip, bip, biiip : le dernier tombe au point de freinage de ta référence, sur le virage du focus</div></div>
+        <input type="checkbox" checked={s?.coach_brake_beeps ?? true} onChange={(e) => void save({ coach_brake_beeps: e.target.checked })} />
       </div>
       <div className="radio-cmds">
         {COMMANDS.map(([w, d]) => (

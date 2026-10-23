@@ -1,9 +1,19 @@
 # Apex Companion
 
-Compagnon de pilotage simracing : import de télémétrie, comparaison de tours **par distance**, conseils de pilotage chiffrés avec niveau de confiance. **100 % local.**
+Compagnon de pilotage simracing pour iRacing : import automatique de la télémétrie, comparaison de tours **par distance**, conseils chiffrés, et un ingénieur de course à la radio. **Les données de conduite restent sur ton PC.**
 
-- Architecture, limites par simulateur, schéma de données et plan de développement : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- Statut : **MVP (phase 1)**. iRacing `.ibt` est implémenté. La lecture live iRacing est écrite mais pas encore validée. LMU, AC et AC EVO sont prévus.
+Ce que fait l'application :
+
+- **Analyse de tour** : virages nommés (relevés et géométrie publique), temps perdu virage par virage, conseils avec niveau de confiance, relecture synchronisée carte + courbes.
+- **Carte de risque** : pour chaque virage, temps à prendre contre probabilité et coût d'une sortie de piste.
+- **Coach de course** : grille, positions tour par tour, incidents typés et localisés, départ, fin de course, qualification contre rythme course.
+- **Programme d'entraînement** : 2 à 3 objectifs mesurables pour la prochaine séance, évalués automatiquement ensuite.
+- **Coach vocal en direct** : synthèse des derniers tours contre la référence, focus d'un virage, annonce avant le virage, bips de freinage, voix naturelle hors ligne ; commandes vocales au volant (« répète », « point », « plan », « carburant », « silence », « reprends »).
+- **Références Garage 61** (facultatif) : import des tours exportés du site, API pour retrouver tes propres sessions.
+- **Historique** de tous les tours par circuit, **app iPhone** (page installable) qui ouvre les exports de séance.
+
+- Architecture, limites par simulateur, schéma de données : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Statut : iRacing (fichiers `.ibt` et lecture en direct) implémenté et utilisé au quotidien. LMU, AC et AC EVO ne sont pas encore pris en charge.
 
 ## Prérequis (Windows 10/11)
 
@@ -24,7 +34,7 @@ npm install
 npm run tauri dev
 
 # 3. Tests
-cargo test -p apex-core          # 41 tests : parseur, analyse, stockage, service
+cargo test -p apex-core          # parseur, analyse, coach, stockage, service
 npm test                         # tests front (Vitest)
 npm run typecheck                # TypeScript strict
 
@@ -49,10 +59,13 @@ npm run tauri build
 
 ## Données et confidentialité
 
-- Base locale : `%APPDATA%\app.apexcompanion.desktop\apex.db` (SQLite). Journaux locaux dans le dossier `logs` voisin.
-- Aucune télémétrie envoyée. Seule connexion : la vérification des mises à jour auprès de GitHub (lecture de `latest.json`, désactivable dans Réglages). Le CSP bloque toute connexion sortante de l'interface.
-- Réglages → export JSON complet, suppression totale des données, diagnostic sans données personnelles.
-- Aucun secret ni clé d'API : pas de `.env` nécessaire.
+- Base locale : `%APPDATA%\app.apexcompanion.desktop\apex.db` (SQLite). Journaux locaux dans le dossier `logs` voisin. Copies de garde des `.ibt` dans `telemetrie-gardee`, voix et reconnaissance vocale dans `voix`.
+- **Aucune donnée de conduite n'est envoyée.** Connexions sortantes, toutes déclenchées par l'application elle-même :
+  - mises à jour : lecture de `latest.json` sur GitHub (désactivable dans Réglages) ;
+  - Garage 61, seulement si tu saisis un jeton : recherche de tours de référence et de tes propres sessions (critères envoyés : circuit, voiture) ;
+  - téléchargements à la demande, une seule fois : moteur vocal Piper (GitHub), voix françaises (Hugging Face), reconnaissance vocale Vosk (GitHub) et son modèle français (alphacephei.com).
+- Le micro n'est ouvert que pendant l'appui sur le bouton radio ; l'audio est analysé sur le PC puis jeté.
+- Le CSP bloque toute connexion sortante de l'interface. Réglages → export JSON complet, suppression totale des données, diagnostic sans données personnelles.
 
 ## Marques et SDK
 
@@ -85,3 +98,10 @@ géométrie publique des tracés (lignes médianes issues d'OpenStreetMap) :
 - [markthebault/open-racetrack-db](https://github.com/markthebault/open-racetrack-db) (ODbL 1.0) — données © [contributeurs OpenStreetMap](https://www.openstreetmap.org/copyright) : Fuji, Motegi, Bathurst, Road Atlanta, Monaco, Albert Park
 
 Seules des valeurs dérivées (position et sens de chaque virage) sont intégrées à l'application.
+
+## Crédits voix et reconnaissance vocale
+
+Téléchargés à la demande sur le PC de l'utilisateur, non inclus dans l'installeur :
+
+- [Piper](https://github.com/rhasspy/piper) (MIT, © Michael Hansen) et les voix françaises de [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) (licence propre à chaque voix).
+- [Vosk](https://github.com/alphacep/vosk-api) (Apache-2.0) et le modèle [vosk-model-small-fr-0.22](https://alphacephei.com/vosk/models) (Apache-2.0).

@@ -88,6 +88,21 @@ pub fn set_coach_muted(state: State<'_, AppState>, muted: bool) {
 }
 
 #[tauri::command]
+pub async fn training_plan(state: State<'_, AppState>, session_id: i64) -> R<apex_core::service::PlanView> {
+    blocking(state.svc.clone(), move |s| s.training_plan(session_id)).await
+}
+
+#[tauri::command]
+pub async fn add_plan_objective(state: State<'_, AppState>, session_id: i64, goal: apex_core::analysis::goals::GoalSuggestion) -> R<apex_core::service::PlanView> {
+    blocking(state.svc.clone(), move |s| s.add_plan_objective(session_id, &goal)).await
+}
+
+#[tauri::command]
+pub async fn new_training_plan(state: State<'_, AppState>, session_id: i64) -> R<apex_core::service::PlanView> {
+    blocking(state.svc.clone(), move |s| s.new_training_plan(session_id)).await
+}
+
+#[tauri::command]
 pub fn get_status(state: State<'_, AppState>) -> StatusPayload {
     state.status.lock().map(|s| s.clone()).unwrap_or_default()
 }

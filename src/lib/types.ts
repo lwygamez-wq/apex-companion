@@ -346,6 +346,7 @@ export interface StatusPayload {
   coach_repeat: string | null;
   coach_point: string | null;
   coach_plan: string | null;
+  coach_fuel: string | null;
 }
 
 export type PttBinding =
@@ -356,12 +357,12 @@ export type PttBinding =
 export interface PttEvent {
   state: "listening" | "done" | "error";
   heard: string | null;
-  command: "repeat" | "mute" | "resume" | "status" | "plan" | null;
+  command: "repeat" | "mute" | "resume" | "status" | "plan" | "fuel" | null;
   error: string | null;
 }
 
 export interface CoachMessage {
-  kind: "info" | "focus" | "invalid" | "callout" | "reply";
+  kind: "info" | "focus" | "invalid" | "callout" | "reply" | "beep";
   lap: number;
   text: string;
   focus: string | null;
@@ -444,6 +445,8 @@ export interface AppSettings {
   coach_volume: number;
   /** Annonce courte juste avant le virage du focus. */
   coach_callouts: boolean;
+  /** Bips de freinage sur le virage du focus. */
+  coach_brake_beeps: boolean;
   /** Commandes vocales au volant. */
   voice_commands: boolean;
   ptt_binding: PttBinding | null;
@@ -505,4 +508,22 @@ export interface VoiceInfo {
   id: string;
   label: string;
   installed: boolean;
+}
+
+export interface PlanItem {
+  title: string;
+  why: string;
+  apex_m: number | null;
+  spoken: string;
+  result: GoalResult | null;
+}
+
+export interface PlanView {
+  id: number;
+  created_at_unix: number;
+  track: string;
+  car: string;
+  objectives: PlanItem[];
+  evaluated_session_id: number | null;
+  spoken: string;
 }

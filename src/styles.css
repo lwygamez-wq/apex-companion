@@ -252,3 +252,5 @@ td.num, th.num { text-align: right; }
 .ptt-state.error { color: #ff8a80; }
 .radio-msg.reply { border-left-color: var(--green); }
 .radio-msg.callout { border-left-color: var(--yellow); }
+.plan { border-left: 4px solid var(--green); }
+.plan-list { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }

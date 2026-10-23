@@ -21,13 +21,13 @@ export function InsightCard({ insight, active, onFocus, sessionId }: { insight: 
             className="btn"
             onClick={(e) => {
               e.stopPropagation();
-              api.createGoal(sessionId, insight.goal!).then(
-                () => setGoalMsg("Objectif enregistré : il sera vérifié sur ta prochaine session ici."),
+              api.addPlanObjective(sessionId, insight.goal!).then(
+                () => setGoalMsg("Ajouté au programme : le coach le privilégie et il sera vérifié sur ta prochaine séance ici."),
                 (err: unknown) => setGoalMsg(err instanceof Error ? err.message : String(err)),
               );
             }}
           >
-            Fixer comme objectif
+            Ajouter au programme
           </button>
           <span className="muted" style={{ fontSize: 12 }}>{goalMsg ?? insight.goal.title}</span>
         </div>
