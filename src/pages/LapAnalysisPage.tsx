@@ -8,11 +8,44 @@ import { RaceCard } from "../components/RaceCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap } from "../components/TrackMap";
 import { api } from "../lib/api";
-import { dateTime, delta, LAP_KIND_FR, lapTime } from "../lib/format";
+import { dateTime, LAP_KIND_FR, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { ReplayStore, replayBounds } from "../lib/replay";
 import type { LapRow, SessionDetail } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
+import { CornerList } from "../components/CornerList";
+import { finalGap, fmtGap, type Axis, type GapUnit } from "../lib/compareView";
+
+/** Réglage d'affichage gardé d'une visite à l'autre (navigateur uniquement, facultatif). */
+function usePref<T>(key: string, init: T): [T, (v: T | ((p: T) => T)) => void] {
+  const [v, setV] = useState<T>(() => {
+    try {
+      const s = localStorage.getItem(key);
+      return s == null ? init : (JSON.parse(s) as T);
+    } catch {
+      return init;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(v));
+    } catch {
+      /* stockage indisponible : réglage non gardé */
+    }
+  }, [key, v]);
+  return [v, setV];
+}
+
+function Segmented<T extends string>({ label, value, options, onChange, title }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void; title?: string }) {
+  return (
+    <div className="seg" title={title}>
+      <span className="seg-label">{label}</span>
+      {options.map(([k, l]) => (
+        <button key={k} className={value === k ? "on" : ""} onClick={() => onChange(k)}>{l}</button>
+      ))}
+    </div>
+  );
+}
 
 function lapFlags(l: LapRow): string {
   const f = [];
@@ -41,11 +74,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [bigMap, setBigMap] = useState(false);
-  const [renaming, setRenaming] = useState<{ apex: number; name: string } | null>(null);
-  const saveName = async () => {
-    if (!renaming || !detail.data) return;
-    await api.setCornerName(detail.data.id, renaming.apex, renaming.name);
-    setRenaming(null);
+  const [axis, setAxis] = usePref<Axis>("apex.axis", "distance");
+  const [gapUnit, setGapUnit] = usePref<GapUnit>("apex.gap", "s");
+  const [more, setMore] = usePref<boolean>("apex.moreCharts", false);
+  const saveName = async (apex: number, name: string) => {
+    if (!detail.data) return;
+    await api.setCornerName(detail.data.id, apex, name);
     cmp.reload();
   };
   const settings = useAsync(() => api.settings(), []);
@@ -68,11 +102,11 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const c = cmp.data;
   const store = useMemo(() => (c ? new ReplayStore(...replayBounds(c)) : null), [c]);
   useEffect(() => () => store?.dispose(), [store]);
-  const onChartCursor = (idx: number | null) => {
-    if (!store || !c || idx == null || store.get().playing) return;
-    const t = c.cmp_trace.time[idx];
-    if (t != null) store.seek(t, true);
+  const onChartCursor = (t: number | null) => {
+    if (!store || t == null || store.get().playing) return;
+    store.seek(t, true);
   };
+  const endGap = useMemo(() => (c ? finalGap(c, gapUnit) : null), [c, gapUnit]);
   const insights = useMemo(() => {
     if (!c) return [];
     const name = c.corners.find((k) => k.corner.id === corner)?.corner.name;
@@ -125,30 +159,38 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
           {d.race && <RaceCard r={d.race} laps={d.laps} onLap={(id) => setCmpId(id)} />}
 
-          <div className="card" style={{ marginBottom: 14 }}>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <div className="row">
-                <span className="muted">Référence</span>
-                <select value={refId ?? ""} onChange={(e) => setRefId(Number(e.target.value))}>
-                  {d.personal_reference_lap_id != null && !d.laps.some((l) => l.id === d.personal_reference_lap_id) && (
-                    <option value={d.personal_reference_lap_id}>{d.reference_label ?? "Référence personnelle (autre session)"}</option>
-                  )}
-                  {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
-                </select>
-                <span className="muted">Tour analysé</span>
-                <select value={cmpId ?? ""} onChange={(e) => setCmpId(Number(e.target.value))}>
-                  {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
-                </select>
-              </div>
-              <div className="row">
-                {settings.data?.garage61_token && d.meta.sim === "iracing" && (
-                  <button className="btn" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">Référence Garage 61</button>
+          <div className="duel">
+            <div className="duel-lap ref">
+              <span className="duel-tag"><i className="swatch ref" />Référence</span>
+              <select value={refId ?? ""} onChange={(e) => setRefId(Number(e.target.value))}>
+                {d.personal_reference_lap_id != null && !d.laps.some((l) => l.id === d.personal_reference_lap_id) && (
+                  <option value={d.personal_reference_lap_id}>{d.reference_label ?? "Référence personnelle (autre session)"}</option>
                 )}
-                {c && <span className={`mono ${(c.delta_s[c.delta_s.length - 1] ?? 0) > 0 ? "pos" : "neg"}`} style={{ fontSize: 18 }}>{delta(c.delta_s[c.delta_s.length - 1])} s</span>}
-              </div>
+                {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
+              </select>
+              <div className="duel-time mono">{lapTime(c?.reference.lap_time_s)}</div>
+              <div className="duel-who">{c ? c.reference.driver ?? `Tour ${c.reference.number}` : ""}</div>
             </div>
-            {g61Msg && <div className="muted" style={{ marginTop: 8 }}>{g61Msg}</div>}
+            <div className="duel-gap">
+              <button className="btn ghost" title="Inverser référence et tour analysé" onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
+              {c && <div className={`duel-delta mono ${(endGap ?? 0) > 0 ? "pos" : "neg"}`}>{fmtGap(endGap, gapUnit, gapUnit === "s" ? 3 : 0)}</div>}
+              <div className="muted" style={{ fontSize: 12 }}>{c ? ((endGap ?? 0) > 0 ? "de retard à l'arrivée" : "d'avance à l'arrivée") : ""}</div>
+            </div>
+            <div className="duel-lap cmp">
+              <span className="duel-tag"><i className="swatch cmp" />Ton tour</span>
+              <select value={cmpId ?? ""} onChange={(e) => setCmpId(Number(e.target.value))}>
+                {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
+              </select>
+              <div className="duel-time mono">{lapTime(c?.compared.lap_time_s)}</div>
+              <div className="duel-who">{c ? `Tour ${c.compared.number}${c.compared.clean ? "" : ", perturbé"}` : ""}</div>
+            </div>
           </div>
+          {settings.data?.garage61_token && d.meta.sim === "iracing" && (
+            <div className="row" style={{ justifyContent: "flex-end", margin: "-6px 0 10px" }}>
+              {g61Msg && <span className="muted" style={{ fontSize: 12 }}>{g61Msg}</span>}
+              <button className="btn ghost" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">Chercher une référence Garage 61</button>
+            </div>
+          )}
 
           {cmp.error && <div className="error">{cmp.error}</div>}
           {c?.warnings.map((w) => <div key={w} className="warning">⚠ {w}</div>)}
@@ -156,13 +198,10 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
           {c && store && (
             <>
-              <div className="grid cols-2" style={{ marginBottom: 14, alignItems: "start" }}>
-                <RiskCard risk={d.risk} headline={d.risk_headline} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
-                <OffTrackCard zones={d.off_tracks} />
-              </div>
               <div className="insights-strip">
                 <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 8px" }}>
                   {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
+                  {corner != null && <button className="btn ghost small" style={{ marginLeft: 8 }} onClick={() => setCorner(null)}>tous les virages</button>}
                 </h2>
                 {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
                 <div className="insight-grid">
@@ -173,11 +212,6 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
                   </button>
                 )}
-                {beginner && corner == null && insights.length > 0 && (
-                  <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                    Travaille un seul conseil par session : c'est plus efficace que de tout corriger en même temps.
-                  </div>
-                )}
               </div>
               {bigMap && (
                 <div className="replay-big">
@@ -187,58 +221,32 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               )}
               <div className={bigMap ? "" : "grid analysis"}>
                 <div>
-                <TelemetryCharts cmp={c} onCursor={onChartCursor} simple={beginner} store={store ?? undefined} />
-                <div className="card" style={{ padding: 0, marginTop: 8 }}>
-                  <table>
-                    <thead>
-                      <tr><th>Virage</th><th className="num">Δ temps</th><th className="num">Freinage réf./tour</th><th className="num">V. mini réf./tour</th><th className="num">V. sortie réf./tour</th><th className="num">Gaz réf./tour</th><th className="num" title="Position de ton tour à l'apex par rapport à la trajectoire de référence">Trajectoire apex</th></tr>
-                    </thead>
-                    <tbody>
-                      {c.corners.map((k) => (
-                        <tr key={k.corner.id} className="clickable" onClick={() => setCorner(corner === k.corner.id ? null : k.corner.id)} style={corner === k.corner.id ? { background: "var(--panel-2)" } : undefined}>
-                          <td className="mono" onClick={(e) => e.stopPropagation()}>
-                            {renaming?.apex === k.corner.apex_m ? (
-                              <input
-                                autoFocus
-                                type="text"
-                                value={renaming.name}
-                                maxLength={40}
-                                placeholder="nom (vide = V…)"
-                                style={{ width: 130 }}
-                                onChange={(e) => setRenaming({ apex: k.corner.apex_m, name: e.target.value })}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") void saveName();
-                                  if (e.key === "Escape") setRenaming(null);
-                                }}
-                                onBlur={() => void saveName()}
-                              />
-                            ) : (
-                              <span title="Cliquer pour renommer ce virage (enregistré pour ce circuit)" style={{ cursor: "text" }} onClick={() => setRenaming({ apex: k.corner.apex_m, name: /^V\d+$/.test(k.corner.name) ? "" : k.corner.name })}>
-                                {k.corner.name} <span className="muted">✎</span>
-                              </span>
-                            )}
-                          </td>
-                          <td className={`num ${k.time_delta_s > 0.02 ? "pos" : k.time_delta_s < -0.02 ? "neg" : ""}`}>{delta(k.time_delta_s, 2)}</td>
-                          <td className="num">{k.reference.brake_on_m?.toFixed(0) ?? "—"} / {k.compared.brake_on_m?.toFixed(0) ?? "—"} m</td>
-                          <td className="num">{k.reference.min_speed_kmh.toFixed(0)} / {k.compared.min_speed_kmh.toFixed(0)}</td>
-                          <td className="num">{k.reference.exit_speed_kmh.toFixed(0)} / {k.compared.exit_speed_kmh.toFixed(0)}</td>
-                          <td className="num">{k.reference.throttle_on_m?.toFixed(0) ?? "—"} / {k.compared.throttle_on_m?.toFixed(0) ?? "—"} m</td>
-                          <td className="num">{k.apex_offset_m == null ? "—" : Math.abs(k.apex_offset_m) < 0.3 ? "identique" : `${Math.abs(k.apex_offset_m).toFixed(1)} m ${k.apex_offset_m > 0 ? "int." : "ext."}`}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="muted" style={{ padding: "8px 10px", fontSize: 12 }}>
-                    Virages détectés automatiquement. Clique sur un nom (✎) pour le renommer : le nom est gardé pour toutes tes sessions sur ce circuit.
+                  <div className="card charts-card">
+                    <div className="charts-bar">
+                      <div className="legend">
+                        <span><i className="swatch ref" />{c.reference.driver ?? `Tour ${c.reference.number}`}</span>
+                        <span><i className="swatch cmp" />Toi, tour {c.compared.number}</span>
+                      </div>
+                      <div className="row" style={{ gap: 10 }}>
+                        <Segmented label="Axe" value={axis} onChange={setAxis} options={[["distance", "Distance"], ["time", "Temps"]]} title="Distance : la référence est calée au même endroit de la piste. Temps : chaque tour à son chrono, la référence se détache devant ou derrière." />
+                        <Segmented label="Écart" value={gapUnit} onChange={setGapUnit} options={[["s", "s"], ["m", "m"]]} title="Écart en secondes de retard, ou en mètres de retard sur la référence" />
+                        <button className={`btn ghost small ${more ? "on" : ""}`} onClick={() => setMore((v) => !v)}>{more ? "Moins de courbes" : "Plus de courbes"}</button>
+                      </div>
+                    </div>
+                    <TelemetryCharts cmp={c} onCursorTime={onChartCursor} axis={axis} gapUnit={gapUnit} more={more} selected={corner} store={store ?? undefined} />
                   </div>
+                  <CornerList corners={c.corners} selected={corner} onSelect={setCorner} onRename={(apex, name) => void saveName(apex, name)} />
                 </div>
-              </div>
                 {!bigMap && (
                   <div className="analysis-side">
                     <TrackMap cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} onToggleBig={() => setBigMap(true)} />
                     <ReplayPanel cmp={c} store={store} />
                   </div>
                 )}
+              </div>
+              <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>
+                <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
+                <OffTrackCard zones={d.off_tracks} />
               </div>
             </>
           )}

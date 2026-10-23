@@ -1,19 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import uPlot from "uplot";
-import { decimate } from "../lib/format";
+import { buildView, type Axis, type CompareView, type GapUnit } from "../lib/compareView";
 import { positionsAt, type ReplayStore } from "../lib/replay";
 import type { Comparison } from "../lib/types";
 
 /** Vrai pendant qu'on place le curseur par programme (relecture) : on ignore alors l'événement. */
 let programmatic = false;
 
-const REF = "#c9c9d4";
-const CMP = "#ff2a1f";
-const GRID = { stroke: "#25252f", width: 1 };
+export const REF_COLOR = "#8fb4ff";
+export const CMP_COLOR = "#ff3b30";
+const THR = "#2bd576";
+const BRK = "#ff5a4e";
+const LOSS = "#ffd400";
+const GRID = { stroke: "#22222c", width: 1 };
 const FONT = "12px 'Archivo Variable', system-ui, sans-serif";
-const AXIS = { stroke: "#8c8c9c", grid: GRID, ticks: { stroke: "#2c2c38", size: 4 }, font: FONT };
-/** Largeur de la fenêtre glissante des courbes pendant la relecture (m). */
-const WINDOW_M = 700;
+const AXIS = { stroke: "#8c8c9c", grid: GRID, ticks: { show: false }, font: FONT };
+/** Largeur de la fenêtre glissante pendant la relecture. */
+const WINDOW = { distance: 700, time: 12 };
+
+interface Series {
+  label: string;
+  color: string;
+  data: (number | null)[];
+  width?: number;
+  dash?: number[];
+  fill?: string;
+  /** Valeur affichée sans signe (frein tracé vers le bas). */
+  abs?: boolean;
+  /** Pas de valeur au curseur (séries de remplissage). */
+  silent?: boolean;
+}
 
 interface ChartSpec {
   key: string;
@@ -21,20 +37,28 @@ interface ChartSpec {
   unit: string;
   digits: number;
   height: number;
-  series: { label: string; color: string; data: (number | null)[]; fill?: string; width?: number }[];
+  series: Series[];
   range?: [number, number];
   zeroLine?: boolean;
-  /** Affiche le signe (+/−) dans la valeur au curseur. */
   signed?: boolean;
+  /** Noms des virages affichés en haut de ce graphique. */
+  labels?: boolean;
+  /** Légende sous le titre (pédales). */
+  hint?: string;
 }
 
+const fmtTime = (t: number) => {
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return m > 0 ? `${m}:${s.toFixed(0).padStart(2, "0")}` : `${s.toFixed(0)} s`;
+};
+
 /** Un graphique uPlot ; le curseur est partagé via `syncKey`. */
-function SyncedChart({ x, spec, syncKey, onCursor, markers, onReady, showX }: {
-  x: number[];
+function SyncedChart({ view, spec, onCursor, selected, onReady, showX }: {
+  view: CompareView;
   spec: ChartSpec;
-  syncKey: string;
   onCursor: (idx: number | null) => void;
-  markers: { at: number; label: string }[];
+  selected: number | null;
   onReady: (key: string, u: uPlot | null) => void;
   showX: boolean;
 }) {
@@ -45,37 +69,59 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers, onReady, showX }: {
   const plot = useRef<uPlot | null>(null);
   const cursorCb = useRef(onCursor);
   cursorCb.current = onCursor;
+  const sel = useRef(selected);
+  sel.current = selected;
 
   useEffect(() => {
     const el = host.current;
     if (!el) return;
-    const fmt = (v: number | null | undefined) => {
-      if (v == null) return "—";
-      const r = Math.abs(v) < 0.5 * 10 ** -spec.digits ? 0 : v;
+    const fmt = (v: number | null | undefined, s: Series) => {
+      if (v == null) return s.abs ? "0" : "—";
+      const x = s.abs ? Math.abs(v) : v;
+      const r = Math.abs(x) < 0.5 * 10 ** -spec.digits ? 0 : x;
       return (spec.signed && r > 0 ? "+" : "") + r.toFixed(spec.digits).replace("-", "−");
     };
+    const xFmt = view.axis === "distance" ? (m: number) => `${(m / 1000).toFixed(1)} km` : fmtTime;
     const opts: uPlot.Options = {
       width: el.clientWidth,
       height: spec.height,
-      cursor: { sync: { key: syncKey, setSeries: false }, drag: { x: true, y: false }, points: { size: 6 } },
+      padding: [spec.labels ? 18 : 6, 8, 0, 0],
+      cursor: { sync: { key: "apex", setSeries: false }, drag: { x: true, y: false }, points: { size: 5 } },
       legend: { show: false },
       scales: { x: { time: false }, y: spec.range ? { range: spec.range } : { auto: true } },
       axes: [
-        showX
-          ? { ...AXIS, size: 26, space: 70, values: (_u, v) => v.map((m) => `${(m / 1000).toFixed(1)} km`) }
-          : { ...AXIS, size: 4, space: 70, values: (_u, v) => v.map(() => "") },
-        { ...AXIS, size: 44, space: 28 },
+        showX ? { ...AXIS, size: 24, space: 80, values: (_u, v) => v.map(xFmt) } : { ...AXIS, size: 0, values: () => [] },
+        { ...AXIS, size: 40, space: 30, values: (_u, v) => v.map((n) => (spec.key === "pedals" ? `${Math.abs(n)}` : `${n}`)) },
       ],
-      series: [{}, ...spec.series.map((s) => ({ label: s.label, stroke: s.color, width: s.width ?? 1.6, fill: s.fill, points: { show: false } }))],
+      series: [
+        {},
+        ...spec.series.map((s) => ({ label: s.label, stroke: s.color, width: s.width ?? 1.5, dash: s.dash, fill: s.fill, fillTo: 0, points: { show: false } })),
+      ],
       hooks: {
         setCursor: [
           (u) => {
             const i = u.cursor.idx;
-            // Valeurs au curseur dans le titre (lecture directe, sans survoler la légende).
             if (readout.current) {
-              readout.current.textContent = i == null ? "" : spec.series.map((s, k) => `${spec.series.length > 1 ? `${s.label} ` : ""}${fmt(u.data[k + 1]?.[i] as number | null)}`).join("  ·  ") + (i == null ? "" : ` ${spec.unit}`);
+              const shown = spec.series.filter((s) => !s.silent);
+              readout.current.textContent =
+                i == null ? "" : shown.map((s) => `${shown.length > 1 ? `${s.label} ` : ""}${fmt(u.data[spec.series.indexOf(s) + 1]?.[i] as number | null, s)}`).join("   ") + (spec.unit ? ` ${spec.unit}` : "");
             }
             if (!programmatic) cursorCb.current(i ?? null);
+          },
+        ],
+        drawClear: [
+          (u) => {
+            // Zones de virage, sous les courbes.
+            const ctx = u.ctx;
+            ctx.save();
+            for (const b of view.bands) {
+              const a = u.valToPos(b.from, "x", true);
+              const z = u.valToPos(b.to, "x", true);
+              if (z < u.bbox.left || a > u.bbox.left + u.bbox.width) continue;
+              ctx.fillStyle = sel.current === b.id ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.035)";
+              ctx.fillRect(Math.max(a, u.bbox.left), u.bbox.top, Math.min(z, u.bbox.left + u.bbox.width) - Math.max(a, u.bbox.left), u.bbox.height);
+            }
+            ctx.restore();
           },
         ],
         draw: [
@@ -84,45 +130,41 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers, onReady, showX }: {
             ctx.save();
             if (spec.zeroLine) {
               const y = u.valToPos(0, "y", true);
-              ctx.strokeStyle = "rgba(255,255,255,0.35)";
+              ctx.strokeStyle = "rgba(255,255,255,0.25)";
               ctx.beginPath();
               ctx.moveTo(u.bbox.left, y);
               ctx.lineTo(u.bbox.left + u.bbox.width, y);
               ctx.stroke();
             }
-            ctx.fillStyle = "#9a9aab";
-            ctx.strokeStyle = "rgba(154,154,171,0.18)";
-            ctx.font = `italic 800 ${11 * devicePixelRatio}px "Archivo Variable", system-ui, sans-serif`;
-            // Noms décalés sur plusieurs lignes quand les virages sont proches.
-            const rowEnd: number[] = [];
-            for (const m of markers) {
-              const px = u.valToPos(m.at, "x", true);
-              if (px < u.bbox.left - 2 || px > u.bbox.left + u.bbox.width) continue;
-              ctx.beginPath();
-              ctx.moveTo(px, u.bbox.top);
-              ctx.lineTo(px, u.bbox.top + u.bbox.height);
-              ctx.stroke();
-              const w = ctx.measureText(m.label).width;
-              let row = rowEnd.findIndex((end) => end < px);
-              if (row < 0) row = rowEnd.length;
-              rowEnd[row] = px + 3 + w + 6 * devicePixelRatio;
-              ctx.fillText(m.label, px + 3, u.bbox.top + (11 + row * 12) * devicePixelRatio);
+            if (spec.labels) {
+              ctx.font = `700 ${11 * devicePixelRatio}px "Archivo Variable", system-ui, sans-serif`;
+              ctx.textAlign = "center";
+              let lastEnd = -Infinity;
+              for (const b of view.bands) {
+                const px = u.valToPos(b.apex, "x", true);
+                if (px < u.bbox.left || px > u.bbox.left + u.bbox.width) continue;
+                const w = ctx.measureText(b.label).width;
+                // Pas de chevauchement : un nom trop proche du précédent est omis (sauf le virage choisi).
+                if (px - w / 2 < lastEnd + 4 * devicePixelRatio && sel.current !== b.id) continue;
+                ctx.fillStyle = sel.current === b.id ? "#ffffff" : "#8c8c9c";
+                ctx.fillText(b.label, px, u.bbox.top - 5 * devicePixelRatio);
+                lastEnd = px + w / 2;
+              }
             }
             ctx.restore();
           },
         ],
       },
     };
-    const data = [x, ...spec.series.map((s) => s.data)] as uPlot.AlignedData;
+    const data = [view.x, ...spec.series.map((s) => s.data)] as uPlot.AlignedData;
     plot.current = new uPlot(opts, data, el);
     ready.current(spec.key, plot.current);
-    // Écran tactile : glisser le doigt horizontalement déplace le curseur (le défilement vertical reste possible).
     const u0 = plot.current;
+    // Écran tactile : glisser le doigt horizontalement déplace le curseur (le défilement vertical reste possible).
     const onTouch = (e: PointerEvent) => {
       if (e.pointerType !== "touch") return;
       const r = u0.over.getBoundingClientRect();
-      const left = Math.max(0, Math.min(r.width, e.clientX - r.left));
-      u0.setCursor({ left, top: r.height / 2 });
+      u0.setCursor({ left: Math.max(0, Math.min(r.width, e.clientX - r.left)), top: r.height / 2 });
     };
     u0.over.style.touchAction = "pan-y";
     u0.over.addEventListener("pointerdown", onTouch);
@@ -135,12 +177,15 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers, onReady, showX }: {
       plot.current?.destroy();
       plot.current = null;
     };
-  }, [x, spec, syncKey, markers, showX]);
+  }, [view, spec, showX]);
+
+  // Virage choisi : simple redessin, sans recréer le graphique.
+  useEffect(() => plot.current?.redraw(false), [selected]);
 
   return (
     <div className="chart">
       <div className="chart-title">
-        <span>{spec.title}</span>
+        <span>{spec.title}{spec.hint && <span className="chart-hint">{spec.hint}</span>}</span>
         <span ref={readout} className="chart-readout" />
       </div>
       <div ref={host} />
@@ -148,92 +193,131 @@ function SyncedChart({ x, spec, syncKey, onCursor, markers, onReady, showX }: {
   );
 }
 
-/** Pile de courbes : delta, vitesse, frein, accélérateur, trajectoire, rapport, volant. */
-export function TelemetryCharts({ cmp, onCursor, simple = false, store }: { cmp: Comparison; onCursor: (idx: number | null) => void; simple?: boolean; store?: ReplayStore }) {
+/**
+ * Courbes de comparaison : écart, vitesse, pédales (gaz vers le haut, frein vers le bas) ;
+ * trajectoire, rapport et volant en option. Référence en bleu pointillé, ton tour en trait plein.
+ */
+export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit = "s", more = false, selected = null, store }: {
+  cmp: Comparison;
+  onCursorTime: (t: number | null) => void;
+  axis?: Axis;
+  gapUnit?: GapUnit;
+  more?: boolean;
+  selected?: number | null;
+  store?: ReplayStore;
+}) {
   const plots = useRef(new Map<string, uPlot>());
   const onReady = useCallback((key: string, u: uPlot | null) => {
     if (u) plots.current.set(key, u);
     else plots.current.delete(key);
   }, []);
-  // Affichage à ≥2 m de résolution : fluide même sur un tour de 13 km.
+  // Mode distance : ≥2 m de résolution, fluide même sur un tour de 13 km.
   const every = Math.max(1, Math.round(2 / cmp.step_m));
-  const { x, specs, markers } = useMemo(() => {
-    const d = (a: number[] | null) => (a ? decimate(a, every) : null);
-    const r = cmp.ref_trace;
-    const c = cmp.cmp_trace;
-    const pct = (a: number[]) => d(a)!.map((v) => v * 100);
-    const specs: ChartSpec[] = [
-      { key: "delta", title: "Écart de temps", unit: "s", digits: 3, height: 110, zeroLine: true, signed: true, series: [{ label: "Écart", color: "#ffffff", data: d(cmp.delta_s)!, fill: "rgba(255,212,0,0.10)" }] },
-      { key: "speed", title: "Vitesse", unit: "km/h", digits: 0, height: 170, series: [{ label: "Réf.", color: REF, data: d(r.speed_kmh)! }, { label: "Tour", color: CMP, data: d(c.speed_kmh)! }] },
-      { key: "brake", title: "Frein", unit: "%", digits: 0, height: 80, range: [0, 100], series: [{ label: "Réf.", color: REF, data: pct(r.brake) }, { label: "Tour", color: CMP, data: pct(c.brake) }] },
-      { key: "throttle", title: "Accélérateur", unit: "%", digits: 0, height: 80, range: [0, 100], series: [{ label: "Réf.", color: REF, data: pct(r.throttle) }, { label: "Tour", color: CMP, data: pct(c.throttle) }] },
+  const view = useMemo(() => buildView(cmp, axis, gapUnit, every), [cmp, axis, gapUnit, every]);
+  const specs = useMemo(() => {
+    // Frein vers le bas ; rien de tracé quand la pédale est relâchée (pas de trait permanent sur le zéro).
+    const neg = (a: (number | null)[]) => a.map((v, i) => (v == null || (v < 0.5 && (a[i - 1] ?? 0) < 0.5 && (a[i + 1] ?? 0) < 0.5) ? null : -v));
+    const pos = (a: (number | null)[]) => a.map((v) => (v == null ? null : Math.max(0, v)));
+    const below = (a: (number | null)[]) => a.map((v) => (v == null ? null : Math.min(0, v)));
+    const s: ChartSpec[] = [
+      {
+        key: "gap",
+        title: gapUnit === "s" ? "Écart (secondes)" : "Écart (mètres)",
+        hint: "au-dessus : tu perds · en dessous : tu gagnes",
+        unit: gapUnit,
+        digits: gapUnit === "s" ? 2 : 0,
+        height: 120,
+        zeroLine: true,
+        signed: true,
+        labels: true,
+        series: [
+          { label: "", color: "transparent", data: pos(view.gap), fill: "rgba(255,212,0,0.16)", width: 0, silent: true },
+          { label: "", color: "transparent", data: below(view.gap), fill: "rgba(43,213,118,0.18)", width: 0, silent: true },
+          { label: "Écart", color: LOSS, data: view.gap, width: 1.8 },
+        ],
+      },
+      {
+        key: "speed",
+        title: "Vitesse",
+        unit: "km/h",
+        digits: 0,
+        height: 160,
+        series: [
+          { label: "Réf.", color: REF_COLOR, data: view.ref.speed, dash: [5, 4], width: 1.4 },
+          { label: "Toi", color: CMP_COLOR, data: view.cmp.speed, width: 2 },
+        ],
+      },
+      {
+        key: "pedals",
+        title: "Pédales",
+        hint: "gaz ↑ · frein ↓",
+        unit: "%",
+        digits: 0,
+        height: 130,
+        range: [-100, 100],
+        zeroLine: true,
+        series: [
+          { label: "Gaz réf.", color: "rgba(143,180,255,0.9)", data: view.ref.throttle, dash: [5, 4], width: 1.2 },
+          { label: "Frein réf.", color: "rgba(143,180,255,0.9)", data: neg(view.ref.brake), dash: [5, 4], width: 1.2, abs: true },
+          { label: "Gaz", color: THR, data: view.cmp.throttle, width: 1.8 },
+          { label: "Frein", color: BRK, data: neg(view.cmp.brake), width: 1.8, abs: true, fill: "rgba(255,90,78,0.12)" },
+        ],
+      },
     ];
-    if (cmp.line_offset_m) {
-      specs.push({ key: "line", title: "Trajectoire : écart à la référence (au-dessus de zéro = plus à gauche)", unit: "m", digits: 1, height: 90, zeroLine: true, series: [{ label: "Écart", color: CMP, data: d(cmp.line_offset_m)!, fill: "rgba(255,42,31,0.08)" }] });
+    if (more && view.line) {
+      s.push({ key: "line", title: "Trajectoire", hint: "écart latéral, au-dessus = plus à gauche que la réf.", unit: "m", digits: 1, height: 90, zeroLine: true, series: [{ label: "Écart", color: CMP_COLOR, data: view.line, fill: "rgba(255,59,48,0.08)" }] });
     }
-    if (!simple && r.gear && c.gear) {
-      specs.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 64, series: [{ label: "Réf.", color: REF, data: d(r.gear)! }, { label: "Tour", color: CMP, data: d(c.gear)! }] });
+    if (more && view.ref.gear && view.cmp.gear) {
+      s.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 64, series: [{ label: "Réf.", color: REF_COLOR, data: view.ref.gear, dash: [5, 4] }, { label: "Toi", color: CMP_COLOR, data: view.cmp.gear, width: 1.8 }] });
     }
-    if (!simple && r.steer_deg && c.steer_deg) {
-      specs.push({ key: "steer", title: "Volant", unit: "°", digits: 0, height: 90, zeroLine: true, series: [{ label: "Réf.", color: REF, data: d(r.steer_deg)! }, { label: "Tour", color: CMP, data: d(c.steer_deg)! }] });
+    if (more && view.ref.steer && view.cmp.steer) {
+      s.push({ key: "steer", title: "Volant", unit: "°", digits: 0, height: 90, zeroLine: true, series: [{ label: "Réf.", color: REF_COLOR, data: view.ref.steer, dash: [5, 4] }, { label: "Toi", color: CMP_COLOR, data: view.cmp.steer, width: 1.8 }] });
     }
-    const markers = cmp.corners.map((k) => ({ at: k.corner.apex_m, label: k.corner.name }));
-    return { x: decimate(r.dist, every), specs, markers };
-  }, [cmp, every, simple]);
+    return s;
+  }, [view, gapUnit, more]);
 
   // Relecture : curseur qui suit la voiture et, si activé, fenêtre glissante autour d'elle.
   useEffect(() => {
     if (!store) return;
     let lastWin: number | null = null;
     let wasFollow = store.get().chartFollow;
-    const xmax = x[x.length - 1] ?? 0;
+    const xmax = view.x[view.x.length - 1] ?? 0;
+    const xmin = view.x[0] ?? 0;
+    const win = WINDOW[view.axis];
     const apply = () => {
       const st = store.get();
-      const { ci } = positionsAt(cmp, st.t);
-      const xv = x[Math.min(x.length - 1, Math.round(ci / every))];
+      const xv = view.axis === "time" ? st.t : cmp.cmp_trace.dist[positionsAt(cmp, st.t).ci];
       if (xv == null) return;
       programmatic = true;
       try {
-        if (st.chartFollow && !st.fromChart && (lastWin == null || Math.abs(xv - lastWin) > 1.5)) {
+        if (st.chartFollow && !st.fromChart && (lastWin == null || Math.abs(xv - lastWin) > win / 400)) {
           lastWin = xv;
-          const min = Math.max(0, Math.min(xmax - WINDOW_M, xv - WINDOW_M * 0.35));
-          for (const u of plots.current.values()) u.setScale("x", { min, max: min + WINDOW_M });
+          const min = Math.max(xmin, Math.min(xmax - win, xv - win * 0.35));
+          for (const u of plots.current.values()) u.setScale("x", { min, max: min + win });
         } else if (!st.chartFollow && wasFollow) {
           lastWin = null;
-          for (const u of plots.current.values()) u.setScale("x", { min: 0, max: xmax });
+          for (const u of plots.current.values()) u.setScale("x", { min: xmin, max: xmax });
         }
         wasFollow = st.chartFollow;
-        for (const u of plots.current.values()) {
-          u.setCursor({ left: u.valToPos(xv, "x"), top: u.over.clientHeight / 2 });
-        }
+        for (const u of plots.current.values()) u.setCursor({ left: u.valToPos(xv, "x"), top: u.over.clientHeight / 2 });
       } finally {
         programmatic = false;
       }
     };
     return store.subscribe(apply);
-  }, [store, cmp, x, every]);
-
-  const missing = [!cmp.ref_trace.gear || !cmp.cmp_trace.gear ? "rapport" : null, !cmp.ref_trace.steer_deg || !cmp.cmp_trace.steer_deg ? "volant" : null].filter(Boolean);
+  }, [store, cmp, view]);
 
   return (
     <div className="charts">
-      <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
-        <div className="legend">
-          <span><i style={{ background: REF }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`})</span>
-          <span><i style={{ background: CMP }} />Tour analysé ({cmp.compared.number})</span>
-        </div>
-        {missing.length > 0 && !simple && <span className="muted" style={{ fontSize: 12 }}>Canaux non disponibles : {missing.join(", ")}</span>}
-      </div>
       {specs.map((s, i) => (
         <SyncedChart
-          key={s.key}
-          x={x}
+          key={`${s.key}-${view.axis}-${view.gapUnit}`}
+          view={view}
           spec={s}
-          syncKey="apex"
-          markers={markers}
+          selected={selected}
           onReady={onReady}
           showX={i === specs.length - 1}
-          onCursor={(k) => onCursor(k == null ? null : Math.min(k * every, cmp.ref_trace.dist.length - 1))}
+          onCursor={(k) => onCursorTime(k == null ? null : view.cmpTime[k] ?? null)}
         />
       ))}
     </div>

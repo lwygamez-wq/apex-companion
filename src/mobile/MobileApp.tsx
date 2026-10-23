@@ -263,7 +263,7 @@ function LapScreen({ s, lapId }: { s: MobileSession; lapId: number }) {
       {tab === "courbes" && (
         <>
           <ReplayPanel cmp={c} store={store} compact />
-          <TelemetryCharts cmp={c} simple store={store} onCursor={(i) => { if (i != null && !store.get().playing) store.seek(c.cmp_trace.time[i] ?? 0, true); }} />
+          <TelemetryCharts cmp={c} store={store} onCursorTime={(t) => { if (t != null && !store.get().playing) store.seek(t, true); }} />
         </>
       )}
       {tab === "virages" && (

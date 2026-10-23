@@ -13,8 +13,9 @@ const VERDICT: Record<RiskVerdict, { label: string; cls: string }> = {
  * Carte de risque : gain disponible contre probabilité de sortie, virage par virage,
  * sur toutes les sessions du même circuit et de la même voiture.
  */
-export function RiskCard({ risk, headline, onCorner, compact = false }: { risk: CornerRisk[]; headline: string | null; onCorner?: (apexM: number) => void; compact?: boolean }) {
+export function RiskCard({ risk, headline, onCorner, compact = false, limit }: { risk: CornerRisk[]; headline: string | null; onCorner?: (apexM: number) => void; compact?: boolean; limit?: number }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
   const judged = risk.filter((r) => r.verdict !== "insufficient");
   if (risk.length === 0) return null;
   const sessions = Math.max(0, ...risk.map((r) => r.sessions));
@@ -28,7 +29,7 @@ export function RiskCard({ risk, headline, onCorner, compact = false }: { risk: 
       {headline && <div className="risk-headline">{headline}</div>}
       {judged.length === 0 && <div className="muted">Il faut au moins 4 tours lancés sur ce circuit avec cette voiture pour juger le risque par virage.</div>}
       <div className="risk-grid">
-        {judged.map((r) => {
+        {(limit && !all ? judged.slice(0, limit) : judged).map((r) => {
           const v = VERDICT[r.verdict];
           const isOpen = open === r.name;
           return (
@@ -49,6 +50,9 @@ export function RiskCard({ risk, headline, onCorner, compact = false }: { risk: 
           );
         })}
       </div>
+      {limit != null && judged.length > limit && (
+        <button className="btn ghost small" style={{ marginTop: 8 }} onClick={() => setAll((v) => !v)}>{all ? "Réduire" : `Voir les ${judged.length - limit} autres virages`}</button>
+      )}
       <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
         « À prendre » = répéter ton propre meilleur passage propre, pas celui d'un autre pilote. Une sortie coûte aussi un tour invalide et un incident, non comptés ici.
       </div>
