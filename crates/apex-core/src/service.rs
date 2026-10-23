@@ -60,6 +60,13 @@ pub struct AppSettings {
     pub garage61_drivers: Vec<String>,
     /// Dossier de téléchargements à surveiller (vide = dossier Téléchargements de Windows, où qu'il soit).
     pub downloads_dir: Option<String>,
+    /// Voix du coach : « windows » (synthèse de Windows) ou une voix naturelle de `tts::VOICES`.
+    #[serde(default = "default_voice")]
+    pub coach_voice: String,
+}
+
+fn default_voice() -> String {
+    "windows".into()
 }
 
 impl Default for AppSettings {
@@ -83,6 +90,7 @@ impl Default for AppSettings {
             watch_downloads: true,
             garage61_drivers: vec![],
             downloads_dir: None,
+            coach_voice: default_voice(),
         }
     }
 }
@@ -360,6 +368,8 @@ pub struct AppService {
     /// avec « supprimer après envoi ») peut effacer le fichier quelques secondes après la fin de
     /// l'écriture, avant qu'Apex ait pu l'importer. `None` : pas de garde (tests en mémoire).
     keep_dir: Option<PathBuf>,
+    /// Voix naturelles du coach (moteur et voix téléchargés à la demande).
+    tts: Option<crate::tts::Tts>,
     /// Fichiers déjà gardés (ou déjà importés) pendant ce lancement : évite de retoucher la base à chaque tour de boucle.
     guarded: Mutex<std::collections::HashSet<String>>,
 }
@@ -515,6 +525,7 @@ impl AppService {
             risk_cache: Mutex::new(None),
             retried: Mutex::new(Default::default()),
             keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
+            tts: db.parent().map(|d| crate::tts::Tts::new(d.join("voix"))),
             guarded: Mutex::new(Default::default()),
         })
     }
@@ -527,6 +538,7 @@ impl AppService {
             risk_cache: Mutex::new(None),
             retried: Mutex::new(Default::default()),
             keep_dir: None,
+            tts: None,
             guarded: Mutex::new(Default::default()),
         })
     }
@@ -1476,6 +1488,23 @@ impl AppService {
             meta,
             laps,
         })
+    }
+
+    /// Voix naturelles disponibles : (identifiant, libellé, installée).
+    pub fn tts_voices(&self) -> Vec<(String, String, bool)> {
+        crate::tts::VOICES.iter().map(|v| (v.id.to_string(), v.label.to_string(), self.tts.as_ref().is_some_and(|t| t.installed(v.id)))).collect()
+    }
+
+    /// Télécharge le moteur vocal et la voix si besoin.
+    pub fn tts_install(&self, id: &str) -> Result<()> {
+        let t = self.tts.as_ref().ok_or_else(|| ServiceError::User("voix naturelles indisponibles".into()))?;
+        t.install(id).map_err(|e| ServiceError::User(e.to_string()))
+    }
+
+    /// Message prononcé par une voix naturelle (fichier WAV).
+    pub fn tts_speak(&self, id: &str, text: &str) -> Result<Vec<u8>> {
+        let t = self.tts.as_ref().ok_or_else(|| ServiceError::User("voix naturelles indisponibles".into()))?;
+        t.synthesize(id, text).map_err(|e| ServiceError::User(e.to_string()))
     }
 
     /// Noms de virages donnés par le pilote pour ce circuit.

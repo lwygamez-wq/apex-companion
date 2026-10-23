@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, onCoach, onStatus } from "./api";
-import { speak } from "./voice";
+import { setCoachVoice, speak } from "./voice";
 import type { StatusPayload } from "./types";
 
 export interface Async<T> {
@@ -35,8 +35,9 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): Async<T> {
 /** Voix du coach : active tant que l'application est ouverte, quelle que soit la page affichée. */
 export function useCoachVoice(): void {
   useEffect(() => {
+    api.settings().then((s) => setCoachVoice(s.coach_voice)).catch(() => undefined);
     const un = onCoach((e) => {
-      if (e.speak) speak(e.message.text);
+      if (e.speak) void speak(e.message.text);
     });
     return () => {
       void un.then((f) => f());

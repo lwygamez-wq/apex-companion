@@ -243,3 +243,6 @@ td.num, th.num { text-align: right; }
 .radio-msg.invalid { border-left-color: #ff8a00; }
 .radio-text { font-size: 15px; line-height: 1.4; margin-top: 4px; }
 .radio-msg.latest .radio-text { font-size: 18px; font-weight: 700; }
+.voice-list { display: flex; flex-direction: column; gap: 4px; }
+.voice-opt { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; background: var(--panel-2); border-radius: var(--radius); padding: 6px 10px; cursor: pointer; border-left: 3px solid transparent; }
+.voice-opt.on { border-left-color: var(--red); }

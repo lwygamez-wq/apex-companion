@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { api } from "../lib/api";
 import { delta, lapTime } from "../lib/format";
+import { useAsync } from "../lib/hooks";
 import type { StatusPayload } from "../lib/types";
-import { speak, voiceAvailable, voiceName } from "../lib/voice";
+import { coachVoice, setCoachVoice, speak, voiceAvailable, voiceName } from "../lib/voice";
+
+const SAMPLE = "Radio check. Plus 3 dixièmes. Sur les 3 derniers tours, focus virage 16, secteur 3 : 3 dixièmes perdus. Freine 10 mètres plus tard.";
 
 /**
  * Coach vocal en direct : à chaque passage de la ligne, synthèse des derniers tours contre la
@@ -10,10 +14,35 @@ import { speak, voiceAvailable, voiceName } from "../lib/voice";
 export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
   const live = status?.live;
   const msgs = [...(status?.coach ?? [])].reverse();
-  const [voice, setVoice] = useState<string | null>(voiceName());
-  const test = () => {
-    speak("Radio check. Plus 3 dixièmes. Sur les 3 derniers tours, focus virage 16, secteur 3 : 3 dixièmes perdus. Freine 10 mètres plus tard.");
-    setTimeout(() => setVoice(voiceName()), 300);
+  const [winVoice, setWinVoice] = useState<string | null>(voiceName());
+  const voices = useAsync(() => api.ttsVoices(), []);
+  const [sel, setSel] = useState(coachVoice());
+  const [busy, setBusy] = useState<string | null>(null);
+  const choose = async (id: string) => {
+    setSel(id);
+    setBusy(null);
+    try {
+      const s = await api.settings();
+      await api.saveSettings({ ...s, coach_voice: id });
+      setCoachVoice(id);
+    } catch (e) {
+      setBusy(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const test = async () => {
+    if (sel !== "windows" && !voices.data?.find((v) => v.id === sel)?.installed) {
+      setBusy("Téléchargement de la voix (environ 80 Mo la première fois)…");
+      try {
+        await api.ttsInstall(sel);
+        voices.reload();
+      } catch (e) {
+        setBusy(e instanceof Error ? e.message : String(e));
+        return;
+      }
+    }
+    setBusy(null);
+    await speak(SAMPLE, sel);
+    setTimeout(() => setWinVoice(voiceName()), 300);
   };
   return (
     <>
@@ -39,13 +68,20 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
         <div>
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Voix</h2>
-            {!voiceAvailable() && <div className="warning">Synthèse vocale indisponible sur ce poste.</div>}
-            <div className="muted" style={{ marginBottom: 8 }}>
-              {voice ? `Voix : ${voice}` : "Aucune voix française détectée : Windows utilisera sa voix par défaut. Paramètres Windows → Heure et langue → Voix pour en ajouter une."}
+            <div className="voice-list">
+              {[{ id: "windows", label: "Windows (synthèse intégrée)", installed: true }, ...(voices.data ?? [])].map((v) => (
+                <label key={v.id} className={`voice-opt ${sel === v.id ? "on" : ""}`}>
+                  <input type="radio" name="voice" checked={sel === v.id} onChange={() => void choose(v.id)} />
+                  <span>{v.label}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>{v.id === "windows" ? (winVoice ?? "voix par défaut") : v.installed ? "installée" : "naturelle · à télécharger"}</span>
+                </label>
+              ))}
             </div>
-            <button className="btn primary" onClick={test}>Tester la voix</button>
+            <button className="btn primary" onClick={() => void test()} style={{ marginTop: 8 }}>{sel !== "windows" && !voices.data?.find((v) => v.id === sel)?.installed ? "Télécharger et tester" : "Tester la voix"}</button>
+            {busy && <div className="muted" style={{ marginTop: 8 }}>{busy}</div>}
+            {!voiceAvailable() && sel === "windows" && <div className="warning">Synthèse vocale Windows indisponible sur ce poste.</div>}
             <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-              Un seul message par tour, au passage de la ligne. Réglages : « Audio » coupe la voix, « Actif en course » la coupe en course.
+              Voix naturelles : synthèse neuronale hors ligne (Piper), téléchargée une fois puis utilisée sans connexion. Un seul message par tour, au passage de la ligne. Réglages : « Audio » coupe la voix, « Actif en course » la coupe en course.
             </div>
           </div>
           <div className="card" style={{ marginBottom: 14 }}>

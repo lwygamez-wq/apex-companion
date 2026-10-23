@@ -422,6 +422,8 @@ export interface AppSettings {
   watch_downloads: boolean;
   garage61_drivers: string[];
   downloads_dir: string | null;
+  /** « windows » ou identifiant d'une voix naturelle. */
+  coach_voice: string;
 }
 
 export interface SessionFilter {
@@ -474,4 +476,10 @@ export interface RecoverReport {
   sessions: number;
   laps: number;
   messages: string[];
+}
+
+export interface VoiceInfo {
+  id: string;
+  label: string;
+  installed: boolean;
 }

@@ -31,6 +31,8 @@ jobs:
         run: npm ci
 
       - name: Tests
+        env:
+          APEX_TTS_E2E: "1"
         run: |
           cargo test -p apex-core
           cargo test -p apex-companion

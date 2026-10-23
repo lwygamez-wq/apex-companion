@@ -18,6 +18,30 @@ async fn blocking<T: Send + 'static>(svc: Arc<AppService>, f: impl FnOnce(&AppSe
         .map_err(|e| ServiceError::User(format!("tâche interrompue : {e}")))?
 }
 
+#[derive(serde::Serialize)]
+pub struct VoiceInfo {
+    pub id: String,
+    pub label: String,
+    pub installed: bool,
+}
+
+#[tauri::command]
+pub fn tts_voices(state: State<'_, AppState>) -> Vec<VoiceInfo> {
+    state.svc.tts_voices().into_iter().map(|(id, label, installed)| VoiceInfo { id, label, installed }).collect()
+}
+
+#[tauri::command]
+pub async fn tts_install(state: State<'_, AppState>, voice: String) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.tts_install(&voice)).await
+}
+
+/// WAV brut (ArrayBuffer côté interface) : pas d'encodage JSON d'un tableau d'octets.
+#[tauri::command]
+pub async fn tts_speak(state: State<'_, AppState>, voice: String, text: String) -> R<tauri::ipc::Response> {
+    let wav = blocking(state.svc.clone(), move |s| s.tts_speak(&voice, &text)).await?;
+    Ok(tauri::ipc::Response::new(wav))
+}
+
 #[tauri::command]
 pub fn get_status(state: State<'_, AppState>) -> StatusPayload {
     state.status.lock().map(|s| s.clone()).unwrap_or_default()
