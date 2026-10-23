@@ -967,7 +967,16 @@ impl AppService {
             }
             rep.messages.push(m);
         }
+        if !rep.messages.iter().any(|m| m.contains("trop de requêtes") || m.contains("jeton")) {
+            self.db().set_setting("garage61_last_recover", &now_secs().to_string())?;
+        }
         Ok(rep)
+    }
+
+    /// Vrai si la dernière récupération automatique de tes sessions Garage 61 date de plus de `hours` heures.
+    pub fn garage61_recover_due(&self, hours: i64) -> bool {
+        let last = self.db().get_setting("garage61_last_recover").ok().flatten().and_then(|v| v.parse::<i64>().ok()).unwrap_or(0);
+        now_secs() - last >= hours * 3600
     }
 
     /// Vrai si la dernière recherche complète Garage 61 date de plus de `hours` heures (ou n'a jamais eu lieu).
@@ -2168,6 +2177,11 @@ mod tests {
         let g = group_into_sessions(vec![l("c", 1000 + 111 * 2), l("a", 1000), l("b", 1111), l("d", 1000 + 111 * 3 + 360), l("e", 9000)], 1200);
         assert_eq!(g.iter().map(|s| s.iter().map(|x| x.id.as_str()).collect::<String>()).collect::<Vec<_>>(), vec!["abcd", "e"]);
         assert!(local_offset_at(1_792_746_014).abs() <= 14 * 3600);
+        // Récupération automatique : due au premier lancement, puis une fois par jour.
+        let svc = AppService::in_memory().unwrap();
+        assert!(svc.garage61_recover_due(24));
+        svc.db().set_setting("garage61_last_recover", &now_secs().to_string()).unwrap();
+        assert!(!svc.garage61_recover_due(24));
     }
 
     #[test]

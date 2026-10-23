@@ -62,18 +62,35 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             let settings = svc.settings();
             if Instant::now() >= next_g61_check {
                 next_g61_check = Instant::now() + Duration::from_secs(3600);
-                if settings.garage61_auto && settings.garage61_token.as_deref().is_some_and(|t| !t.trim().is_empty()) && svc.garage61_full_scan_due(24) {
+                // Garage 61, dans un seul fil pour ne pas dépasser la limite de débit de l'API gratuite :
+                // 1) tes sessions envoyées sur Garage 61 mais absentes d'Apex (fichier .ibt effacé avant import),
+                //    récupérées au plus une fois par jour et dès le premier lancement ;
+                // 2) recherche de références pour toutes les sessions déjà roulées, au plus une fois par jour.
+                let enabled = settings.garage61_auto && settings.garage61_token.as_deref().is_some_and(|t| !t.trim().is_empty());
+                let (recover, refs) = (enabled && svc.garage61_recover_due(24), enabled && svc.garage61_full_scan_due(24));
+                if recover || refs {
                     let (svc2, app2, status2) = (svc.clone(), app.clone(), status.clone());
                     std::thread::spawn(move || {
-                        let msg = match svc2.find_garage61_references_all() {
-                            Ok(v) => format!("Garage 61 : {}", v.join(" ; ")),
-                            Err(e) => format!("Garage 61 : {e}"),
+                        let say = |msg: String| {
+                            log::info!("{msg}");
+                            if let Ok(mut s) = status2.lock() {
+                                s.last_auto_import = Some(msg);
+                            }
+                            let _ = app2.emit("apex://sessions-changed", ());
                         };
-                        log::info!("{msg}");
-                        if let Ok(mut s) = status2.lock() {
-                            s.last_auto_import = Some(msg);
+                        if recover {
+                            say(match svc2.recover_garage61_sessions(30) {
+                                Ok(r) if r.sessions > 0 => format!("Garage 61 : {} session(s) récupérée(s) ({} tours)", r.sessions, r.laps),
+                                Ok(r) => format!("Garage 61 : aucune session à récupérer ({})", r.messages.join(" ; ")),
+                                Err(e) => format!("Garage 61, récupération : {e}"),
+                            });
                         }
-                        let _ = app2.emit("apex://sessions-changed", ());
+                        if refs {
+                            say(match svc2.find_garage61_references_all() {
+                                Ok(v) => format!("Garage 61 : {}", v.join(" ; ")),
+                                Err(e) => format!("Garage 61 : {e}"),
+                            });
+                        }
                     });
                 }
             }
