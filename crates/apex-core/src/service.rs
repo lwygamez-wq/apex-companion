@@ -310,6 +310,14 @@ pub struct ExternalImport {
     pub setup: Option<SetupType>,
 }
 
+/// Référence externe à classer (fixed / open).
+#[derive(Debug, Clone, Serialize)]
+pub struct UntypedReference {
+    pub session_id: i64,
+    pub driver: String,
+    pub lap_time_s: Option<f64>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ConnectorInfo {
     pub id: SimId,
@@ -362,6 +370,9 @@ pub struct SessionDetail {
     pub profile: Option<SessionProfile>,
     /// Circuit et configuration reconnus dans la banque OpenStreetMap.
     pub bank: Option<crate::trackdb::BankMatch>,
+    /// Tours d'autres pilotes sur ce circuit et cette voiture dont la série (fixed / open) n'est pas
+    /// précisée : ils ne servent pas de référence tant que la série de ta session est connue.
+    pub untyped_references: Vec<UntypedReference>,
     pub laps: Vec<LapRow>,
     pub best_lap_id: Option<i64>,
     pub theoretical_best_s: Option<f64>,
@@ -1626,6 +1637,15 @@ impl AppService {
             None => None,
         };
         let bank = ref_trace.as_ref().and_then(|t| self.bank_for(&db, &meta, t));
+        let untyped_references = if meta.setup.is_some() {
+            db.list_sessions(&SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), external: Some(true), ..Default::default() })?
+                .into_iter()
+                .filter(|s| s.track_config == meta.track_config && s.setup.is_none())
+                .map(|s| UntypedReference { session_id: s.id, driver: s.external_driver.unwrap_or_default(), lap_time_s: s.best_lap_s })
+                .collect()
+        } else {
+            vec![]
+        };
         let profile = match db.session_profile(id)? {
             Some(p) => Some(p),
             None => db.latest_profile(&meta.track, &meta.car)?,
@@ -1633,6 +1653,7 @@ impl AppService {
         Ok(SessionDetail {
             id,
             bank,
+            untyped_references,
             profile,
             race,
             reference_label,
@@ -1852,14 +1873,19 @@ impl AppService {
     }
 
     /// Référence perso (à toi ou externe) du circuit et de la voiture, pour le type de série de `meta` :
-    /// d'abord une référence du même type (fixed / open), sinon une référence de type inconnu.
-    /// Une référence de l'autre type n'est jamais utilisée (vitesses de pointe et freinages différents).
+    /// d'abord une référence du même type (fixed / open), sinon une de tes références de type inconnu.
+    /// Une référence de l'autre type n'est jamais utilisée (vitesses de pointe et freinages différents),
+    /// ni un tour d'un autre pilote dont la série n'est pas précisée quand celle de ta session est connue :
+    /// mieux vaut ton propre meilleur tour qu'un tour fixed pris pour une course open.
     fn personal_reference(db: &Store, meta: &SessionMeta) -> Result<Option<i64>> {
         let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() };
         let ext = SessionFilter { external: Some(true), ..f.clone() };
         let mut fallback = None;
         for s in db.list_sessions(&f)?.into_iter().chain(db.list_sessions(&ext)?) {
             if s.track_config != meta.track_config || !SetupType::compatible(s.setup, meta.setup) {
+                continue;
+            }
+            if s.external_driver.is_some() && s.setup.is_none() && meta.setup.is_some() {
                 continue;
             }
             // Seul un tour lancé complet peut servir de référence (un ancien choix sur un tour incomplet est ignoré).
@@ -2439,19 +2465,27 @@ mod tests {
             let name = crate::ingest::garage61::parse_file_name(&fname).unwrap();
             svc.import_garage61_text(name, &csv, fname, setup).unwrap()
         };
-        // Référence de type inconnu seule : utilisée partout, avec un avertissement.
+        // Tour d'un autre pilote sans série précisée : jamais pris d'office pour une session de série connue
+        // (cas réel : une course open analysée avec la référence fixed). La session le signale.
         let nathan = import("Nathan Open", "N1", None);
         let d = svc.session_detail(fid).unwrap();
-        assert_eq!(d.analysis_reference_lap_id, Some(nathan.lap_id));
-        assert!(d.reference_label.as_deref().unwrap().contains("série inconnue"), "{:?}", d.reference_label);
+        assert_ne!(d.analysis_reference_lap_id, Some(nathan.lap_id));
+        assert_eq!(d.untyped_references.len(), 1);
+        assert!(svc.live_reference(&fixed.meta).unwrap().unwrap().label.starts_with("ton meilleur tour"));
+        // Comparaison choisie à la main : avertissement explicite.
         let c = svc.compare(nathan.lap_id, d.laps[1].id, 1.0).unwrap();
         assert!(c.warnings.iter().any(|w| w.contains("Type de série de la référence inconnu")), "{:?}", c.warnings);
         // Cas réel : la référence fixed a été importée avant la mise à jour (type inconnu) et a pris la place
         // de Nathan. Le pilote précise ensuite les deux types : chacun redevient la référence de sa série.
         let anthony = import("Anthony Fixed", "A1", None);
         assert!(!svc.db().lap(nathan.lap_id).unwrap().is_reference);
+        // Course open : les deux références sans série, aucune n'est prise.
+        let dop0 = svc.session_detail(oid).unwrap();
+        assert!(![nathan.lap_id, anthony.lap_id].contains(&dop0.analysis_reference_lap_id.unwrap()));
+        assert_eq!(dop0.untyped_references.len(), 2);
         svc.set_session_setup(nathan.session_id, Some(SetupType::Open)).unwrap();
         svc.set_session_setup(anthony.session_id, Some(SetupType::Fixed)).unwrap();
+        assert!(svc.session_detail(oid).unwrap().untyped_references.is_empty());
         // Les deux références coexistent : une par type de série.
         let refs: Vec<i64> = [nathan.lap_id, anthony.lap_id].into_iter().filter(|id| svc.db().lap(*id).unwrap().is_reference).collect();
         assert_eq!(refs.len(), 2, "une référence fixed et une open");

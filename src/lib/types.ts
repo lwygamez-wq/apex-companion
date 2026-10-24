@@ -137,7 +137,14 @@ export interface BankMatch {
   fit_m: number;
 }
 
+export interface UntypedReference {
+  session_id: number;
+  driver: string;
+  lap_time_s: number | null;
+}
+
 export interface SessionDetail {
+  untyped_references: UntypedReference[];
   profile: SessionProfile | null;
   bank: BankMatch | null;
   id: number;

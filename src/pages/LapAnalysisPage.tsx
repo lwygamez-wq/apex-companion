@@ -235,6 +235,21 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
             </div>
           )}
 
+          {d.untyped_references.length > 0 && (
+            <div className="warning untyped">
+              <div>
+                Ta session est en série <b>{d.meta.setup === "fixed" ? "Fixed" : "Open"}</b>. Ces références d'autres pilotes n'ont pas de série précisée :
+                elles ne sont pas utilisées, pour ne pas comparer un tour fixed à un tour open. Indique leur série :
+              </div>
+              {d.untyped_references.map((u) => (
+                <div key={u.session_id} className="row" style={{ gap: 8, marginTop: 6 }}>
+                  <b>{u.driver}</b> <span className="mono">{lapTime(u.lap_time_s)}</span>
+                  <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "fixed").then(() => (detail.reload(), overlay.reload()))}>Fixed</button>
+                  <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "open").then(() => (detail.reload(), overlay.reload()))}>Open</button>
+                </div>
+              ))}
+            </div>
+          )}
           {cmp.error && <div className="error">{cmp.error}</div>}
           {c?.warnings.map((w) => <div key={w} className="warning">⚠ {w}</div>)}
           {refId === cmpId && <div className="warning">Choisis deux tours différents.</div>}
