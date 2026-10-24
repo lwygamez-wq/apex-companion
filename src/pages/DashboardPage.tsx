@@ -3,7 +3,7 @@ import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
 import { PlanCard } from "../components/PlanCard";
 import { api, onSessionsChanged } from "../lib/api";
-import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
+import { dateTime, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 
 function Sparkline({ points }: { points: [number, number][] }) {
@@ -37,20 +37,18 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
   return (
     <>
       <div className="page-title">
-        <h1>Tableau de bord</h1>
-        <button className="btn" onClick={() => navigate({ page: "live" })}>Ouvrir le Live Coach</button>
+        <h1>Accueil</h1>
+        {s && <ImportActions compact onDone={dash.reload} />}
       </div>
       {dash.error && <div className="error">{dash.error}</div>}
-      {msg && <div className="warning">{msg}</div>}
+      {msg && <div className="warning" onClick={() => setMsg(null)}>{msg}</div>}
       {autolog.data?.enabled === false && (
-        <div className="card" style={{ marginBottom: 14, borderColor: "#5c4a14" }}>
-          <div className="row" style={{ justifyContent: "space-between" }}>
-            <div>
-              <b>iRacing n'enregistre tes sessions que si tu appuies sur Alt+L.</b>
-              <div className="muted" style={{ fontSize: 12 }}>Active l'enregistrement automatique pour ne jamais perdre une session (iRacing doit être fermé). Environ 200 Mo par heure de roulage.</div>
-            </div>
-            <button className="btn primary" onClick={() => run(api.setIracingAutolog(true), "Enregistrement automatique activé : toutes tes sessions iRacing seront enregistrées.")}>Activer</button>
+        <div className="card notice">
+          <div>
+            <b>iRacing n'enregistre tes sessions que si tu appuies sur Alt+L.</b>
+            <div className="muted" style={{ fontSize: 12 }}>Active l'enregistrement automatique (iRacing fermé). Environ 200 Mo par heure de roulage.</div>
           </div>
+          <button className="btn primary" onClick={() => run(api.setIracingAutolog(true), "Enregistrement automatique activé.")}>Activer</button>
         </div>
       )}
       {d && !s && (
@@ -61,79 +59,59 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
         </div>
       )}
       {s && d && (
-        <div className="grid" style={{ gap: 14 }}>
-          <div className="grid cols-4">
-            <div className="card">
-              <h2>Dernière session</h2>
-              <div style={{ fontWeight: 600 }}>{s.track}{s.track_config ? `, ${s.track_config}` : ""}</div>
-              <div className="kpi-sub">{s.car}, {s.sim_name}</div>
-              <div className="kpi-sub">{SESSION_KIND_FR[s.kind]}, {dateTime(s.started_at_unix)}</div>
+        <>
+          <h3 className="section-title">Dernière session</h3>
+          <div className="session-strip clickable" role="button" tabIndex={0} onClick={() => navigate({ page: "analysis", sessionId: s.id })} onKeyDown={(e) => e.key === "Enter" && navigate({ page: "analysis", sessionId: s.id })}>
+            <div className="ss-where">
+              <b>{s.track}</b>
+              <span className="muted">{s.car} · {SESSION_KIND_FR[s.kind]} · {dateTime(s.started_at_unix)}</span>
+              <span className="link-like">Analyser →</span>
             </div>
-            <div className="card">
-              <h2>Meilleur tour propre</h2>
-              <div className="kpi best">{lapTime(s.best_lap_s)}</div>
-              <div className="kpi-sub">{s.clean_lap_count} tour(s) propre(s) sur {s.lap_count}</div>
-            </div>
-            <div className="card">
-              <h2>Temps théorique</h2>
-              <div className="kpi best">{lapTime(d.theoretical_best_s)}</div>
-              <div className="kpi-sub">
-                {d.theoretical_best_s != null && s.best_lap_s != null ? `${delta(d.theoretical_best_s - s.best_lap_s)} s vs meilleur tour` : "Au moins 2 tours propres requis"}
-              </div>
-            </div>
-            <div className="card">
-              <h2>Régularité</h2>
-              <div className="kpi">{s.stddev_clean_s != null ? `σ ${s.stddev_clean_s.toFixed(3)} s` : "—"}</div>
-              <div className="kpi-sub">{s.mean_clean_s != null ? `moyenne ${lapTime(s.mean_clean_s)}` : "tours propres insuffisants"}</div>
-            </div>
+            <div className="ss-kpi"><span>Meilleur tour propre</span><b className="mono best">{lapTime(s.best_lap_s)}</b></div>
+            <div className="ss-kpi"><span>Théorique</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
+            <div className="ss-kpi"><span>Régularité</span><b className="mono">{s.stddev_clean_s != null ? `± ${s.stddev_clean_s.toFixed(2)} s` : "—"}</b></div>
+            <div className="ss-kpi"><span>Tours propres</span><b className="mono">{s.clean_lap_count}/{s.lap_count}</b></div>
           </div>
 
           {d.active_goal && (
-            <div className="card" style={{ borderColor: d.active_goal.result?.achieved ? "#1c5234" : "#24476b" }}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <h2 style={{ margin: 0 }}>Objectif en cours</h2>
-                <button className="btn" onClick={() => run(api.archiveGoal(d.active_goal!.id), "Objectif clôturé.")}>Clôturer</button>
-              </div>
-              <div style={{ fontWeight: 600, marginTop: 8 }}>{d.active_goal.title}</div>
-              {d.active_goal.result ? (
-                <div style={{ marginTop: 6 }}>
-                  <span className={`chip ${d.active_goal.result.achieved ? "good" : "warn"}`}>{d.active_goal.result.achieved ? "Atteint" : "Pas encore"}</span>{" "}
-                  <span className="muted">{d.active_goal.result.summary}</span>
+            <div className="card notice">
+              <div>
+                <span className="muted" style={{ fontSize: 12 }}>Objectif en cours</span>
+                <div style={{ fontWeight: 650 }}>{d.active_goal.title}</div>
+                <div className="muted" style={{ fontSize: 13 }}>
+                  {d.active_goal.result ? <><span className={`chip ${d.active_goal.result.achieved ? "good" : "warn"}`}>{d.active_goal.result.achieved ? "Atteint" : "Pas encore"}</span> {d.active_goal.result.summary}</> : "Vérifié sur ta prochaine session sur ce circuit."}
                 </div>
-              ) : (
-                <div className="muted" style={{ marginTop: 6 }}>Sera vérifié sur ta prochaine session sur ce circuit.</div>
-              )}
+              </div>
+              <button className="btn ghost small" onClick={() => run(api.archiveGoal(d.active_goal!.id), "Objectif clôturé.")}>Clôturer</button>
             </div>
           )}
 
           <PlanCard sessionId={s.id} />
 
-          <div className="grid cols-2">
-            <div className="card">
-              <h2>Principales zones de progrès</h2>
-              {d.progress_zones.length === 0 && <div className="muted">Aucune perte récurrente détectée sur la dernière session.</div>}
-              <table>
-                <thead><tr><th>Virage</th><th>Problème type</th><th className="num">Récurrence</th><th className="num">Perte moy.</th></tr></thead>
-                <tbody>
-                  {d.progress_zones.slice(0, 6).map((z) => (
-                    <tr key={z.segment} className="clickable" onClick={() => navigate({ page: "analysis", sessionId: s.id })}>
-                      <td className="mono">{z.segment}</td>
-                      <td>{z.typical_issue.split(" : ")[1] ?? z.typical_issue}</td>
-                      <td className="num">{z.occurrences}/{z.laps_compared}</td>
-                      <td className="num">{z.avg_loss_s.toFixed(2)} s</td>
-                    </tr>
+          {(d.progress_zones.length > 0 || d.consistency_trend.length >= 2) && (
+            <div className="grid cols-2" style={{ alignItems: "start" }}>
+              {d.progress_zones.length > 0 && (
+                <div className="card">
+                  <h2>Où tu perds du temps à chaque tour</h2>
+                  {d.progress_zones.slice(0, 4).map((z) => (
+                    <div key={z.segment} className="zone-row clickable" onClick={() => navigate({ page: "analysis", sessionId: s.id })}>
+                      <b>{z.segment}</b>
+                      <span className="muted">{z.typical_issue.split(" : ")[1] ?? z.typical_issue}</span>
+                      <span className="mono">{z.avg_loss_s.toFixed(2)} s</span>
+                      <span className="muted" style={{ fontSize: 12 }}>{z.occurrences}/{z.laps_compared} tours</span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
+              {d.consistency_trend.length >= 2 && (
+                <div className="card">
+                  <h2>Régularité sur ce circuit (plus bas = mieux)</h2>
+                  <Sparkline points={d.consistency_trend} />
+                </div>
+              )}
             </div>
-            <div className="card">
-              <h2>Évolution de la régularité (σ, même combo)</h2>
-              <Sparkline points={d.consistency_trend} />
-              <div className="kpi-sub">{d.total_sessions} session(s) au total</div>
-              <div style={{ marginTop: 14 }}><ImportActions onDone={dash.reload} /></div>
-            </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </>
   );

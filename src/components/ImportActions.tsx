@@ -16,7 +16,8 @@ function summarize(r: ImportReport[]): string {
   return s;
 }
 
-export function ImportActions({ onDone }: { onDone: () => void }) {
+/** Boutons d'import. `compact` : sans la démo (déjà des sessions), pour une barre d'outils. */
+export function ImportActions({ onDone, compact = false }: { onDone: () => void; compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -40,12 +41,14 @@ export function ImportActions({ onDone }: { onDone: () => void }) {
           const sel = await open({ multiple: true, filters: [{ name: "Télémétrie iRacing (.ibt) ou tour Garage 61 (.csv)", extensions: ["ibt", "csv"] }] });
           if (!sel) return "Import annulé.";
           return summarize(await api.importFiles(Array.isArray(sel) ? sel : [sel]));
-        })} title="Fichiers .ibt d'iRacing, ou tour d'un autre pilote exporté de Garage 61 (.csv) pour t'en servir de référence">Importer (.ibt, Garage 61)</button>
-        <button className="btn" disabled={busy} onClick={() => run(async () => summarize(await api.scanIracing()))}>Scanner le dossier iRacing</button>
-        <button className="btn" disabled={busy} onClick={() => run(async () => {
-          const r = await api.loadDemo();
-          return r.status === "inserted" ? "Session de démonstration ajoutée." : "Session de démonstration déjà présente.";
-        })}>Charger une session démo</button>
+        })} title="Fichiers .ibt d'iRacing, ou tour d'un autre pilote exporté de Garage 61 (.csv) pour t'en servir de référence">{compact ? "Importer" : "Importer (.ibt, Garage 61)"}</button>
+        <button className={compact ? "btn ghost" : "btn"} disabled={busy} onClick={() => run(async () => summarize(await api.scanIracing()))} title="Importe les .ibt du dossier iRacing pas encore importés">{compact ? "Scanner iRacing" : "Scanner le dossier iRacing"}</button>
+        {!compact && (
+          <button className="btn" disabled={busy} onClick={() => run(async () => {
+            const r = await api.loadDemo();
+            return r.status === "inserted" ? "Session de démonstration ajoutée." : "Session de démonstration déjà présente.";
+          })}>Charger une session démo</button>
+        )}
       </div>
       {msg && <div className="muted" style={{ marginTop: 8 }}>{msg}</div>}
     </div>

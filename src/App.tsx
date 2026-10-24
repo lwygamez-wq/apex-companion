@@ -22,12 +22,11 @@ export type Route =
   | { page: "settings" };
 
 const NAV: { page: Route["page"]; label: string }[] = [
-  { page: "dashboard", label: "Tableau de bord" },
+  { page: "dashboard", label: "Accueil" },
   { page: "sessions", label: "Sessions" },
-  { page: "analysis", label: "Analyse de tour" },
-  { page: "history", label: "Historique" },
-  { page: "comparison", label: "Comparaison" },
-  { page: "live", label: "Live Coach" },
+  { page: "analysis", label: "Analyse" },
+  { page: "history", label: "Progression" },
+  { page: "live", label: "Coach live" },
   { page: "settings", label: "Réglages" },
 ];
 

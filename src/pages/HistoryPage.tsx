@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Route } from "../App";
 import { api } from "../lib/api";
 import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
@@ -80,14 +80,14 @@ function LapChart({ laps, best, external }: { laps: HistoryLap[]; best: number |
 export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
   const circuits = useAsync(() => api.circuits(), []);
   const [sel, setSel] = useState<string | null>(null);
-  const [onlyClean, setOnlyClean] = useState(false);
+  const [onlyClean, setOnlyClean] = useState(true);
   const [sort, setSort] = useState<"date" | "time">("date");
   const current = useMemo(() => circuits.data?.find((c) => key(c) === sel) ?? circuits.data?.[0] ?? null, [circuits.data, sel]);
   const history = useAsync(
     () => (current ? api.lapHistory(current.sim, current.track, current.track_config, current.car, current.setup) : Promise.resolve([] as HistoryLap[])),
     [current ? key(current) : ""],
   );
-  useEffect(() => setOnlyClean(false), [sel]);
+
 
   const rows = useMemo(() => {
     let r = (history.data ?? []).filter((l) => l.lap_time_s != null);
@@ -102,7 +102,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
 
   return (
     <>
-      <div className="page-title"><h1>Historique</h1></div>
+      <div className="page-title"><h1>Progression</h1></div>
       {circuits.error && <div className="error">{circuits.error}</div>}
       {circuits.data?.length === 0 && <div className="card empty"><h2>Aucun circuit</h2><p>Roule une session iRacing : elle apparaîtra ici automatiquement.</p></div>}
       {current && (
@@ -156,11 +156,11 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
               </div>
               <table>
                 <thead>
-                  <tr><th>Date</th><th>Session</th><th className="num">Tour</th><th className="num">Temps</th><th className="num">Écart au record</th><th>État</th><th /></tr>
+                  <tr><th>Date</th><th>Session</th><th className="num">Tour</th><th className="num">Temps</th><th className="num">Écart au record</th><th>État</th></tr>
                 </thead>
                 <tbody>
                   {rows.map((l) => (
-                    <tr key={l.lap_id}>
+                    <tr key={l.lap_id} className="clickable" title="Analyser ce tour" onClick={() => navigate({ page: "analysis", sessionId: l.session_id, cmpLapId: l.lap_id })}>
                       <td>{dateTime(l.started_at_unix)}</td>
                       <td className="muted">{SESSION_KIND_FR[l.session_kind]}</td>
                       <td className="num">{l.number}</td>
@@ -176,7 +176,6 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                           : <span className="chip">perturbé</span>}
                         {l.is_reference && <span className="chip warn" style={{ marginLeft: 4 }}>référence</span>}
                       </td>
-                      <td><button className="btn" onClick={() => navigate({ page: "analysis", sessionId: l.session_id, cmpLapId: l.lap_id })}>Analyser</button></td>
                     </tr>
                   ))}
                 </tbody>

@@ -89,12 +89,30 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
     await speak(SAMPLE, sel);
     setTimeout(() => setWinVoice(voiceName()), 300);
   };
+  const all = [{ id: "windows", label: "Windows (synthèse intégrée)", installed: true }, ...(voices.data ?? [])];
+  const groups: [string, typeof all][] = [
+    ["Azure : les plus naturelles (en ligne)", all.filter((v) => v.id.startsWith("azure:"))],
+    ["Hors ligne (téléchargées une fois)", all.filter((v) => !v.id.startsWith("azure:") && v.id !== "windows")],
+    ["Windows", all.filter((v) => v.id === "windows")],
+  ];
+  const selInfo = all.find((v) => v.id === sel);
+  const azureMissing = sel.startsWith("azure:") && !selInfo?.installed;
   return (
     <>
-      <div className="page-title"><h1>Live Coach</h1><span className="chip warn">Nouveau : à valider en piste</span></div>
-      <div className="grid cols-2">
-        <div className="card">
+      <div className="page-title">
+        <h1>Coach live</h1>
+        <span className={`chip ${live?.on_track ? "good" : ""}`}>{status?.label ?? "—"}</span>
+      </div>
+      <div className="grid cols-2" style={{ alignItems: "start" }}>
+        <div className="card radio-card">
           <h2>Radio</h2>
+          {live && (
+            <div className="live-strip mono">
+              <span>{live.speed_kmh.toFixed(0)} km/h</span>
+              <span>rapport {live.gear}</span>
+              <span>tour {live.lap} · {(live.lap_dist_pct * 100).toFixed(0)} %</span>
+            </div>
+          )}
           {msgs.length === 0 && (
             <div className="muted">
               Lance une session iRacing : le coach annonce sa référence dès que tu es en piste, puis te parle à chaque passage de la ligne.
@@ -109,18 +127,32 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               <div className="radio-text">{m.text}</div>
             </div>
           ))}
+          <details className="how">
+            <summary>Comment le coach juge</summary>
+            <ul className="muted">
+              <li>Chaque tour est comparé à ta référence de la même série (perso ou Garage 61), sinon à ton meilleur tour propre.</li>
+              <li>Sur les 3 derniers tours propres, le virage où tu perds le plus devient le focus, et le reste tant qu'il coûte du temps.</li>
+              <li>Consigne tirée de la mesure : freiner, tourner ou accélérer plus tôt / plus tard.</li>
+              <li>Tours avec sortie de piste ou incident : non comptés, la sortie est signalée.</li>
+            </ul>
+          </details>
         </div>
         <div>
           <div className="card" style={{ marginBottom: 14 }}>
             <h2>Voix</h2>
-            <div className="voice-list">
-              {[{ id: "windows", label: "Windows (synthèse intégrée)", installed: true }, ...(voices.data ?? [])].map((v) => (
-                <label key={v.id} className={`voice-opt ${sel === v.id ? "on" : ""}`}>
-                  <input type="radio" name="voice" checked={sel === v.id} onChange={() => void choose(v.id)} />
-                  <span>{v.label}</span>
-                  <span className="muted" style={{ fontSize: 12 }}>{v.id === "windows" ? (winVoice ?? "voix par défaut") : v.id.startsWith("azure:") ? (v.installed ? "en ligne, prête" : "en ligne · clé Azure requise") : v.installed ? "installée" : "hors ligne · à télécharger"}</span>
-                </label>
-              ))}
+            <div className="voice-row">
+              <select value={sel} onChange={(e) => void choose(e.target.value)} aria-label="Voix du coach">
+                {groups.filter((g) => g[1].length > 0).map(([g, list]) => (
+                  <optgroup key={g} label={g}>
+                    {list.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label}{v.id.startsWith("azure:") ? (v.installed ? "" : " · clé requise") : v.id !== "windows" && !v.installed ? " · à télécharger" : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <button className="btn primary" onClick={() => void test()}>{sel !== "windows" && !sel.startsWith("azure:") && !selInfo?.installed ? "Télécharger et tester" : "Tester"}</button>
             </div>
             <div className="row" style={{ marginTop: 10, gap: 10 }}>
               <span className="muted">Volume</span>
@@ -131,6 +163,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
                 step={5}
                 value={vol}
                 style={{ flex: 1 }}
+                aria-label="Volume du coach"
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   setVol(v);
@@ -141,15 +174,14 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               />
               <span className="mono" style={{ width: 44, textAlign: "right" }}>{vol} %</span>
             </div>
-            <button className="btn primary" onClick={() => void test()} style={{ marginTop: 8 }}>{sel !== "windows" && !sel.startsWith("azure:") && !voices.data?.find((v) => v.id === sel)?.installed ? "Télécharger et tester" : "Tester la voix"}</button>
-            <details className="azure-box" open={sel.startsWith("azure:") && !voices.data?.find((v) => v.id === sel)?.installed}>
-              <summary>Voix Azure (les plus naturelles) : clé et région</summary>
+            <details className="azure-box" open={azureMissing}>
+              <summary>Clé Azure {voices.data?.some((v) => v.id.startsWith("azure:") && v.installed) ? "(enregistrée)" : ""}</summary>
               <div className="muted" style={{ fontSize: 12, margin: "6px 0" }}>
-                portal.azure.com → Créer une ressource → « Speech » → niveau tarifaire <b>Free F0</b> (500 000 caractères gratuits par mois) → région France Central → « Clés et point de terminaison » : copie la Clé 1 et la région. Seul le texte des messages radio est envoyé à Azure.
+                portal.azure.com → ressource « Speech », niveau <b>Free F0</b>, région France Central → « Clés et point de terminaison » : copie la Clé 1. Seul le texte des messages radio est envoyé à Azure.
               </div>
               <div className="row" style={{ gap: 8 }}>
                 <input type="password" placeholder="Clé 1" value={azKey} onChange={(e) => setAzKey(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
-                <select value={azRegion} onChange={(e) => setAzRegion(e.target.value)}>
+                <select value={azRegion} onChange={(e) => setAzRegion(e.target.value)} aria-label="Région Azure">
                   {["francecentral", "westeurope", "northeurope", "swedencentral", "uksouth", "switzerlandnorth", "eastus", "westus2"].map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <button className="btn" onClick={() => void saveAzure()}>Enregistrer</button>
@@ -157,34 +189,9 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
             </details>
             {busy && <div className="muted" style={{ marginTop: 8 }}>{busy}</div>}
             {!voiceAvailable() && sel === "windows" && <div className="warning">Synthèse vocale Windows indisponible sur ce poste.</div>}
-            <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-              Voix naturelles : synthèse neuronale hors ligne (Piper), téléchargée une fois puis utilisée sans connexion. Un seul message par tour, au passage de la ligne. Réglages : « Audio » coupe la voix, « Actif en course » la coupe en course.
-            </div>
+            {sel === "windows" && winVoice && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{winVoice}</div>}
           </div>
           <RadioControlCard status={status} />
-          <div className="card" style={{ marginBottom: 14 }}>
-            <h2>Connexion simulateur</h2>
-            <div className="kpi" style={{ fontSize: 18 }}>{status?.label ?? "—"}</div>
-            <div className="kpi-sub">Jeux détectés : {status?.running.length ? status.running.join(", ") : "aucun"}</div>
-            {live && (
-              <div className="grid cols-2 mono" style={{ marginTop: 8 }}>
-                <div>Vitesse <b>{live.speed_kmh.toFixed(0)} km/h</b></div>
-                <div>Rapport <b>{live.gear}</b></div>
-                <div>Tour <b>{live.lap}</b> ({(live.lap_dist_pct * 100).toFixed(1)} %)</div>
-                <div>En piste <b>{live.on_track ? "oui" : "non"}</b></div>
-              </div>
-            )}
-          </div>
-          <div className="card">
-            <h2>Comment il juge</h2>
-            <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-              <li>Chaque tour est comparé à ta référence (perso ou Garage 61), sinon à ton meilleur tour propre de la séance.</li>
-              <li>Synthèse des 3 derniers tours propres : le virage où tu perds le plus, et de façon répétée, devient le focus.</li>
-              <li>Consigne tirée de la mesure : freiner, tourner ou accélérer plus tôt / plus tard. Sans cause nette : « vise la corde ».</li>
-              <li>Le focus reste le même tant qu'il coûte du temps : on travaille un point à la fois.</li>
-              <li>Tours avec sortie de piste ou incident : non comptés, la sortie est signalée.</li>
-            </ul>
-          </div>
         </div>
       </div>
     </>

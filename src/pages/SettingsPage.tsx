@@ -96,29 +96,6 @@ export function SettingsPage() {
       <div className="page-title"><h1>Réglages</h1><button className="btn primary" onClick={() => void saveAll()} disabled={!s}>Enregistrer</button></div>
       {msg && <div className="warning">{msg}</div>}
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <h2>Simulateurs</h2>
-        {(connectors.data ?? []).map((c) => (
-          <div key={c.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <b>{c.name}</b>
-              <span className="muted" style={{ fontSize: 12 }}>{c.capabilities.data_source}</span>
-            </div>
-            <div className="cap-grid">
-              {CAP_LABELS.map(([k, label]) => {
-                const v = c.capabilities[k] as Support;
-                return <div className="cap" key={k}><span>{label}</span><span className={`chip ${SUPPORT_CLS[v]}`}>{SUPPORT_FR[v]}</span></div>;
-              })}
-            </div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              <div>Installation : {c.install.detail}</div>
-              <div>Processus détectés : {c.process_names.join(", ")}</div>
-              {c.capabilities.notes.map((n) => <div key={n}>• {n}</div>)}
-            </div>
-          </div>
-        ))}
-      </div>
-
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Télémétrie</h2>
@@ -241,7 +218,7 @@ export function SettingsPage() {
 
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
-          <h2>Live Coach</h2>
+          <h2>Coach live</h2>
           <div className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></div>
           <div className="form-row"><div>Audio</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></div>
           <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
@@ -285,6 +262,29 @@ export function SettingsPage() {
           )}
         </div>
       </div>
+      <details className="card" style={{ marginTop: 14 }}>
+        <summary>Simulateurs pris en charge</summary>
+        {(connectors.data ?? []).map((c) => (
+          <div key={c.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <b>{c.name}</b>
+              <span className="muted" style={{ fontSize: 12 }}>{c.capabilities.data_source}</span>
+            </div>
+            <div className="cap-grid">
+              {CAP_LABELS.map(([k, label]) => {
+                const v = c.capabilities[k] as Support;
+                return <div className="cap" key={k}><span>{label}</span><span className={`chip ${SUPPORT_CLS[v]}`}>{SUPPORT_FR[v]}</span></div>;
+              })}
+            </div>
+            <div className="muted" style={{ fontSize: 12 }}>
+              <div>Installation : {c.install.detail}</div>
+              <div>Processus détectés : {c.process_names.join(", ")}</div>
+              {c.capabilities.notes.map((n) => <div key={n}>• {n}</div>)}
+            </div>
+          </div>
+        ))}
+      </details>
+
     </>
   );
 }

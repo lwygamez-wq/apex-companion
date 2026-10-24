@@ -3,51 +3,58 @@ import { api } from "../lib/api";
 import { CONFIDENCE_FR, PRIORITY_FR } from "../lib/format";
 import type { Insight } from "../lib/types";
 
-export function InsightCard({ insight, active, onFocus, sessionId }: { insight: Insight; active?: boolean; onFocus?: () => void; sessionId?: number }) {
+/**
+ * Un conseil, lisible en 3 secondes : le virage, le problème, ce qu'il faut faire.
+ * L'explication et les mesures restent à un clic (« Pourquoi »).
+ */
+export function InsightCard({ insight, active, onFocus, sessionId, rank }: { insight: Insight; active?: boolean; onFocus?: () => void; sessionId?: number; rank?: number }) {
   const g = insight.est_gain_s;
   const [goalMsg, setGoalMsg] = useState<string | null>(null);
+  const [where, what] = insight.title.includes(" : ") ? insight.title.split(" : ", 2) : [insight.segment ?? "", insight.title];
   return (
-    <div className="insight" style={active ? { borderColor: "var(--accent)" } : undefined} onClick={onFocus}>
+    <div className={`insight ${insight.priority}`} style={active ? { borderColor: "var(--accent)" } : undefined} onClick={onFocus}>
       <div className="head">
-        <span className={`chip ${insight.priority}`}>{PRIORITY_FR[insight.priority]}</span>
-        {g && <span className="mono muted">gain estimé {g[0].toFixed(2)}–{g[1].toFixed(2)} s</span>}
+        {rank != null && <span className="insight-rank">{rank}</span>}
+        <div className="insight-title">
+          <b>{where}</b>
+          <span>{what}</span>
+        </div>
+        {g && <span className="insight-gain mono" title={`Priorité : ${PRIORITY_FR[insight.priority]}`}>≈ {g[0].toFixed(1)}–{g[1].toFixed(1)} s</span>}
       </div>
-      <h3>{insight.title}</h3>
-      <div>{insight.explanation}</div>
       <div className="rec">{insight.recommendation}</div>
-      {insight.goal && sessionId != null && (
-        <div className="row" style={{ marginTop: 8 }}>
+      <div className="insight-foot">
+        <details onClick={(e) => e.stopPropagation()}>
+          <summary>Pourquoi</summary>
+          <p>{insight.explanation}</p>
+          <table>
+            <thead>
+              <tr><th>Mesure</th><th className="num">Réf.</th><th className="num">Toi</th><th className="num">Écart</th></tr>
+            </thead>
+            <tbody>
+              {insight.evidence.map((e) => (
+                <tr key={e.label}><td>{e.label}</td><td className="num">{e.reference}</td><td className="num">{e.compared}</td><td className="num">{e.delta}</td></tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="muted" style={{ fontSize: 12 }}>Confiance : {CONFIDENCE_FR[insight.confidence]}{insight.confidence_notes.length > 0 ? ` · ${insight.confidence_notes.join(" · ")}` : ""}</div>
+        </details>
+        {insight.goal && sessionId != null && (
           <button
-            className="btn"
+            className="btn ghost small"
+            title={insight.goal.title}
+            disabled={goalMsg != null}
             onClick={(e) => {
               e.stopPropagation();
               api.addPlanObjective(sessionId, insight.goal!).then(
-                () => setGoalMsg("Ajouté au programme : le coach le privilégie et il sera vérifié sur ta prochaine séance ici."),
+                () => setGoalMsg("ajouté"),
                 (err: unknown) => setGoalMsg(err instanceof Error ? err.message : String(err)),
               );
             }}
           >
-            Ajouter au programme
+            {goalMsg === "ajouté" ? "✓ Dans le programme" : goalMsg ?? "+ Programme"}
           </button>
-          <span className="muted" style={{ fontSize: 12 }}>{goalMsg ?? insight.goal.title}</span>
-        </div>
-      )}
-      <details>
-        <summary>Données et confiance ({CONFIDENCE_FR[insight.confidence]})</summary>
-        <table>
-          <thead>
-            <tr><th>Mesure</th><th className="num">Réf.</th><th className="num">Tour</th><th className="num">Écart</th></tr>
-          </thead>
-          <tbody>
-            {insight.evidence.map((e) => (
-              <tr key={e.label}><td>{e.label}</td><td className="num">{e.reference}</td><td className="num">{e.compared}</td><td className="num">{e.delta}</td></tr>
-            ))}
-          </tbody>
-        </table>
-        {insight.confidence_notes.length > 0 && (
-          <ul>{insight.confidence_notes.map((n) => <li key={n}>{n}</li>)}</ul>
         )}
-      </details>
+      </div>
     </div>
   );
 }

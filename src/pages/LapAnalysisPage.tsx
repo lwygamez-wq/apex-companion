@@ -9,7 +9,7 @@ import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap, type MapSize } from "../components/TrackMap";
 import { ReplayStudio } from "../components/ReplayStudio";
 import { api } from "../lib/api";
-import { dateTime, LAP_KIND_FR, lapTime } from "../lib/format";
+import { dateTime, LAP_KIND_FR, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { ReplayStore, replayBounds } from "../lib/replay";
 import type { LapRow, SessionDetail, SessionProfile } from "../lib/types";
@@ -58,6 +58,8 @@ function Segmented<T extends string>({ label, value, options, onChange, title }:
   );
 }
 
+type Tab = "advice" | "telemetry" | "corners" | "race" | "laps";
+
 /** Fiche voiture en quelques repères lisibles. */
 function carFacts(p: SessionProfile): string[] {
   const c = p.car;
@@ -91,7 +93,9 @@ function defaultPair(d: SessionDetail): [number | null, number | null] {
 
 export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { page: "analysis" }>; navigate: (r: Route) => void }) {
   const sessions = useAsync(() => api.sessions(), []);
-  const sessionId = route.sessionId ?? sessions.data?.[0]?.id;
+  // Par défaut : la session la plus récente qui a des tours chronométrés (pas une sortie des stands).
+  const sessionId = route.sessionId ?? (sessions.data?.find((s) => s.best_lap_s != null || s.lap_count > 3) ?? sessions.data?.[0])?.id;
+  const [tab, setTab] = usePref<Tab>("apex.analysisTab", "advice");
   const detail = useAsync(() => (sessionId != null ? api.session(sessionId) : Promise.resolve(null)), [sessionId]);
   const [refId, setRefId] = useState<number | null>(route.refLapId ?? null);
   const [cmpId, setCmpId] = useState<number | null>(route.cmpLapId ?? null);
@@ -162,14 +166,18 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
   const lapLabel = (l: LapRow) =>
     `Tour ${l.number}, ${lapTime(l.lap_time_s)}${l.id === d?.best_lap_id ? ", meilleur" : ""}${l.is_reference ? ", réf. perso" : ""}${l.clean ? "" : " (perturbé)"}`;
+  const timed = d ? d.laps.filter((l) => l.lap_time_s != null) : [];
+  const tabs: [Tab, string][] = [["advice", "Conseils"], ["telemetry", "Télémétrie"], ["corners", "Virages"], ...(d?.race ? ([["race", "Course"]] as [Tab, string][]) : []), ["laps", "Tours"]];
+  const current: Tab = tabs.some((t) => t[0] === tab) ? tab : "advice";
+  const best = d ? d.laps.find((l) => l.id === (d.best_lap_id ?? d.fastest_lap_id))?.lap_time_s : null;
 
   return (
     <>
       <div className="page-title">
-        <h1>Analyse de tour</h1>
-        <select value={sessionId ?? ""} onChange={(e) => navigate({ page: "analysis", sessionId: Number(e.target.value) })}>
+        <h1>Analyse</h1>
+        <select className="session-pick" value={sessionId ?? ""} onChange={(e) => navigate({ page: "analysis", sessionId: Number(e.target.value) })} aria-label="Session">
           {(sessions.data ?? []).map((s) => (
-            <option key={s.id} value={s.id}>{s.track}, {s.car}, {dateTime(s.started_at_unix)}</option>
+            <option key={s.id} value={s.id}>{dateTime(s.started_at_unix)} · {s.track} · {SESSION_KIND_FR[s.kind]}{s.best_lap_s != null ? ` · ${lapTime(s.best_lap_s)}` : ""}</option>
           ))}
         </select>
       </div>
@@ -177,69 +185,28 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
       {detail.error && <div className="error">{detail.error}</div>}
       {d && (
         <>
-          <div className="grid cols-4" style={{ marginBottom: 14 }}>
-            <div className="card">
-              <h2>Session</h2>
-              <div style={{ fontWeight: 600 }}>{d.meta.track}</div>
-              {d.profile && (d.profile.track.city || d.profile.track.turns) && (
-                <div className="kpi-sub" style={{ marginTop: 2 }}>
-                  {[d.profile.track.city && d.profile.track.country ? `${d.profile.track.city}, ${d.profile.track.country}` : d.profile.track.country, d.profile.track.turns ? `${d.profile.track.turns} virages` : null].filter(Boolean).join(" · ")}
-                </div>
+          <div className="session-strip">
+            <div className="ss-where">
+              <b>{d.meta.track}</b>
+              <span className="muted">
+                {d.meta.car} · {SESSION_KIND_FR[d.meta.kind]} <SetupChip setup={d.meta.setup} />
+              </span>
+              {d.profile && (
+                <span className="ss-facts" title={[d.profile.track.city && `${d.profile.track.city}, ${d.profile.track.country}`, d.profile.track.turns && `${d.profile.track.turns} virages`, d.bank && `Base circuits : ${d.bank.venue}`].filter(Boolean).join(" · ")}>
+                  {carFacts(d.profile).slice(0, 3).join(" · ")}
+                </span>
               )}
-              <div className="kpi-sub">{d.meta.car} <SetupChip setup={d.meta.setup} /></div>
-              {d.profile && <div className="profile-facts">{carFacts(d.profile).map((f) => <span key={f}>{f}</span>)}</div>}
-              {d.bank && <div className="kpi-sub" style={{ fontSize: 11 }} title={`Tracé OpenStreetMap, écart moyen ${d.bank.fit_m.toFixed(1)} m avec ta trajectoire`}>Base circuits : {d.bank.venue}{d.bank.layout && d.bank.layout !== d.bank.venue ? ` · ${d.bank.layout}` : ""}</div>}
             </div>
-            {d.best_lap_id != null || d.fastest_lap_id == null ? (
-              <div className="card"><h2>Meilleur tour</h2><div className="kpi best">{lapTime(d.laps.find((l) => l.id === d.best_lap_id)?.lap_time_s)}</div></div>
-            ) : (
-              <div className="card"><h2>Tour le plus rapide</h2><div className="kpi">{lapTime(d.laps.find((l) => l.id === d.fastest_lap_id)?.lap_time_s)}</div><div className="kpi-sub">invalide : aucun tour propre dans la session</div></div>
-            )}
-            <div className="card"><h2>Théorique</h2><div className="kpi best">{lapTime(d.theoretical_best_s)}</div>{d.theoretical_best_s == null && <div className="kpi-sub">nécessite des tours propres</div>}</div>
-            <div className="card"><h2>Régularité</h2><div className="kpi">{d.consistency ? `σ ${d.consistency.stddev_s.toFixed(3)} s` : "—"}</div><div className="kpi-sub">{d.consistency ? `${d.consistency.clean_laps} tours propres` : ""}</div></div>
+            <div className="ss-kpi"><span>{d.best_lap_id != null || d.fastest_lap_id == null ? "Meilleur tour" : "Plus rapide (invalide)"}</span><b className="mono best">{lapTime(best)}</b></div>
+            <div className="ss-kpi"><span>Théorique</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
+            <div className="ss-kpi"><span>Régularité</span><b className="mono">{d.consistency ? `± ${d.consistency.stddev_s.toFixed(2)} s` : "—"}</b></div>
+            <div className="ss-kpi"><span>Tours propres</span><b className="mono">{d.laps.filter((l) => l.clean).length}/{timed.length}</b></div>
           </div>
-
-          {d.race && <RaceCard r={d.race} laps={d.laps} onLap={(id) => setCmpId(id)} />}
-
-          <div className="duel">
-            <div className="duel-lap ref">
-              <span className="duel-tag"><i className="swatch ref" />Référence</span>
-              <select value={refId ?? ""} onChange={(e) => setRefId(Number(e.target.value))}>
-                {d.personal_reference_lap_id != null && !d.laps.some((l) => l.id === d.personal_reference_lap_id) && (
-                  <option value={d.personal_reference_lap_id}>{d.reference_label ?? "Référence personnelle (autre session)"}</option>
-                )}
-                {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
-              </select>
-              <div className="duel-time mono">{lapTime(c?.reference.lap_time_s)}</div>
-              <div className="duel-who">{c ? c.reference.driver ?? `Tour ${c.reference.number}` : ""}</div>
-            </div>
-            <div className="duel-gap">
-              <button className="btn ghost" title="Inverser référence et tour analysé" onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
-              {c && <div className={`duel-delta mono ${(endGap ?? 0) > 0 ? "pos" : "neg"}`}>{fmtGap(endGap, gapUnit, gapUnit === "s" ? 3 : 0)}</div>}
-              <div className="muted" style={{ fontSize: 12 }}>{c ? ((endGap ?? 0) > 0 ? "de retard à l'arrivée" : "d'avance à l'arrivée") : ""}</div>
-              {c && store && <button className="btn primary" style={{ marginTop: 6 }} onClick={() => setMapSize("full")} title="Carte et télémétrie synchronisées, en plein écran">▶ Relecture</button>}
-            </div>
-            <div className="duel-lap cmp">
-              <span className="duel-tag"><i className="swatch cmp" />Ton tour</span>
-              <select value={cmpId ?? ""} onChange={(e) => setCmpId(Number(e.target.value))}>
-                {d.laps.filter((l) => l.lap_time_s != null).map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
-              </select>
-              <div className="duel-time mono">{lapTime(c?.compared.lap_time_s)}</div>
-              <div className="duel-who">{c ? `Tour ${c.compared.number}${c.compared.clean ? "" : ", perturbé"}` : ""}</div>
-            </div>
-          </div>
-          {settings.data?.garage61_token && d.meta.sim === "iracing" && (
-            <div className="row" style={{ justifyContent: "flex-end", margin: "-6px 0 10px" }}>
-              {g61Msg && <span className="muted" style={{ fontSize: 12 }}>{g61Msg}</span>}
-              <button className="btn ghost" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">Chercher une référence Garage 61</button>
-            </div>
-          )}
 
           {d.untyped_references.length > 0 && (
             <div className="warning untyped">
               <div>
-                Ta session est en série <b>{d.meta.setup === "fixed" ? "Fixed" : "Open"}</b>. Ces références d'autres pilotes n'ont pas de série précisée :
-                elles ne sont pas utilisées, pour ne pas comparer un tour fixed à un tour open. Indique leur série :
+                Ta session est en série <b>{d.meta.setup === "fixed" ? "Fixed" : "Open"}</b>. Indique la série de ces références (elles ne sont pas utilisées en attendant) :
               </div>
               {d.untyped_references.map((u) => (
                 <div key={u.session_id} className="row" style={{ gap: 8, marginTop: 6 }}>
@@ -250,91 +217,152 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               ))}
             </div>
           )}
-          {cmp.error && <div className="error">{cmp.error}</div>}
-          {c?.warnings.map((w) => <div key={w} className="warning">⚠ {w}</div>)}
-          {refId === cmpId && <div className="warning">Choisis deux tours différents.</div>}
 
-          {c && store && (
+          {timed.length < 2 && !(d.personal_reference_lap_id != null && timed.length === 1) ? (
+            <div className="card empty"><h2>Pas assez de tours</h2><p>Cette session n'a {timed.length === 0 ? "aucun tour chronométré" : "qu'un tour chronométré"} : choisis une autre session en haut à droite.</p></div>
+          ) : (
             <>
-              <div className="insights-strip">
-                <h2 style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 8px" }}>
-                  {corner != null ? `Conseils pour ${c.corners.find((k) => k.corner.id === corner)?.corner.name}` : beginner ? "Tes 3 priorités" : "Conseils prioritaires"}
-                  {corner != null && <button className="btn ghost small" style={{ marginLeft: 8 }} onClick={() => setCorner(null)}>tous les virages</button>}
-                </h2>
-                {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
-                <div className="insight-grid">
-                  {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i) => <InsightCard key={i.id} insight={i} sessionId={d.id} />)}
+              <div className="duel">
+                <div className="duel-lap ref">
+                  <span className="duel-tag"><i className="swatch ref" />Référence</span>
+                  <select value={refId ?? ""} onChange={(e) => setRefId(Number(e.target.value))} aria-label="Tour de référence">
+                    {d.personal_reference_lap_id != null && !d.laps.some((l) => l.id === d.personal_reference_lap_id) && (
+                      <option value={d.personal_reference_lap_id}>{d.reference_label ?? "Référence personnelle (autre session)"}</option>
+                    )}
+                    {timed.map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
+                  </select>
+                  <div className="duel-time mono">{lapTime(c?.reference.lap_time_s)}</div>
+                  <div className="duel-who">
+                    {c ? c.reference.driver ?? `Tour ${c.reference.number}` : ""}
+                    {settings.data?.garage61_token && d.meta.sim === "iracing" && (
+                      <button className="link" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">chercher sur Garage 61</button>
+                    )}
+                  </div>
+                  {g61Msg && <div className="muted" style={{ fontSize: 12 }}>{g61Msg}</div>}
                 </div>
-                {beginner && corner == null && insights.length > 3 && (
-                  <button className="btn" onClick={() => setShowAll((v) => !v)}>
-                    {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
-                  </button>
-                )}
+                <div className="duel-gap">
+                  <button className="btn ghost small" title="Inverser référence et tour analysé" onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
+                  {c && <div className={`duel-delta mono ${(endGap ?? 0) > 0 ? "pos" : "neg"}`}>{fmtGap(endGap, gapUnit, gapUnit === "s" ? 3 : 0)}</div>}
+                  {c && store && <button className="btn primary" onClick={() => setMapSize("full")} title="Carte et télémétrie synchronisées, en plein écran">▶ Relecture</button>}
+                </div>
+                <div className="duel-lap cmp">
+                  <span className="duel-tag"><i className="swatch cmp" />Ton tour</span>
+                  <select value={cmpId ?? ""} onChange={(e) => setCmpId(Number(e.target.value))} aria-label="Tour analysé">
+                    {timed.map((l) => <option key={l.id} value={l.id}>{lapLabel(l)}</option>)}
+                  </select>
+                  <div className="duel-time mono">{lapTime(c?.compared.lap_time_s)}</div>
+                  <div className="duel-who">{c ? `Tour ${c.compared.number}${c.compared.clean ? "" : ", perturbé"}` : ""}</div>
+                </div>
               </div>
-              {mapSize === "half" && (
-                <div className="replay-big">
-                  <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
-                  <ReplayPanel cmp={c} store={store} />
+
+              {cmp.error && <div className="error">{cmp.error}</div>}
+              {refId === cmpId && <div className="warning">Choisis deux tours différents.</div>}
+              {c && c.warnings.length > 0 && (
+                <details className="notes">
+                  <summary>⚠ {c.warnings[0]}{c.warnings.length > 1 ? ` (+${c.warnings.length - 1})` : ""}</summary>
+                  {c.warnings.slice(1).map((w) => <div key={w}>{w}</div>)}
+                </details>
+              )}
+
+              <div className="tabs" role="tablist">
+                {tabs.map(([k, l]) => (
+                  <button key={k} role="tab" aria-selected={current === k} className={current === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>
+                ))}
+              </div>
+
+              {c && store && current === "advice" && (
+                <div className="insights-strip">
+                  {corner != null && (
+                    <div className="row" style={{ marginBottom: 8 }}>
+                      <span className="muted">Conseils pour <b>{c.corners.find((k) => k.corner.id === corner)?.corner.name}</b></span>
+                      <button className="btn ghost small" onClick={() => setCorner(null)}>tous les virages</button>
+                    </div>
+                  )}
+                  {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
+                  <div className="insight-grid">
+                    {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i, k) => <InsightCard key={i.id} insight={i} sessionId={d.id} rank={k + 1} />)}
+                  </div>
+                  {beginner && corner == null && insights.length > 3 && (
+                    <button className="btn ghost" onClick={() => setShowAll((v) => !v)}>
+                      {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
+                    </button>
+                  )}
                 </div>
               )}
-              {mapSize === "full" && <ReplayStudio overlay={overlay.data} cmp={c} store={store} title={`${d.meta.track} · ${d.meta.car}`} onClose={() => setMapSize("normal")} />}
-              <div className={bigMap ? "" : "grid analysis"}>
-                <div>
-                  <div className="card charts-card">
-                    <div className="charts-bar">
-                      <div className="legend">
-                        <span><i className="swatch ref" />{c.reference.driver ?? `Tour ${c.reference.number}`}</span>
-                        <span><i className="swatch cmp" />Toi, tour {c.compared.number}</span>
-                      </div>
-                      <div className="row" style={{ gap: 10 }}>
-                        <Segmented label="Axe" value={axis} onChange={setAxis} options={[["distance", "Distance"], ["time", "Temps"]]} title="Distance : la référence est calée au même endroit de la piste. Temps : chaque tour à son chrono, la référence se détache devant ou derrière." />
-                        <Segmented label="Écart" value={gapUnit} onChange={setGapUnit} options={[["s", "s"], ["m", "m"]]} title="Écart en secondes de retard, ou en mètres de retard sur la référence" />
-                        <button className={`btn ghost small ${more ? "on" : ""}`} onClick={() => setMore((v) => !v)}>{more ? "Moins de courbes" : "Plus de courbes"}</button>
-                      </div>
+
+              {c && store && current === "telemetry" && (
+                <>
+                  {mapSize === "half" && (
+                    <div className="replay-big">
+                      <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
+                      <ReplayPanel cmp={c} store={store} />
                     </div>
-                    <TelemetryCharts cmp={c} onCursorTime={onChartCursor} axis={axis} gapUnit={gapUnit} more={more} selected={corner} store={store ?? undefined} />
+                  )}
+                  <div className={bigMap ? "" : "grid analysis"}>
+                    <div className="card charts-card">
+                      <div className="charts-bar">
+                        <div className="legend">
+                          <span><i className="swatch ref" />{c.reference.driver ?? `Tour ${c.reference.number}`}</span>
+                          <span><i className="swatch cmp" />Toi, tour {c.compared.number}</span>
+                        </div>
+                        <div className="row" style={{ gap: 10 }}>
+                          <Segmented label="Axe" value={axis} onChange={setAxis} options={[["distance", "Distance"], ["time", "Temps"]]} title="Distance : la référence est calée au même endroit de la piste. Temps : chaque tour à son chrono." />
+                          <Segmented label="Écart" value={gapUnit} onChange={setGapUnit} options={[["s", "s"], ["m", "m"]]} title="Écart en secondes ou en mètres de retard sur la référence" />
+                          <button className={`btn ghost small ${more ? "on" : ""}`} onClick={() => setMore((v) => !v)}>{more ? "Moins de courbes" : "Plus de courbes"}</button>
+                        </div>
+                      </div>
+                      <TelemetryCharts cmp={c} onCursorTime={onChartCursor} axis={axis} gapUnit={gapUnit} more={more} selected={corner} store={store ?? undefined} />
+                    </div>
+                    {!bigMap && (
+                      <div className="analysis-side">
+                        <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
+                        <ReplayPanel cmp={c} store={store} />
+                      </div>
+                    )}
                   </div>
-                  <CornerList corners={c.corners} selected={corner} onSelect={setCorner} onRename={(apex, name) => void saveName(apex, name)} />
-                </div>
-                {!bigMap && (
-                  <div className="analysis-side">
-                    <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
-                    <ReplayPanel cmp={c} store={store} />
+                </>
+              )}
+
+              {c && store && current === "corners" && (
+                <>
+                  <CornerList corners={c.corners} selected={corner} onSelect={(id) => setCorner(id)} onRename={(apex, name) => void saveName(apex, name)} />
+                  <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>
+                    <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
+                    <OffTrackCard zones={d.off_tracks} />
                   </div>
-                )}
-              </div>
-              <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>
-                <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
-                <OffTrackCard zones={d.off_tracks} />
-              </div>
+                </>
+              )}
             </>
           )}
 
-          <div className="card" style={{ padding: 0, marginTop: 14 }}>
-            <table>
-              <thead><tr><th>Tour</th><th>Type</th><th className="num">Temps</th><th>Validité</th><th>Perturbations</th><th className="num">Carburant</th><th /></tr></thead>
-              <tbody>
-                {d.laps.map((l) => (
-                  <tr key={l.id}>
-                    <td className="mono">{l.number}{l.id === d.best_lap_id && <span className="chip best" style={{ marginLeft: 6 }}>meilleur</span>}</td>
-                    <td>{LAP_KIND_FR[l.kind]}</td>
-                    <td className="num">{lapTime(l.lap_time_s)}</td>
-                    <td>
-                      <span className={`chip ${l.validity === "valid" ? "good" : l.validity === "invalid" ? "bad" : ""}`}>{l.validity === "valid" ? "valide" : l.validity === "invalid" ? "invalide" : "inconnue"}</span>
-                      {l.validity_source === "derived" && <span className="muted" title="Déduite de la télémétrie (hors-piste, incidents), non rapportée par le simulateur."> (estimée)</span>}
-                    </td>
-                    <td className="muted">{lapFlags(l)}</td>
-                    <td className="num">{l.fuel_used_l != null ? `${l.fuel_used_l.toFixed(2)} L` : "—"}</td>
-                    <td>
-                      {l.is_reference ? <span className="chip warn">référence perso</span> : l.lap_time_s != null && l.kind === "flying" && (
-                        <button className="btn" onClick={() => void markReference(l.id)} title={l.clean ? "" : "Tour perturbé : référence déconseillée"}>Définir comme référence</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {current === "race" && d.race && <RaceCard r={d.race} laps={d.laps} onLap={(id) => (setCmpId(id), setTab("telemetry"))} />}
+
+          {current === "laps" && (
+            <div className="card" style={{ padding: 0 }}>
+              <table>
+                <thead><tr><th>Tour</th><th className="num">Temps</th><th>État</th><th>Détail</th><th className="num">Carburant</th><th /></tr></thead>
+                <tbody>
+                  {d.laps.map((l) => (
+                    <tr key={l.id} className={l.lap_time_s == null ? "dim" : ""}>
+                      <td className="mono">{l.number}{l.id === d.best_lap_id && <span className="chip best" style={{ marginLeft: 6 }}>meilleur</span>}</td>
+                      <td className="num">{lapTime(l.lap_time_s)}</td>
+                      <td>
+                        {l.kind !== "flying" ? <span className="muted">{LAP_KIND_FR[l.kind]}</span> : <span className={`chip ${l.clean ? "good" : "bad"}`}>{l.clean ? "propre" : "perturbé"}</span>}
+                      </td>
+                      <td className="muted">{lapFlags(l)}</td>
+                      <td className="num">{l.fuel_used_l != null ? `${l.fuel_used_l.toFixed(2)} L` : "—"}</td>
+                      <td>
+                        {l.is_reference ? <span className="chip warn">référence perso</span> : l.lap_time_s != null && l.kind === "flying" && (
+                          <button className="btn ghost small" onClick={() => void markReference(l.id)} title={l.clean ? "" : "Tour perturbé : référence déconseillée"}>Prendre comme référence</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {mapSize === "full" && c && store && <ReplayStudio overlay={overlay.data} cmp={c} store={store} title={`${d.meta.track} · ${d.meta.car}`} onClose={() => setMapSize("normal")} />}
         </>
       )}
     </>

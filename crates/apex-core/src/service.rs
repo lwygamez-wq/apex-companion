@@ -2124,7 +2124,9 @@ impl AppService {
 
     pub fn dashboard(&self) -> Result<Dashboard> {
         let all = self.list_sessions(&SessionFilter::default())?;
-        let Some(last) = all.first().cloned() else {
+        // Dernière session exploitable : une session sans aucun tour chronométré (sortie des stands,
+        // abandon) n'apporte rien au tableau de bord.
+        let Some(last) = all.iter().find(|s| s.best_lap_s.is_some() || s.lap_count > 2).or(all.first()).cloned() else {
             return Ok(Dashboard { active_goal: None, next_goal_suggestion: None, last_session: None, theoretical_best_s: None, progress_zones: vec![], consistency_trend: vec![], next_goal: None, total_sessions: 0 });
         };
         let detail = self.session_detail(last.id)?;
