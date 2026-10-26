@@ -6,7 +6,7 @@ import type { CircuitOverview, RaceLength } from "../lib/types";
 
 const l1 = (v: number) => v.toFixed(1).replace(".", ",");
 
-/** Préparer une course : carburant au départ, arrêts et fenêtre, d'après ta consommation réelle ici. */
+/** Une ligne « carburant pour finir » ; ouverte : format, marge, et le plan d'arrêts s'il en faut. Préparer une course : carburant au départ, arrêts et fenêtre, d'après ta consommation réelle ici. */
 export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
   const [length, setLength] = useState<RaceLength | null>(null);
   const [margin, setMargin] = useState(1);
@@ -19,11 +19,22 @@ export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
   const s = v?.strategy;
 
   return (
-    <div className="card strategy">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2 style={{ margin: 0 }}>Préparer une course ici</h2>
-        {v && <span className="muted" style={{ fontSize: 12 }}>d'après tes {v.laps_used} derniers tours propres</span>}
-      </div>
+    <details className="card strategy">
+      <summary className="strategy-line">
+        <span className="muted">Carburant pour finir</span>
+        {s ? (
+          <>
+            <b className="mono">{l1(s.stints[0]?.fuel_l ?? s.total_fuel_l)} L</b>
+            <span className="muted">
+              {s.laps} tours, marge comprise{s.stops > 0 ? ` · ${s.stops} arrêt${s.stops > 1 ? "s" : ""}` : ""}
+            </span>
+          </>
+        ) : (
+          <span className="muted">{view.error ? "pas encore de tours propres ici" : "…"}</span>
+        )}
+        <span className="muted strategy-more">régler</span>
+      </summary>
+      {v && <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>D'après tes {v.laps_used} derniers tours propres.</div>}
       <div className="strategy-inputs">
         <div className="seg">
           <button className={len.kind === "minutes" ? "on" : ""} onClick={() => setLength({ kind: "minutes", value: len.kind === "minutes" ? len.value : 30 })}>Minutes</button>
@@ -51,13 +62,13 @@ export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
       {view.error && <div className="muted">{view.error}</div>}
       {s && v && (
         <>
-          <div className="strategy-summary">{s.summary}</div>
-          <div className="strategy-facts">
+          {s.stops > 0 && <div className="strategy-summary">{s.summary}</div>}
+          {s.stops > 0 && <div className="strategy-facts">
             <div><span>Tours</span><b className="mono">{s.laps}</b></div>
             <div><span>Carburant total</span><b className="mono">{l1(s.total_fuel_l)} L</b></div>
             <div><span>Départ</span><b className="mono">{l1(s.stints[0]?.fuel_l ?? 0)} L</b></div>
             <div><span>Arrêts</span><b className="mono">{s.stops}</b></div>
-          </div>
+          </div>}
           {s.stints.length > 1 && (
             <div className="stints">
               {s.stints.map((st, i) => (
@@ -75,6 +86,6 @@ export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
           </div>
         </>
       )}
-    </div>
+    </details>
   );
 }

@@ -496,3 +496,9 @@ details.how ul { margin: 8px 0 0; padding-left: 18px; }
 .strategy-facts b { font-size: 18px; font-weight: 800; font-style: italic; }
 .stints { margin-top: 10px; }
 .stint { display: grid; grid-template-columns: 90px 1fr auto; gap: 10px; padding: 6px 0; border-top: 1px solid #262632; font-size: 13px; }
+.strategy > summary.strategy-line { display: flex; gap: 10px; align-items: baseline; cursor: pointer; list-style: none; font-size: 14px; }
+.strategy > summary.strategy-line::-webkit-details-marker { display: none; }
+.strategy-line b { font-size: 17px; font-weight: 800; font-style: italic; }
+.strategy-more { margin-left: auto; font-size: 12px; text-decoration: underline; }
+.strategy[open] .strategy-more { visibility: hidden; }
+.strategy { padding-top: 10px; padding-bottom: 10px; }
