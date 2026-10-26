@@ -485,3 +485,14 @@ details.how ul { margin: 8px 0 0; padding-left: 18px; }
 .form-row { grid-template-columns: minmax(240px, 380px) minmax(0, 1fr); border-bottom-color: #262632; }
 .form-row > input[type="checkbox"], .form-row > label, .form-row > span { justify-self: start; }
 .form-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--red); }
+.strategy { margin-bottom: 12px; }
+.strategy-inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+.strategy-inputs input[type="number"] { width: 80px; }
+.strategy-inputs label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.strategy-summary { font-size: 15px; font-weight: 650; margin: 6px 0 10px; }
+.strategy-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.strategy-facts div { background: var(--panel-2); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; }
+.strategy-facts span { font-size: 12px; color: var(--muted); }
+.strategy-facts b { font-size: 18px; font-weight: 800; font-style: italic; }
+.stints { margin-top: 10px; }
+.stint { display: grid; grid-template-columns: 90px 1fr auto; gap: 10px; padding: 6px 0; border-top: 1px solid #262632; font-size: 13px; }

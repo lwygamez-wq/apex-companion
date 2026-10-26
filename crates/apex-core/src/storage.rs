@@ -398,6 +398,15 @@ impl Store {
         Ok(j.and_then(|j| serde_json::from_str(&j).ok()))
     }
 
+    /// Dernière fiche connue pour une voiture, tous circuits confondus (contenance du réservoir…).
+    pub fn latest_car_profile(&self, car: &str) -> Result<Option<SessionProfile>, StoreError> {
+        let j: Option<String> = self
+            .conn
+            .query_row("SELECT profile_json FROM sessions WHERE car = ?1 AND profile_json IS NOT NULL ORDER BY started_at DESC LIMIT 1", [car], |r| r.get(0))
+            .optional()?;
+        Ok(j.and_then(|j| serde_json::from_str(&j).ok()))
+    }
+
     /// Dernière fiche connue pour un circuit qui situe le circuit (position et repère des trajectoires).
     pub fn latest_track_profile(&self, track: &str) -> Result<Option<SessionProfile>, StoreError> {
         let mut st = self.conn.prepare("SELECT profile_json FROM sessions WHERE track = ?1 AND profile_json IS NOT NULL ORDER BY started_at DESC")?;

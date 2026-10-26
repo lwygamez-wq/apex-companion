@@ -11,6 +11,7 @@ pub mod race;
 pub mod resample;
 pub mod risk;
 pub mod session;
+pub mod strategy;
 pub mod surface;
 
 pub use compare::{compare_laps, Comparison, LapInput};

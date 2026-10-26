@@ -11,6 +11,7 @@ Ce que fait l'application :
 - **Coach vocal en direct** : synthèse des derniers tours contre la référence, focus d'un virage, annonce avant le virage, bips de freinage, voix naturelle hors ligne ; commandes vocales au volant (« répète », « point », « plan », « carburant », « silence », « reprends »).
 - **Références Garage 61** (facultatif) : import des tours exportés du site, API pour retrouver tes propres sessions.
 - **Fiche voiture et circuit automatique** : réservoir, régime de passage, rapports, catégorie, ville, nombre de virages, lus dans chaque session iRacing (toutes les voitures, aucune mise à jour).
+- **Stratégie de course** : carburant au départ, nombre d'arrêts, fenêtre d'arrêt et économie nécessaire pour un arrêt de moins, d'après ta consommation réelle sur le circuit (course au tour ou au temps) ; en course, « carburant » dit s'il y a de quoi finir.
 - **Relevé de piste** : vibreurs, bordures peintes et hors-piste relevés sous ta voiture à chaque tour, bords de piste (largeur mesurée sur 25 circuits, sinon estimés d'après tes tours), affichés sur la carte et en relecture.
 - **Séries fixed et open séparées** : type de série lu dans chaque session iRacing ; une référence fixed ne sert qu'aux sessions fixed, une open qu'aux sessions open (analyse, coach en direct, historique).
 - **Historique** de tous les tours par circuit, **app iPhone** (page installable) qui ouvre les exports de séance.

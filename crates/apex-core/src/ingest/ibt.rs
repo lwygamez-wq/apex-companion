@@ -596,10 +596,10 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
 pub const LIVE_CHANNELS: [&str; LIVE_N] = [
     "SessionTime", "LapDist", "LapDistPct", "Speed", "Throttle", "Brake", "Lap", "Gear", "RPM", "SteeringWheelAngle",
     "Lat", "Lon", "FuelLevel", "OnPitRoad", "PlayerTrackSurface", "PlayerCarMyIncidentCount", "SessionFlags", "SessionNum", "YawRate",
-    "PlayerTrackSurfaceMaterial",
+    "PlayerTrackSurfaceMaterial", "SessionTimeRemain", "SessionLapsRemainEx",
 ];
 /// Nombre de canaux lus en direct.
-pub const LIVE_N: usize = 20;
+pub const LIVE_N: usize = 22;
 
 /// Reconstitution des tours en direct : on empile les échantillons et, à chaque passage de la
 /// ligne, le tour qui vient de se terminer est découpé par le même code que les fichiers .ibt.

@@ -284,6 +284,10 @@ pub struct LiveCoach {
     fuel_laps: VecDeque<f64>,
     /// Plein utilisable (l), d'après la fiche voiture de la session.
     tank_l: Option<f64>,
+    /// Temps (s) et tours restants de la séance, position dans le tour (0..1).
+    time_remain: f64,
+    laps_remain: f64,
+    lap_pct: f64,
 }
 
 /// Tours propres pris en compte dans la synthèse.
@@ -330,7 +334,7 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0 },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -382,6 +386,9 @@ impl LiveCoach {
         if row[12] > 0.0 {
             self.fuel_now = row[12];
         }
+        self.time_remain = row[20];
+        self.laps_remain = row[21];
+        self.lap_pct = row[2].clamp(0.0, 1.0);
         match self.builder.push(row) {
             Some(lap) => {
                 self.callout_done = false;
@@ -415,6 +422,23 @@ impl LiveCoach {
         let per = self.fuel_laps.iter().sum::<f64>() / self.fuel_laps.len() as f64;
         let laps = (self.fuel_now / per).floor() as i64;
         let mut t = format!("Carburant : {litres} litres, environ {laps} tour{}. {} litre par tour.", if laps > 1 { "s" } else { "" }, format!("{per:.1}").replace('.', ","));
+        // En course : de quoi finir ? Tours restants donnés par iRacing, sinon estimés sur le chrono.
+        if self.current_kind() == SessionKind::Race {
+            let left = if self.laps_remain > 0.0 && self.laps_remain < 30_000.0 {
+                Some(self.laps_remain + (1.0 - self.lap_pct))
+            } else if self.time_remain > 0.0 {
+                self.best_lap.map(|b| (self.time_remain / (b * 1.01)).ceil() + 1.0 + (1.0 - self.lap_pct))
+            } else {
+                None
+            };
+            if let Some(left) = left {
+                let check = crate::analysis::strategy::finish_check(self.fuel_now as f32, per as f32, left as f32);
+                if !check.is_empty() {
+                    t = format!("{t} {check}");
+                }
+                return t;
+            }
+        }
         // Fiche voiture : autonomie d'un plein, pour préparer l'arrêt ou le départ.
         if let Some(tank) = self.tank_l.filter(|t| *t > 0.0 && per > 0.0) {
             t += &format!(" Un plein, {} litres, fait environ {} tours.", tank.round() as i64, (tank / per).floor() as i64);

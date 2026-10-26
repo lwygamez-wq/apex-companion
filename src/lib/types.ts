@@ -86,6 +86,34 @@ export interface Consistency {
   cv_percent: number;
 }
 
+export type RaceLength = { kind: "laps"; value: number } | { kind: "minutes"; value: number };
+
+export interface Stint {
+  from_lap: number;
+  to_lap: number;
+  fuel_l: number;
+}
+
+export interface Strategy {
+  laps: number;
+  total_fuel_l: number;
+  stops: number;
+  stints: Stint[];
+  window: [number, number] | null;
+  save_per_lap_to_skip_stop_l: number | null;
+  summary: string;
+}
+
+export interface RaceStrategyView {
+  strategy: Strategy;
+  fuel_per_lap_l: number;
+  fuel_per_lap_max_l: number;
+  lap_time_s: number;
+  tank_l: number | null;
+  laps_used: number;
+  default_length: RaceLength;
+}
+
 export interface TrackEdges {
   left: [number, number][];
   right: [number, number][];

@@ -310,6 +310,21 @@ pub struct ExternalImport {
     pub setup: Option<SetupType>,
 }
 
+/// Stratégie carburant d'une course, avec les données qui l'ont nourrie.
+#[derive(Debug, Clone, Serialize)]
+pub struct RaceStrategyView {
+    pub strategy: crate::analysis::strategy::Strategy,
+    pub fuel_per_lap_l: f32,
+    /// Tour le plus gourmand parmi ceux retenus (l).
+    pub fuel_per_lap_max_l: f32,
+    pub lap_time_s: f32,
+    pub tank_l: Option<f32>,
+    /// Tours chronométrés propres ayant servi au calcul.
+    pub laps_used: usize,
+    /// Format proposé par défaut (dernière course sur ce circuit), pour pré-remplir l'écran.
+    pub default_length: crate::analysis::strategy::RaceLength,
+}
+
 /// Référence externe à classer (fixed / open).
 #[derive(Debug, Clone, Serialize)]
 pub struct UntypedReference {
@@ -1723,6 +1738,76 @@ impl AppService {
         })()
         .unwrap_or_default();
         crate::tracks::merge_names(numbered, user)
+    }
+
+    /// Stratégie carburant pour une course sur ce circuit avec cette voiture (et ce type de série) :
+    /// consommation et rythme mesurés sur tes tours propres récents, réservoir d'après la fiche voiture.
+    /// `length` : `None` = format de ta dernière course ici (sinon 30 minutes).
+    #[allow(clippy::too_many_arguments)]
+    pub fn race_strategy(
+        &self,
+        sim: SimId,
+        track: &str,
+        track_config: Option<&str>,
+        car: &str,
+        setup: Option<SetupType>,
+        length: Option<crate::analysis::strategy::RaceLength>,
+        margin_laps: f32,
+        formation_laps: f32,
+    ) -> Result<RaceStrategyView> {
+        use crate::analysis::strategy::{plan, RaceLength, StrategyInput};
+        let db = self.db();
+        let sessions: Vec<SessionSummary> = db
+            .list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), car: Some(car.to_string()), ..Default::default() })?
+            .into_iter()
+            .filter(|s| s.track_config.as_deref() == track_config && SetupType::compatible(s.setup, setup))
+            .collect();
+        // Tours propres récents (du plus récent au plus ancien), consommation mesurée.
+        let mut fuel = vec![];
+        let mut times = vec![];
+        for s in &sessions {
+            for l in db.laps(s.id)?.into_iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying) {
+                if let Some(t) = l.meta.lap_time_s {
+                    times.push(t as f32);
+                }
+                if let Some(f) = l.meta.fuel_used_l.filter(|f| *f > 0.05) {
+                    fuel.push(f);
+                }
+            }
+            if fuel.len() >= 15 && times.len() >= 15 {
+                break;
+            }
+        }
+        if fuel.is_empty() || times.is_empty() {
+            return Err(ServiceError::User("pas encore de tour propre avec mesure du carburant sur ce circuit avec cette voiture : roule quelques tours (fichier .ibt iRacing)".into()));
+        }
+        fuel.truncate(15);
+        times.truncate(15);
+        let per = fuel.iter().sum::<f32>() / fuel.len() as f32;
+        let max = fuel.iter().copied().fold(0.0, f32::max);
+        times.sort_by(|a, b| a.total_cmp(b));
+        let lap_time = times[times.len() / 2];
+        let tank = db
+            .latest_profile(track, car)?
+            .or(db.latest_car_profile(car)?)
+            .and_then(|p| p.usable_tank_l());
+        let default_length = sessions
+            .iter()
+            .filter(|s| s.kind == SessionKind::Race)
+            .map(|s| s.lap_count as u32)
+            .max()
+            .filter(|n| *n >= 3)
+            .map(RaceLength::Laps)
+            .unwrap_or(RaceLength::Minutes(30.0));
+        let strategy = plan(&StrategyInput {
+            length: length.unwrap_or(default_length),
+            fuel_per_lap_l: per,
+            lap_time_s: lap_time,
+            tank_l: tank,
+            margin_laps,
+            formation_laps,
+        });
+        Ok(RaceStrategyView { strategy, fuel_per_lap_l: per, fuel_per_lap_max_l: max, lap_time_s: lap_time, tank_l: tank, laps_used: fuel.len(), default_length })
     }
 
     /// Relevé de la piste pour la carte : vibreurs, lignes, hors-piste et bords, à partir de tous tes

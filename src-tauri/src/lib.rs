@@ -47,6 +47,7 @@ pub fn run() {
             commands::set_reference,
             commands::set_session_setup,
             commands::track_overlay,
+            commands::race_strategy,
             commands::delete_session,
             commands::delete_all_data,
             commands::export_data,
