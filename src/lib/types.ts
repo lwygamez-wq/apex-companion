@@ -193,6 +193,7 @@ export interface SessionDetail {
   risk_headline: string | null;
   /** Coach de course (courses iRacing). */
   race: RaceReport | null;
+  regularity: RegularityReport | null;
 }
 
 export type IncidentKind = "loss_of_control" | "off_track" | "world_contact" | "world_collision" | "car_contact" | "car_collision" | "other";
@@ -622,4 +623,31 @@ export interface PlanView {
   objectives: PlanItem[];
   evaluated_session_id: number | null;
   spoken: string;
+}
+
+export interface PassDifference {
+  metric: "brake" | "min_speed" | "throttle" | "exit_speed";
+  fast: number;
+  slow: number;
+  label: string;
+}
+
+export interface CornerRegularity {
+  name: string;
+  apex_m: number;
+  passes: number;
+  best_s: number;
+  median_s: number;
+  gain_s: number;
+  best_lap: number;
+  brake_spread_m: number | null;
+  differences: PassDifference[];
+  advice: string;
+}
+
+export interface RegularityReport {
+  laps: number;
+  total_gain_s: number;
+  corners: CornerRegularity[];
+  headline: string;
 }

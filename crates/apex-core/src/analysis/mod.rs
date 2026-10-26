@@ -8,6 +8,7 @@ pub mod offtrack;
 pub mod plan;
 pub mod progress;
 pub mod race;
+pub mod regularity;
 pub mod resample;
 pub mod risk;
 pub mod session;

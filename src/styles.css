@@ -502,3 +502,5 @@ details.how ul { margin: 8px 0 0; padding-left: 18px; }
 .strategy-more { margin-left: auto; font-size: 12px; text-decoration: underline; }
 .strategy[open] .strategy-more { visibility: hidden; }
 .strategy { padding-top: 10px; padding-bottom: 10px; }
+.risk-cause { font-size: 13px; margin-top: 6px; color: var(--text, #e8e8ee); }
+.risk-cause button.link { padding-left: 4px; }

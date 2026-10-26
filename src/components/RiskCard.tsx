@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CornerRisk, RiskVerdict } from "../lib/types";
+import type { CornerRegularity, CornerRisk, RiskVerdict } from "../lib/types";
 
 const VERDICT: Record<RiskVerdict, { label: string; cls: string }> = {
   secure: { label: "À sécuriser", cls: "bad" },
@@ -13,7 +13,9 @@ const VERDICT: Record<RiskVerdict, { label: string; cls: string }> = {
  * Carte de risque : gain disponible contre probabilité de sortie, virage par virage,
  * sur toutes les sessions du même circuit et de la même voiture.
  */
-export function RiskCard({ risk, headline, onCorner, compact = false, limit }: { risk: CornerRisk[]; headline: string | null; onCorner?: (apexM: number) => void; compact?: boolean; limit?: number }) {
+export function RiskCard({ risk, headline, onCorner, compact = false, limit, causes, onLap }: { risk: CornerRisk[]; headline: string | null; onCorner?: (apexM: number) => void; compact?: boolean; limit?: number; causes?: CornerRegularity[]; onLap?: (lap: number) => void }) {
+  // Ce qui différencie tes bons passages des mauvais dans cette session, rattaché au virage par son apex.
+  const causeFor = (r: CornerRisk) => causes?.find((c) => Math.abs(c.apex_m - r.apex_m) < 60 && c.differences.length > 0);
   const [open, setOpen] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   const judged = risk.filter((r) => r.verdict !== "insufficient");
@@ -45,6 +47,12 @@ export function RiskCard({ risk, headline, onCorner, compact = false, limit }: {
                   <span title="Écart entre ton passage moyen propre et ton meilleur passage propre">{r.gain_available_s == null ? "" : `à prendre : ${r.gain_available_s.toFixed(2)} s`}</span>
                 </div>
               )}
+              {!compact && causeFor(r) && (
+                <div className="risk-cause">
+                  {causeFor(r)!.advice}{" "}
+                  <button className="link" onClick={(e) => { e.stopPropagation(); onLap?.(causeFor(r)!.best_lap); }}>voir le tour {causeFor(r)!.best_lap}</button>
+                </div>
+              )}
               {(isOpen || compact) && <div className="risk-msg">{r.message}</div>}
             </div>
           );
@@ -54,7 +62,7 @@ export function RiskCard({ risk, headline, onCorner, compact = false, limit }: {
         <button className="btn ghost small" style={{ marginTop: 8 }} onClick={() => setAll((v) => !v)}>{all ? "Réduire" : `Voir les ${judged.length - limit} autres virages`}</button>
       )}
       <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-        « À prendre » = répéter ton propre meilleur passage propre, pas celui d'un autre pilote. Une sortie coûte aussi un tour invalide et un incident, non comptés ici.
+        « À prendre » = répéter ton propre meilleur passage propre, pas celui d'un autre pilote.{causes?.length ? " La phrase sous le virage compare tes bons et tes mauvais passages de cette session." : ""} Une sortie coûte aussi un tour invalide et un incident, non comptés ici.
       </div>
     </div>
   );

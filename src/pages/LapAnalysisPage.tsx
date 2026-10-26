@@ -327,7 +327,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 <>
                   <CornerList corners={c.corners} selected={corner} onSelect={(id) => setCorner(id)} onRename={(apex, name) => void saveName(apex, name)} />
                   <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>
-                    <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
+                    <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} causes={d.regularity?.corners} onLap={(n) => { const l = d.laps.find((x) => x.number === n && x.lap_time_s != null); if (l) { setCmpId(l.id); setTab("telemetry"); } }} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
                     <OffTrackCard zones={d.off_tracks} />
                   </div>
                 </>

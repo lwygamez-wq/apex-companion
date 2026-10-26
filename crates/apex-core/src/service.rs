@@ -408,6 +408,8 @@ pub struct SessionDetail {
     pub risk_headline: Option<String>,
     /// Coach de course (courses iRacing) : grille, positions, incidents, points à travailler.
     pub race: Option<crate::analysis::race::RaceReport>,
+    /// Régularité par virage sur tes tours propres de la session (5 au moins).
+    pub regularity: Option<crate::analysis::regularity::RegularityReport>,
 }
 
 /// Objectif du programme et son résultat sur la séance suivante.
@@ -1632,6 +1634,15 @@ impl AppService {
             _ => (vec![], Default::default()),
         };
         let risk_headline = crate::analysis::risk::risk_headline(&risk, totals);
+        let regularity = length.and_then(|len| {
+            let rs: Vec<(i32, crate::analysis::resample::Resampled)> = traces
+                .iter()
+                .filter(|(m, _)| m.kind == LapKind::Flying)
+                .filter_map(|(m, t)| crate::analysis::resample::resample(t, len, 2.0).ok().filter(|r| r.coverage > 0.97).map(|r| (m.number, r)))
+                .collect();
+            let refs: Vec<(i32, &crate::analysis::resample::Resampled)> = rs.iter().map(|(n, r)| (*n, r)).collect();
+            crate::analysis::regularity::regularity(&refs, &windows)
+        });
         let race = db.race_data(id)?.map(|rd| {
             let spots: Vec<(f32, String)> = windows.iter().map(|(n, _, a, _)| (*a, n.clone())).collect();
             crate::analysis::race::race_report(&rd, &metas, &spots, length.unwrap_or(0.0))
@@ -1671,6 +1682,7 @@ impl AppService {
             untyped_references,
             profile,
             race,
+            regularity,
             reference_label,
             risk,
             risk_headline,
