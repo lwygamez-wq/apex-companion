@@ -299,7 +299,7 @@ const FOCUS_MIN_S: f32 = 0.05;
 
 fn meta_from(si: &SessionInfo) -> SessionMeta {
     SessionMeta {
-        sim: SimId::Iracing,
+        sim: si.sim.unwrap_or(SimId::Iracing),
         track: si.track_display_name.clone().unwrap_or_else(|| "Circuit inconnu".into()),
         track_config: si.track_config.clone(),
         track_length_m: si.track_length_m,

@@ -103,7 +103,7 @@ export function RaceCard({ r, laps, onLap }: { r: RaceReport; laps: LapRow[]; on
         </table>
       )}
       <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-        Le fichier iRacing ne contient que ta voiture : positions relevées au passage de la ligne, sans écarts ni lieu des dépassements. Temps perdu = écart à ton tour médian propre.
+        L'enregistrement ne contient que ta voiture : positions relevées au passage de la ligne, sans écarts ni lieu des dépassements. Temps perdu = écart à ton tour médian propre.
       </div>
     </div>
   );

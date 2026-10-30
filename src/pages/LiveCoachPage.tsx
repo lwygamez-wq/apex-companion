@@ -115,7 +115,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
           )}
           {msgs.length === 0 && (
             <div className="muted">
-              Lance une session iRacing : le coach annonce sa référence dès que tu es en piste, puis te parle à chaque passage de la ligne.
+              Lance une session iRacing ou Le Mans Ultimate : le coach annonce sa référence dès que tu es en piste, puis te parle à chaque passage de la ligne.
             </div>
           )}
           {msgs.map((m, i) => (

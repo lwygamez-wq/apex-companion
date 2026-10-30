@@ -138,7 +138,7 @@ export function SettingsPage() {
             </div>
           </div>
           <div className="form-row">
-            <div>Synchro automatique<div className="hint">Importe chaque nouveau .ibt dès qu'iRacing a fini de l'écrire, et rattrape au démarrage les sessions roulées app fermée.</div></div>
+            <div>Synchro automatique<div className="hint">Importe chaque nouveau .ibt dès qu'iRacing a fini de l'écrire, et rattrape au démarrage les sessions roulées app fermée. Le Mans Ultimate : Apex enregistre lui-même chaque passage en piste (Apex doit être ouvert pendant que tu roules).</div></div>
             <input type="checkbox" checked={s.auto_import} onChange={(e) => upd("auto_import", e.target.checked)} />
           </div>
           <div className="form-row">

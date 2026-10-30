@@ -1,6 +1,6 @@
 # Apex Companion
 
-Compagnon de pilotage simracing pour iRacing : import automatique de la télémétrie, comparaison de tours **par distance**, conseils chiffrés, et un ingénieur de course à la radio. **Les données de conduite restent sur ton PC.**
+Compagnon de pilotage simracing pour iRacing et Le Mans Ultimate : import automatique de la télémétrie, comparaison de tours **par distance**, conseils chiffrés, et un ingénieur de course à la radio. **Les données de conduite restent sur ton PC.**
 
 Ce que fait l'application :
 
@@ -15,6 +15,7 @@ Ce que fait l'application :
 - **Stratégie de course** : carburant au départ, nombre d'arrêts, fenêtre d'arrêt et économie nécessaire pour un arrêt de moins, d'après ta consommation réelle sur le circuit (course au tour ou au temps) ; en course, « carburant » dit s'il y a de quoi finir.
 - **Relevé de piste** : vibreurs, bordures peintes et hors-piste relevés sous ta voiture à chaque tour, bords de piste (largeur mesurée sur 25 circuits, sinon estimés d'après tes tours), affichés sur la carte et en relecture.
 - **Séries fixed et open séparées** : type de série lu dans chaque session iRacing ; une référence fixed ne sert qu'aux sessions fixed, une open qu'aux sessions open (analyse, coach en direct, historique).
+- **Le Mans Ultimate** : lecture de la mémoire partagée native du jeu (« Enable Plugins » dans Réglages → Gameplay). LMU n'écrivant pas de fichier de télémétrie lisible, Apex enregistre lui-même chaque passage en piste (~50 Hz, fichiers `.apexlmu` dans son dossier de données) puis l'importe : temps et secteurs officiels, tours invalidés par le jeu, trajectoire, vibreurs, coach vocal en direct, circuit reconnu par son nom dans la banque OpenStreetMap.
 - **Historique** de tous les tours par circuit, **app iPhone** (page installable) qui ouvre les exports de séance.
 
 - Architecture, limites par simulateur, schéma de données : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
@@ -112,6 +113,11 @@ Données embarquées en plus (dossier `crates/apex-core/data`, licences jointes)
   numéroter les virages d'après le vrai tracé quand aucun relevé n'est intégré.
 - **Largeurs de piste** : 25 circuits de TUMFTM racetrack-database (LGPL-3.0), recalées sur tes
   trajectoires ; utilisées seulement si le tracé colle (sinon bords estimés d'après tes tours).
+
+Disposition de la mémoire partagée de Le Mans Ultimate : en-tête `SharedMemoryInterface.hpp` livré par
+Studio 397 avec le jeu, recoupé avec [pyLMUSharedMemory](https://github.com/TinyPedal/pyLMUSharedMemory)
+(MIT) et [lmu-pitwall](https://github.com/Kalanur/lmu-pitwall) (MIT). Aucun code n'en est repris tel quel ;
+les tailles des structures sont vérifiées à la compilation.
 
 ## Crédits voix et reconnaissance vocale
 

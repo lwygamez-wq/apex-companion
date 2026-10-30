@@ -360,6 +360,100 @@ pub fn bank_match(track_pos: (f64, f64), origin: [f64; 2], spine: &[[f32; 2]]) -
     best
 }
 
+/// Mots-clés de site (banque OpenStreetMap) pour les circuits nommés autrement par les simulateurs.
+const NAME_ALIASES: &[(&[&str], &str)] = &[
+    (&["sarthe", "le mans", "lemans", "24h"], "le mans"),
+    (&["sebring"], "sebring"),
+    (&["monza"], "monza"),
+    (&["francorchamps", "spa "], "francorchamps"),
+    (&["fuji"], "fuji speedway"),
+    (&["bahrain", "sakhir"], "bahrain"),
+    (&["algarve", "portimao"], "algarve"),
+    (&["lusail", "losail", "qatar"], "lusail"),
+    (&["imola", "enzo e dino"], "enzo e dino"),
+    (&["americas", "cota", "austin"], "americas"),
+    (&["interlagos", "carlos pace"], "interlagos"),
+    (&["silverstone"], "silverstone"),
+    (&["ricard", "castellet"], "paul ricard"),
+];
+
+const STOPWORDS: &[&str] = &["circuit", "circuito", "autodromo", "international", "internacional", "raceway", "speedway", "racing", "motor", "track", "park", "grand", "prix", "nazionale"];
+
+/// Comme `bank_match`, sans position GPS (simulateurs au repère propre, Le Mans Ultimate) : sites
+/// retenus d'après le nom du circuit, tracé recalé (rotation, translation) sur ta trajectoire.
+pub fn bank_match_by_name(track_name: &str, spine: &[[f32; 2]]) -> Option<BankMatch> {
+    if spine.len() < 50 {
+        return None;
+    }
+    let name = format!("{} ", fold(track_name));
+    let alias: Vec<&str> = NAME_ALIASES.iter().filter(|(keys, _)| keys.iter().any(|k| name.contains(k))).map(|(_, v)| *v).collect();
+    let words: Vec<String> = name
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| w.len() >= 5 && !STOPWORDS.contains(w))
+        .map(str::to_string)
+        .collect();
+    let ls = length(spine);
+    const N: usize = 180;
+    let b = resample_loop(spine, N);
+    let sub = resample_loop(spine, 300);
+    if b.len() != N {
+        return None;
+    }
+    let mut best: Option<BankMatch> = None;
+    for v in osm() {
+        let vn = fold(&v.n);
+        if !alias.iter().any(|a| vn.contains(a)) && !words.iter().any(|w| vn.contains(w.as_str())) {
+            continue;
+        }
+        let origin = (v.loc[0], v.loc[1]);
+        for l in &v.l {
+            let pts: Vec<[f32; 2]> = decode(&l.p).into_iter().map(|(la, lo)| {
+                let (x, y) = crate::ingest::latlon_to_xy(la, lo, origin);
+                [x, y]
+            }).collect();
+            if pts.len() < 10 {
+                continue;
+            }
+            let lc = if l.len > 0.0 { l.len } else { length(&pts) };
+            if (lc / ls - 1.0).abs() > 0.12 {
+                continue;
+            }
+            let a0 = resample_loop(&pts, N);
+            if a0.len() != N {
+                continue;
+            }
+            // Recalage sur tous les points de départ, dans les deux sens.
+            let mut reg: Option<(f32, (f32, f32, f32, f32))> = None;
+            for rev in [false, true] {
+                let a: Vec<[f32; 2]> = if rev { a0.iter().rev().copied().collect() } else { a0.clone() };
+                for k in 0..N {
+                    let rot: Vec<[f32; 2]> = (0..N).map(|i| a[(i + k) % N]).collect();
+                    let (c, s, tx, ty, rms) = kabsch(&rot, &b);
+                    if reg.as_ref().is_none_or(|x| rms < x.0) {
+                        reg = Some((rms, (c, s, tx, ty)));
+                    }
+                }
+            }
+            let Some((rms, (c, s, tx, ty))) = reg else { continue };
+            if rms > 30.0 {
+                continue;
+            }
+            let dense: Vec<[f32; 2]> = resample_loop(&pts, (lc / 3.0).max(50.0) as usize).into_iter().map(|p| [c * p[0] - s * p[1] + tx, s * p[0] + c * p[1] + ty]).collect();
+            let fit = sub
+                .iter()
+                .map(|q| dense.iter().map(|p| (p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2)).fold(f32::INFINITY, f32::min).sqrt())
+                .sum::<f32>()
+                / sub.len() as f32;
+            // À tracé égal, une configuration nommée passe devant un « candidat » générique.
+            let rank = |name: &str, fit: f32| fit + if name.contains("candidate") { 1.0 } else { 0.0 };
+            if fit <= 12.0 && best.as_ref().is_none_or(|x| rank(&l.n, fit) < rank(&x.layout, x.fit_m)) {
+                best = Some(BankMatch { venue: v.n.clone(), layout: l.n.clone(), country: v.c.clone(), length_m: lc, fit_m: fit, centerline: dense });
+            }
+        }
+    }
+    best
+}
+
 /// Virages du tracé (méthode de la courbure, comme les tables intégrées) : (index du point d'apex,
 /// sens +1 gauche / −1 droite, angle total en degrés), sur une boucle échantillonnée à pas constant `step`.
 pub fn geometric_turns(p: &[[f32; 2]], step: f32) -> Vec<(usize, i8, f32)> {
@@ -454,4 +548,38 @@ pub fn bank_turns_on_lap(m: &BankMatch, lap_xy: &[[f32; 2]], lap_dist: &[f32], o
     at.sort_by(|a, b| a.total_cmp(b));
     at.dedup_by(|a, b| (*a - *b).abs() < 25.0);
     at.into_iter().enumerate().map(|(k, d)| (d, k as u32 + 1)).collect()
+}
+
+#[cfg(test)]
+mod bank_name_tests {
+    use super::*;
+
+    /// Tracé de la banque dans un repère arbitraire (simulateur sans GPS) : rotation, décalage,
+    /// sens inverse, départ ailleurs ; retrouvé par le nom du simulateur.
+    fn moved(venue: &str, layout: &str, deg: f32) -> Vec<[f32; 2]> {
+        let v = osm().iter().find(|v| v.n == venue).unwrap();
+        let l = v.l.iter().find(|l| l.n == layout).unwrap();
+        let pts: Vec<[f32; 2]> = decode(&l.p).into_iter().map(|(la, lo)| {
+            let (x, y) = crate::ingest::latlon_to_xy(la, lo, (v.loc[0], v.loc[1]));
+            [x, y]
+        }).collect();
+        let (c, s) = (deg.to_radians().cos(), deg.to_radians().sin());
+        let mut p: Vec<[f32; 2]> = pts.iter().map(|p| [c * p[0] - s * p[1] - 812.0, s * p[0] + c * p[1] + 3301.0]).collect();
+        p.reverse();
+        let k = p.len() / 3;
+        p.rotate_left(k);
+        resample_loop(&p, 2000)
+    }
+
+    #[test]
+    fn le_mans_is_found_from_the_sim_name() {
+        let spine = moved("Le Mans Bugatti Circuit", "Le Mans Full", 133.0);
+        let m = bank_match_by_name("Circuit de la Sarthe", &spine).expect("Le Mans");
+        assert_eq!(m.layout, "Le Mans Full");
+        assert!(m.fit_m < 3.0, "{}", m.fit_m);
+        let s = moved("Sebring International Raceway", "Sebring", -40.0);
+        assert_eq!(bank_match_by_name("Sebring International Raceway", &s).unwrap().layout, "Sebring");
+        // Mauvais nom : rien.
+        assert!(bank_match_by_name("Fuji Speedway", &spine).is_none());
+    }
 }

@@ -105,7 +105,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
     <>
       <div className="page-title"><h1>Progression</h1></div>
       {circuits.error && <div className="error">{circuits.error}</div>}
-      {circuits.data?.length === 0 && <div className="card empty"><h2>Aucun circuit</h2><p>Roule une session iRacing : elle apparaîtra ici automatiquement.</p></div>}
+      {circuits.data?.length === 0 && <div className="card empty"><h2>Aucun circuit</h2><p>Roule une session iRacing ou Le Mans Ultimate : elle apparaîtra ici automatiquement.</p></div>}
       {current && (
         <div className="history">
           <div className="history-list">

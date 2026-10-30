@@ -9,6 +9,9 @@ pub mod iracing;
 #[cfg(windows)]
 pub mod iracing_live;
 pub mod lmu;
+pub mod lmu_shm;
+#[cfg(windows)]
+pub mod lmu_live;
 
 use crate::model::{ImportedSession, SimId};
 use serde::{Deserialize, Serialize};
@@ -142,7 +145,7 @@ pub trait SimulatorConnector: Send + Sync {
 pub fn registry() -> Vec<Box<dyn SimulatorConnector>> {
     vec![
         Box::new(iracing::IracingConnector),
-        Box::new(lmu::LmuConnector),
+        Box::new(lmu::LmuConnector { recordings_dir: None }),
         Box::new(ac::AcConnector::assetto_corsa()),
         Box::new(ac::AcConnector::ac_evo()),
         Box::new(ac::AcConnector::acc()),

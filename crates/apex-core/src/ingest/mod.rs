@@ -2,6 +2,7 @@
 
 pub mod garage61;
 pub mod ibt;
+pub mod lmu;
 
 /// Origine du repère métrique : coin de la maille de 0,1° contenant le point.
 /// Commune à tous les tours d'un même circuit (et à toutes les sources : .ibt, Garage 61),

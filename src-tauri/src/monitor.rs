@@ -138,14 +138,17 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             }
             let running = scanner.running(svc.connectors());
 
-            // Source live : ouverte à la demande, fermée si le jeu disparaît.
-            if live.as_ref().is_some_and(|(sim, _)| !running.contains(sim) || !settings.live_enabled) {
+            // Source live : ouverte à la demande, fermée si le jeu disparaît. Le Mans Ultimate n'écrit
+            // pas de fichier de télémétrie : sa source sert aussi à enregistrer les séances, elle reste
+            // ouverte même sans coach tant que la synchro automatique est active.
+            let wanted = |sim: SimId| settings.live_enabled || (sim == SimId::Lmu && settings.auto_import);
+            if live.as_ref().is_some_and(|(sim, _)| !running.contains(sim) || !wanted(*sim)) {
                 live = None;
                 last_snap = None;
                 coach = None;
             }
-            if live.is_none() && settings.live_enabled {
-                for sim in &running {
+            if live.is_none() {
+                for sim in running.iter().filter(|s| wanted(**s)) {
                     if let Some(c) = svc.connectors().iter().find(|c| c.id() == *sim) {
                         if let Ok(src) = c.open_live(&svc.connector_config(*sim)) {
                             log::info!("source live ouverte : {}", sim.display_name());
@@ -164,7 +167,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 while Instant::now() < until {
                     match src.poll(20) {
                         Ok(Some(snap)) => {
-                            if let Some(yaml) = &snap.session_info {
+                            if let Some(yaml) = snap.session_info.as_ref().filter(|_| settings.live_enabled) {
                                 let meta = session_meta_from_yaml(yaml);
                                 let key = format!("{}|{}|{}|{:?}", meta.track, meta.track_config.clone().unwrap_or_default(), meta.car, meta.setup);
                                 if coach.as_ref().is_none_or(|(k, _)| *k != key) && meta.track != "Circuit inconnu" {
@@ -258,6 +261,20 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             }
             if settings.auto_import && Instant::now() >= next_sync {
                 next_sync = Instant::now() + Duration::from_secs(15);
+                // Séances Le Mans Ultimate enregistrées par Apex.
+                match svc.sync_lmu_folder(Duration::from_secs(3)) {
+                    Ok(r) if r.imported > 0 || !r.errors.is_empty() => {
+                        let mut m = format!("Le Mans Ultimate : {} séance(s) importée(s)", r.imported);
+                        if !r.errors.is_empty() {
+                            m += &format!(", erreurs : {}", r.errors.join(" ; "));
+                            log::warn!("synchro LMU : {}", r.errors.join(" ; "));
+                        }
+                        auto_msg = Some(m);
+                        let _ = app.emit("apex://sessions-changed", ());
+                    }
+                    Ok(_) => {}
+                    Err(e) => log::debug!("synchro LMU : {e}"),
+                }
                 // Tours Garage 61 téléchargés depuis le site : importés comme références.
                 if settings.watch_downloads {
                     match svc.sync_downloads() {

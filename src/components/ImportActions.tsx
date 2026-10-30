@@ -38,7 +38,7 @@ export function ImportActions({ onDone, compact = false }: { onDone: () => void;
     <div>
       <div className="row">
         <button className="btn primary" disabled={busy} onClick={() => run(async () => {
-          const sel = await open({ multiple: true, filters: [{ name: "Télémétrie iRacing (.ibt) ou tour Garage 61 (.csv)", extensions: ["ibt", "csv"] }] });
+          const sel = await open({ multiple: true, filters: [{ name: "Télémétrie iRacing (.ibt), séance Le Mans Ultimate (.apexlmu) ou tour Garage 61 (.csv)", extensions: ["ibt", "apexlmu", "csv"] }] });
           if (!sel) return "Import annulé.";
           return summarize(await api.importFiles(Array.isArray(sel) ? sel : [sel]));
         })} title="Fichiers .ibt d'iRacing, ou tour d'un autre pilote exporté de Garage 61 (.csv) pour t'en servir de référence">{compact ? "Importer" : "Importer (.ibt, Garage 61)"}</button>

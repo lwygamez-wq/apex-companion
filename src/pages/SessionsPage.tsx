@@ -110,7 +110,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
       </div>
 
       {all.error && <div className="error">{all.error}</div>}
-      {all.data?.length === 0 && <div className="card empty"><h2>Aucune session</h2><p>Importe tes fichiers iRacing, ou laisse la synchro automatique faire.</p><ImportActions onDone={reload} /></div>}
+      {all.data?.length === 0 && <div className="card empty"><h2>Aucune session</h2><p>Importe tes fichiers iRacing, ou laisse la synchro automatique faire (iRacing et Le Mans Ultimate).</p><ImportActions onDone={reload} /></div>}
 
       {days.map(([day, list]) => (
         <section key={day} className="day">

@@ -276,7 +276,7 @@ mod tests {
         let r = circle(100.0);
         // Rayon plus petit dans un virage à gauche = plus à gauche (intérieur).
         let o = line_offset(&r, &circle(97.5)).unwrap();
-        assert!(o[10..590].iter().all(|v| (v - 2.5).abs() < 0.05), "{:?}", &o[300]);
+        assert!(o[10..590].iter().all(|v| (v - 2.5).abs() < 0.05), "{:?}", o[300]);
         let o = line_offset(&r, &circle(101.0)).unwrap();
         assert!((o[300] + 1.0).abs() < 0.05);
         let d = CornerDef { id: 1, name: "V1".into(), search_start_m: 0.0, entry_m: 100.0, apex_m: 300.0, exit_m: 500.0 };

@@ -190,6 +190,9 @@ pub struct SessionInfo {
     /// `WeekendOptions.IsFixedSetup` : série à setup imposé.
     pub fixed_setup: Option<bool>,
     pub profile: SessionProfile,
+    /// Simulateur d'origine (`ApexSim`, clé propre à Apex dans les YAML synthétisés pour les
+    /// autres simulateurs) ; absent = iRacing.
+    pub sim: Option<SimId>,
 }
 
 impl SessionInfo {
@@ -280,6 +283,8 @@ pub fn parse_session_info(yaml: &str) -> SessionInfo {
             if let Some(i) = cur_car_idx {
                 classes.insert(i, v.to_string());
             }
+        } else if let Some(v) = yaml_val(line, "ApexSim") {
+            si.sim = serde_json::from_value(serde_json::Value::String(v.to_string())).ok();
         } else if let Some(v) = yaml_val(line, "IsFixedSetup") {
             si.fixed_setup = v.parse::<i32>().ok().map(|x| x != 0);
         } else if let Some(v) = yaml_val(line, "SessionNum") {
@@ -443,32 +448,39 @@ fn extract_race(ch: &Channels, ry: &RaceYaml) -> Option<RaceData> {
     })
 }
 
-/// Canaux lus (tous optionnels sauf ceux marqués requis).
-struct Channels {
-    session_time: Vec<f64>,
-    lap_dist: Vec<f64>,
-    lap_dist_pct: Vec<f64>,
-    speed: Vec<f64>,
-    throttle: Vec<f64>,
-    brake: Vec<f64>,
-    lap: Option<Vec<f64>>,
-    gear: Option<Vec<f64>>,
-    rpm: Option<Vec<f64>>,
-    steer: Option<Vec<f64>>,
-    lat: Option<Vec<f64>>,
-    lon: Option<Vec<f64>>,
-    fuel: Option<Vec<f64>>,
-    on_pit_road: Option<Vec<f64>>,
-    track_surface: Option<Vec<f64>>,
-    incidents: Option<Vec<f64>>,
-    session_flags: Option<Vec<f64>>,
-    session_num: Option<Vec<f64>>,
-    yaw_rate: Option<Vec<f64>>,
-    position: Option<Vec<f64>>,
-    player_incidents: Option<Vec<f64>>,
+/// Canaux lus (tous optionnels sauf ceux marqués requis). Partagé avec les autres sources
+/// (Le Mans Ultimate) pour que tous les tours soient découpés par le même code.
+#[derive(Default)]
+pub(crate) struct Channels {
+    pub(crate) session_time: Vec<f64>,
+    pub(crate) lap_dist: Vec<f64>,
+    pub(crate) lap_dist_pct: Vec<f64>,
+    pub(crate) speed: Vec<f64>,
+    pub(crate) throttle: Vec<f64>,
+    pub(crate) brake: Vec<f64>,
+    pub(crate) lap: Option<Vec<f64>>,
+    pub(crate) gear: Option<Vec<f64>>,
+    pub(crate) rpm: Option<Vec<f64>>,
+    pub(crate) steer: Option<Vec<f64>>,
+    pub(crate) lat: Option<Vec<f64>>,
+    pub(crate) lon: Option<Vec<f64>>,
+    pub(crate) fuel: Option<Vec<f64>>,
+    pub(crate) on_pit_road: Option<Vec<f64>>,
+    pub(crate) track_surface: Option<Vec<f64>>,
+    pub(crate) incidents: Option<Vec<f64>>,
+    pub(crate) session_flags: Option<Vec<f64>>,
+    pub(crate) session_num: Option<Vec<f64>>,
+    pub(crate) yaw_rate: Option<Vec<f64>>,
+    pub(crate) position: Option<Vec<f64>>,
+    pub(crate) player_incidents: Option<Vec<f64>>,
     /// Matière sous la voiture (irsdk_TrkSurf) : asphalte, vibreur, peinture, herbe…
-    surface_material: Option<Vec<f64>>,
-    session_state: Option<Vec<f64>>,
+    pub(crate) surface_material: Option<Vec<f64>>,
+    pub(crate) session_state: Option<Vec<f64>>,
+    /// Position en mètres dans le repère du simulateur (x, y vers le haut de la carte), quand la
+    /// source n'a pas de GPS (Le Mans Ultimate). Ignoré si Lat/Lon sont présents.
+    pub(crate) xy: Option<(Vec<f64>, Vec<f64>)>,
+    /// Canaux supplémentaires recopiés tels quels dans `LapTrace::extra`.
+    pub(crate) extra: Vec<(String, Vec<f64>)>,
 }
 
 /// Drapeaux iRacing signalant une neutralisation locale ou globale.
@@ -542,6 +554,7 @@ pub fn import_ibt_bytes(b: &[u8]) -> Result<ImportedSession, IbtError> {
         player_incidents: read("PlayerIncidents"),
         surface_material: read("PlayerTrackSurfaceMaterial"),
         session_state: read("SessionState"),
+        ..Default::default()
     };
 
     let laps = split_laps(&ch, &si);
@@ -655,9 +668,7 @@ impl LiveLapBuilder {
             session_num: Some(col(17)),
             yaw_rate: Some(col(18)),
             surface_material: Some(col(19)),
-            position: None,
-            player_incidents: None,
-            session_state: None,
+            ..Default::default()
         };
         let lap = split_laps(&ch, &self.si).into_iter().rev().find(|l| l.meta.lap_time_s.is_some());
         // On ne garde que le début du tour en cours (le passage de ligne reste visible pour le prochain découpage).
@@ -692,7 +703,7 @@ pub fn ibt_live_rows(b: &[u8]) -> Result<(String, Vec<[f64; LIVE_N]>), IbtError>
 }
 
 /// Découpe en tours sur les franchissements de ligne (LapDistPct 1→0), temps interpolé.
-fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
+pub(crate) fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
     let n = ch.session_time.len();
     let pct = &ch.lap_dist_pct;
     let t = &ch.session_time;
@@ -813,7 +824,10 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
                 let (x, y): (Vec<f32>, Vec<f32>) = pts.iter().map(|p| super::latlon_to_xy(p.0, p.1, origin)).unzip();
                 (Some(x), Some(y))
             }
-            _ => (None, None),
+            _ => match &ch.xy {
+                Some((x, y)) => (Some(f(x)), Some(f(y))),
+                None => (None, None),
+            },
         };
         let fuel = ch.fuel.as_ref().map(|v| f(v));
         let trace = LapTrace {
@@ -837,6 +851,9 @@ fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
                 }
                 if let Some(v) = ch.surface_material.as_ref().filter(|v| v[a..b].iter().any(|x| *x > 0.0)) {
                     m.insert("surface_material".to_string(), f(v));
+                }
+                for (k, v) in &ch.extra {
+                    m.insert(k.clone(), f(v));
                 }
                 m
             },

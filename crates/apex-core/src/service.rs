@@ -486,6 +486,8 @@ pub struct AppService {
     /// avec « supprimer après envoi ») peut effacer le fichier quelques secondes après la fin de
     /// l'écriture, avant qu'Apex ait pu l'importer. `None` : pas de garde (tests en mémoire).
     keep_dir: Option<PathBuf>,
+    /// Séances Le Mans Ultimate enregistrées par Apex (fichiers `.apexlmu`).
+    lmu_dir: Option<PathBuf>,
     /// Voix naturelles du coach (moteur et voix téléchargés à la demande).
     tts: Option<crate::tts::Tts>,
     /// Messages déjà synthétisés par Azure (voix|texte → WAV).
@@ -649,6 +651,7 @@ impl AppService {
             overlay_cache: Mutex::new(None),
             retried: Mutex::new(Default::default()),
             keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
+            lmu_dir: db.parent().map(|d| d.join("enregistrements-lmu")),
             tts: db.parent().map(|d| crate::tts::Tts::new(d.join("voix"))),
             tts_cache: Mutex::new(Default::default()),
             voice: db.parent().map(|d| crate::voice_cmd::VoiceRecognizer::new(d.join("voix"))),
@@ -666,6 +669,7 @@ impl AppService {
             overlay_cache: Mutex::new(None),
             retried: Mutex::new(Default::default()),
             keep_dir: None,
+            lmu_dir: None,
             tts: None,
             tts_cache: Mutex::new(Default::default()),
             voice: None,
@@ -732,6 +736,7 @@ impl AppService {
         ConnectorConfig {
             telemetry_dir: match id {
                 SimId::Iracing => s.iracing_telemetry_dir.map(PathBuf::from),
+                SimId::Lmu => self.lmu_dir.clone(),
                 _ => None,
             },
             live_enabled: s.live_enabled,
@@ -1367,7 +1372,12 @@ impl AppService {
                 self.db().mark_parsed(id)?;
                 continue;
             }
-            match crate::ingest::ibt::import_ibt_file(p) {
+            let decoded = if p.extension().is_some_and(|x| x == crate::ingest::lmu::EXT) {
+                crate::ingest::lmu::import_lmu_file(p).map_err(|e| e.to_string())
+            } else {
+                crate::ingest::ibt::import_ibt_file(p).map_err(|e| e.to_string())
+            };
+            match decoded {
                 Ok(s) => {
                     self.db().replace_laps(id, &s)?;
                     n += 1;
@@ -1386,6 +1396,56 @@ impl AppService {
         let dir = self.iracing_dir()?;
         let files = self.ibt_files(&dir)?;
         Ok(self.import_paths(&files))
+    }
+
+    /// Séances Le Mans Ultimate enregistrées par Apex : importe chaque `.apexlmu` nouveau, une fois
+    /// écrit depuis `min_age` ; les enregistrements provisoires abandonnés (Apex fermé pendant une
+    /// séance) sont repris après 10 minutes.
+    pub fn sync_lmu_folder(&self, min_age: std::time::Duration) -> Result<SyncReport> {
+        let mut rep = SyncReport::default();
+        let Some(dir) = self.lmu_dir.clone().filter(|d| d.exists()) else { return Ok(rep) };
+        crate::connectors::lmu::promote_stale_parts(&dir, std::time::Duration::from_secs(600));
+        let now = std::time::SystemTime::now();
+        let files: Vec<PathBuf> = std::fs::read_dir(&dir)
+            .map_err(|e| ServiceError::User(format!("dossier LMU : {e}")))?
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == crate::ingest::lmu::EXT))
+            .collect();
+        for p in files {
+            let Ok(meta) = std::fs::metadata(&p) else { continue };
+            let Ok(modified) = meta.modified() else { continue };
+            if now.duration_since(modified).unwrap_or_default() < min_age {
+                rep.pending += 1;
+                continue;
+            }
+            let key = p.to_string_lossy().into_owned();
+            let (size, mtime) = (meta.len() as i64, modified.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0));
+            if !self.should_process(&key, size, mtime)? {
+                continue;
+            }
+            let r = self.import_paths(std::slice::from_ref(&p)).remove(0);
+            let sid = match r.outcome {
+                Some(InsertOutcome::Inserted(id)) => {
+                    rep.imported += 1;
+                    rep.new_sessions.push(id);
+                    if let Err(e) = self.export_to_mobile_dir(id) {
+                        rep.errors.push(format!("copie pour le mobile : {e}"));
+                    }
+                    Some(id)
+                }
+                Some(InsertOutcome::Duplicate(id)) => {
+                    rep.duplicates += 1;
+                    Some(id)
+                }
+                None => None,
+            };
+            if let Some(e) = &r.error {
+                rep.errors.push(format!("{} : {e}", p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()));
+            }
+            self.db().record_file(&key, size, mtime, sid, r.error.as_deref())?;
+        }
+        Ok(rep)
     }
 
     /// Synchro automatique : importe chaque `.ibt` nouveau ou modifié, une fois terminé.
@@ -1711,11 +1771,15 @@ impl AppService {
             return v.clone();
         }
         let found = (|| {
-            let p = db.latest_track_profile(&meta.track).ok()??;
-            let (lat, lon, origin) = (p.track.lat?, p.track.lon?, p.track.origin?);
             let len = meta.track_length_m.filter(|l| *l > 100.0).unwrap_or_else(|| reference.max_dist());
             let r = crate::analysis::resample::resample(reference, len, 2.0).ok()?;
             let spine: Vec<[f32; 2]> = r.x?.into_iter().zip(r.y?).map(|(a, b)| [a, b]).collect();
+            // Le Mans Ultimate : pas de GPS, le circuit est cherché par son nom et recalé sur ton tour.
+            if meta.sim == SimId::Lmu {
+                return crate::trackdb::bank_match_by_name(&meta.track, &spine);
+            }
+            let p = db.latest_track_profile(&meta.track).ok()??;
+            let (lat, lon, origin) = (p.track.lat?, p.track.lon?, p.track.origin?);
             crate::trackdb::bank_match((lat, lon), origin, &spine)
         })();
         self.bank_cache.lock().unwrap_or_else(|p| p.into_inner()).insert(key, found.clone());
@@ -3042,3 +3106,25 @@ mod tests {
         assert!(!json.contains("Circuit Démo"));
     }
 }
+
+#[cfg(test)]
+mod lmu_tests {
+    use super::*;
+
+    #[test]
+    fn lmu_recordings_are_imported_once_and_analysed() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = AppService::open(&dir.path().join("apex.db")).unwrap();
+        let rec = crate::ingest::lmu::testkit::record(1);
+        crate::connectors::lmu::write_recording(&dir.path().join("enregistrements-lmu"), &rec, true).unwrap();
+        let r = svc.sync_lmu_folder(std::time::Duration::ZERO).unwrap();
+        assert_eq!((r.imported, r.errors.len()), (1, 0), "{:?}", r.errors);
+        assert_eq!(svc.sync_lmu_folder(std::time::Duration::ZERO).unwrap().imported, 0);
+        let d = svc.session_detail(r.new_sessions[0]).unwrap();
+        assert_eq!(d.meta.sim, SimId::Lmu);
+        assert!(d.best_lap_id.is_some());
+        assert!(d.consistency.is_some());
+        assert_eq!(svc.connector_config(SimId::Lmu).telemetry_dir, Some(dir.path().join("enregistrements-lmu")));
+    }
+}
+
