@@ -85,6 +85,8 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         let mut monitor = SessionMonitor::default();
         let mut live: Option<(SimId, Box<dyn LiveSource>)> = None;
         let mut last_snap: Option<LiveSnapshot> = None;
+        // Dernière erreur d'ouverture de source live signalée (pour ne pas la répéter toutes les 2 s).
+        let mut live_error: Option<String> = None;
         // Coach en direct : (circuit|configuration|voiture, coach).
         let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
@@ -150,10 +152,27 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             if live.is_none() {
                 for sim in running.iter().filter(|s| wanted(**s)) {
                     if let Some(c) = svc.connectors().iter().find(|c| c.id() == *sim) {
-                        if let Ok(src) = c.open_live(&svc.connector_config(*sim)) {
-                            log::info!("source live ouverte : {}", sim.display_name());
-                            live = Some((*sim, src));
-                            break;
+                        match c.open_live(&svc.connector_config(*sim)) {
+                            Ok(src) => {
+                                log::info!("source live ouverte : {}", sim.display_name());
+                                live_error = None;
+                                live = Some((*sim, src));
+                                break;
+                            }
+                            // Jeu lancé mais lecture impossible (LMU sans « Enable Plugins ») : dit une fois,
+                            // sinon rien n'est enregistré sans que le pilote sache pourquoi.
+                            Err(e) => {
+                                let msg = format!("{} : {e}", sim.display_name());
+                                if live_error.as_deref() != Some(msg.as_str()) {
+                                    log::warn!("{msg}");
+                                    if *sim == SimId::Lmu {
+                                        if let Ok(mut st) = status.lock() {
+                                            st.last_auto_import = Some(msg.clone());
+                                        }
+                                    }
+                                    live_error = Some(msg);
+                                }
+                            }
                         }
                     }
                 }
