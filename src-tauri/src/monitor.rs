@@ -101,6 +101,8 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         let mut last_yaml: Option<String> = None;
         // Une seule tentative par description (le YAML iRacing est long : pas d'analyse à chaque échantillon).
         let mut yaml_fresh = false;
+        // Envoi local vers le plugin SimHub (LEDs du volant), créé à la demande.
+        let mut led: Option<apex_core::led::LedSender> = None;
         // Coach en direct : (circuit|configuration|voiture, coach).
         let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
@@ -242,6 +244,17 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                     }
                                     coach = Some((key, c));
                                     radio(&app, &status, hello, settings.coach_audio);
+                                }
+                            }
+                            // LEDs du volant : repère de freinage envoyé au plugin SimHub à chaque échantillon.
+                            if settings.led_cues {
+                                if let (Some(row), Some((_, c))) = (snap.channels.as_ref(), coach.as_mut()) {
+                                    if led.as_ref().is_none_or(|l| l.port() != settings.led_port) {
+                                        led = apex_core::led::LedSender::new(settings.led_port).ok();
+                                    }
+                                    if let Some(l) = &led {
+                                        l.send(&c.led_cue(row));
+                                    }
                                 }
                             }
                             // Coach : une panique imprévue l'arrête (journal), sans tuer la surveillance.

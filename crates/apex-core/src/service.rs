@@ -79,6 +79,14 @@ pub struct AppSettings {
     pub voice_commands: bool,
     /// Bouton « radio » du volant (ou touche clavier).
     pub ptt_binding: Option<crate::ptt::PttBinding>,
+    /// Clé API Claude pour le débrief par IA (vide = fonction désactivée, aucune connexion).
+    pub ai_api_key: Option<String>,
+    /// Modèle Claude utilisé pour le débrief.
+    pub ai_model: String,
+    /// Repères de freinage envoyés aux LEDs du volant (plugin SimHub d'Apex).
+    pub led_cues: bool,
+    /// Port local (UDP) vers le plugin SimHub.
+    pub led_port: u16,
 }
 
 fn default_true() -> bool {
@@ -122,6 +130,10 @@ impl Default for AppSettings {
             azure_tts_region: None,
             voice_commands: false,
             ptt_binding: None,
+            ai_api_key: None,
+            ai_model: crate::ai::DEFAULT_MODEL.into(),
+            led_cues: false,
+            led_port: crate::led::DEFAULT_PORT,
         }
     }
 }
@@ -1802,6 +1814,137 @@ impl AppService {
         })
     }
 
+    /// Synthèse chiffrée d'une séance pour le débrief par IA : uniquement des valeurs calculées par
+    /// Apex (aucune télémétrie brute), en texte compact.
+    pub fn ai_context(&self, session_id: i64) -> Result<String> {
+        use std::fmt::Write;
+        let d = self.session_detail(session_id)?;
+        let m = &d.meta;
+        let mut s = String::new();
+        let t = |v: Option<f64>| v.map(fmt_lap).unwrap_or_else(|| "—".into());
+        let _ = writeln!(s, "Simulateur : {} · Circuit : {}{} · Voiture : {} · Séance : {} · Série : {}", m.sim.display_name(), m.track, m.track_config.as_deref().map(|c| format!(" ({c})")).unwrap_or_default(), m.car, match m.kind { SessionKind::Practice => "essais", SessionKind::Qualifying => "qualification", SessionKind::Race => "course", SessionKind::Hotlap => "tour chrono", SessionKind::PrivateTesting => "test", SessionKind::Unknown => "inconnue" }, m.setup.map(|x| x.label()).unwrap_or("type inconnu"));
+        if let Some(l) = m.track_length_m {
+            let _ = writeln!(s, "Longueur du circuit : {:.0} m", l);
+        }
+        let clean: Vec<&LapRow> = d.laps.iter().filter(|l| l.clean).collect();
+        let best = d.best_lap_id.and_then(|id| d.laps.iter().find(|l| l.id == id));
+        let _ = writeln!(s, "Tours : {} au total, {} propres. Meilleur tour propre : {} (tour {}). Tour théorique (meilleurs segments) : {}.", d.laps.len(), clean.len(), t(best.and_then(|l| l.meta.lap_time_s)), best.map(|l| l.meta.number).unwrap_or(0), t(d.theoretical_best_s));
+        if let Some(c) = &d.consistency {
+            let _ = writeln!(s, "Régularité : écart-type {:.2} s sur {} tours propres, moyenne {}.", c.stddev_s, c.clean_laps, fmt_lap(c.mean_s));
+        }
+        let _ = writeln!(s, "\nTOURS (numéro, temps, état) :");
+        for l in &d.laps {
+            let state = if l.clean { "propre".to_string() } else {
+                let f = &l.meta.flags;
+                let mut why = vec![];
+                if f.off_track { why.push("sortie de piste"); }
+                if f.incident { why.push("incident"); }
+                if f.pit { why.push("stand"); }
+                if f.yellow_flag { why.push("drapeau jaune"); }
+                if why.is_empty() { why.push(match l.meta.kind { LapKind::OutLap => "tour de sortie", LapKind::InLap => "tour de rentrée", LapKind::Incomplete => "incomplet", _ => "non valide" }); }
+                why.join(", ")
+            };
+            let _ = writeln!(s, "- T{} {} {}{}", l.meta.number, t(l.meta.lap_time_s), state, l.meta.fuel_used_l.map(|f| format!(", {:.2} L", f)).unwrap_or_default());
+        }
+        // Comparaison du meilleur tour avec la référence d'analyse (perso ou pilote plus rapide).
+        // Sans référence plus rapide, ton meilleur tour sert de référence face à un tour typique (médian).
+        let typical = || {
+            let mut v: Vec<&LapRow> = clean.iter().copied().filter(|l| Some(l.id) != d.best_lap_id).collect();
+            v.sort_by(|a, b| a.meta.lap_time_s.unwrap_or(f64::MAX).total_cmp(&b.meta.lap_time_s.unwrap_or(f64::MAX)));
+            v.get(v.len() / 2).map(|l| l.id)
+        };
+        let pair = match (d.analysis_reference_lap_id, d.best_lap_id.or(d.fastest_lap_id)) {
+            (Some(r), Some(b)) if r != b => Some((r, b)),
+            (Some(r), _) => typical().map(|t| (r, t)),
+            _ => None,
+        };
+        if let Some((r, b)) = pair {
+            {
+                if let Ok(c) = self.compare(r, b, 1.0) {
+                    let who = d.reference_label.clone().unwrap_or_else(|| format!("ton tour {}", c.reference.number));
+                    let _ = writeln!(s, "\nCOMPARAISON : ton tour {} ({}) contre la référence {} ({}). Écart final {:+.3} s.", c.compared.number, t(c.compared.lap_time_s), who, t(c.reference.lap_time_s), c.delta_s.last().copied().unwrap_or(0.0));
+                    for w in &c.warnings {
+                        let _ = writeln!(s, "Avertissement : {w}");
+                    }
+                    let _ = writeln!(s, "Par virage (temps perdu + / gagné −, puis toi vs référence) :");
+                    let mut corners: Vec<&crate::analysis::compare::CornerComparison> = c.corners.iter().collect();
+                    corners.sort_by(|a, b| b.time_delta_s.total_cmp(&a.time_delta_s));
+                    for k in corners {
+                        let (me, rf) = (&k.compared, &k.reference);
+                        let brake = match (me.brake_on_m, rf.brake_on_m) {
+                            (Some(a), Some(b)) if (a - b).abs() < 3.0 => "freinage au même endroit".into(),
+                            (Some(a), Some(b)) => format!("freinage {} ({:+.0} m)", if a < b { "plus tôt" } else { "plus tard" }, a - b),
+                            (None, Some(_)) => "pas de freinage (la référence freine)".into(),
+                            (Some(_), None) => "freinage (la référence n'en a pas)".into(),
+                            _ => "pas de freinage".into(),
+                        };
+                        let gas = match (me.throttle_on_m, rf.throttle_on_m) {
+                            (Some(a), Some(b)) => format!(", gaz {:+.0} m", a - b),
+                            _ => String::new(),
+                        };
+                        let _ = writeln!(s, "- {} : {:+.2} s · {} · vitesse mini {:.0} vs {:.0} km/h{} · sortie {:.0} vs {:.0} km/h", k.corner.name, k.time_delta_s, brake, me.min_speed_kmh, rf.min_speed_kmh, gas, me.exit_speed_kmh, rf.exit_speed_kmh);
+                    }
+                    if !c.insights.is_empty() {
+                        let _ = writeln!(s, "Conseils calculés par Apex (priorité décroissante) :");
+                        for i in c.insights.iter().take(5) {
+                            let gain = i.est_gain_s.map(|g| format!(" (gain estimé {:.2} à {:.2} s)", g[0], g[1])).unwrap_or_default();
+                            let _ = writeln!(s, "- {}{} : {} → {}", i.title, gain, i.explanation, i.recommendation);
+                        }
+                    }
+                }
+            }
+        }
+        if !d.risk.is_empty() {
+            let _ = writeln!(s, "\nCARTE DE RISQUE (toutes tes séances ici) :{}", d.risk_headline.as_deref().map(|h| format!(" {h}")).unwrap_or_default());
+            for r in d.risk.iter().take(8) {
+                let _ = writeln!(s, "- {} : {}/{} sorties{}{} · {}", r.name, r.offs, r.passes, r.gain_available_s.map(|g| format!(", à prendre {:.2} s en refaisant ton meilleur passage", g)).unwrap_or_default(), r.off_cost_s.map(|c| format!(", une sortie coûte {:.1} s", c)).unwrap_or_default(), r.message);
+            }
+        }
+        if let Some(rg) = &d.regularity {
+            let _ = writeln!(s, "\nBONS ET MAUVAIS PASSAGES (cette séance) : {}", rg.headline);
+            for c in rg.corners.iter().take(6) {
+                let _ = writeln!(s, "- {} : −{:.2} s possibles (meilleur passage au tour {}). {}", c.name, c.gain_s, c.best_lap, c.advice);
+            }
+        }
+        if !d.off_tracks.is_empty() {
+            let _ = writeln!(s, "\nSORTIES DE PISTE :");
+            for o in &d.off_tracks {
+                let _ = writeln!(s, "- {} (à {:.0} m) aux tours {:?}", o.corner.as_deref().unwrap_or("hors virage"), o.at_m, o.laps);
+            }
+        }
+        if let Some(r) = &d.race {
+            let _ = writeln!(s, "\nCOURSE : {}", r.headline);
+            let _ = writeln!(s, "Grille {:?}, arrivée {:?}, {} pilotes, {} incidents.", r.start_position, r.finish_position, r.field_size, r.incident_total);
+            for i in &r.insights {
+                let _ = writeln!(s, "- {} : {}", i.title, i.detail);
+            }
+        }
+        Ok(s)
+    }
+
+    /// Compile et installe le plugin SimHub d'Apex (LEDs du volant). `dir` : dossier de SimHub choisi
+    /// par le pilote, sinon emplacement habituel.
+    pub fn simhub_install(&self, dir: Option<&Path>) -> Result<String> {
+        let sh = crate::simhub::find_simhub(dir).ok_or_else(|| ServiceError::User("SimHub introuvable : indique son dossier d'installation (celui qui contient SimHubWPF.exe)".into()))?;
+        let work = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("simhub")).ok_or_else(|| ServiceError::User("dossier de données indisponible".into()))?;
+        let dll = crate::simhub::build(&sh, &work).map_err(ServiceError::User)?;
+        let dest = crate::simhub::install(&dll, &sh).map_err(ServiceError::User)?;
+        Ok(format!("Plugin installé ({}). Redémarre SimHub et accepte le nouveau plugin « Apex Companion ».", dest.display()))
+    }
+
+    /// Question au débrief IA sur une séance : `history` = conversation, dernière question en dernier.
+    pub fn ai_chat(&self, session_id: i64, history: &[crate::ai::ChatMessage]) -> Result<crate::ai::ChatReply> {
+        let st = self.settings();
+        let key = st.ai_api_key.clone().filter(|k| !k.trim().is_empty()).ok_or_else(|| ServiceError::User("ajoute ta clé API Claude dans Réglages → Débrief IA".into()))?;
+        if history.last().is_none_or(|m| m.role != "user" || m.text.trim().is_empty()) {
+            return Err(ServiceError::User("pose une question".into()));
+        }
+        let context = self.ai_context(session_id)?;
+        let model = if st.ai_model.trim().is_empty() { crate::ai::DEFAULT_MODEL.to_string() } else { st.ai_model.clone() };
+        let body = crate::ai::build_request(&model, &crate::ai::system_prompt(st.beginner_mode), &context, history);
+        crate::ai::ask(&key, &body).map_err(ServiceError::User)
+    }
+
     /// Télémétrie brute d'un tour.
     pub fn lap_trace(&self, lap_id: i64) -> Result<LapTrace> {
         Ok(self.db().trace(lap_id)?)
@@ -3154,6 +3297,23 @@ mod tests {
 #[cfg(test)]
 mod lmu_tests {
     use super::*;
+
+    #[test]
+    fn ai_context_holds_measured_facts_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = AppService::open(&dir.path().join("apex.db")).unwrap();
+        let id = match svc.load_demo().unwrap() {
+            InsertOutcome::Inserted(id) | InsertOutcome::Duplicate(id) => id,
+        };
+        let c = svc.ai_context(id).unwrap();
+        assert!(c.contains("Circuit :") && c.contains("TOURS"), "{c}");
+        assert!(c.contains("Meilleur tour propre"));
+        assert!(c.len() < 40_000, "contexte trop long : {} caractères", c.len());
+        // Sans clé : message clair, aucune connexion.
+        let err = svc.ai_chat(id, &[crate::ai::ChatMessage { role: "user".into(), text: "Où je perds ?".into() }]).unwrap_err();
+        assert!(err.to_string().contains("clé API"));
+        println!("{c}");
+    }
 
     #[test]
     fn lmu_recordings_are_imported_once_and_analysed() {

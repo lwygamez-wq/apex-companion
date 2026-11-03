@@ -299,3 +299,22 @@ pub async fn create_goal(state: State<'_, AppState>, session_id: i64, goal: apex
 pub async fn archive_goal(state: State<'_, AppState>, id: i64) -> R<()> {
     blocking(state.svc.clone(), move |s| s.archive_goal(id)).await
 }
+
+/// Débrief IA : une question (dernier message) sur une séance, avec la conversation précédente.
+#[tauri::command]
+pub async fn ai_chat(state: State<'_, AppState>, session_id: i64, messages: Vec<apex_core::ai::ChatMessage>) -> R<apex_core::ai::ChatReply> {
+    blocking(state.svc.clone(), move |s| s.ai_chat(session_id, &messages)).await
+}
+
+/// Ce qu'Apex envoie à l'IA pour une séance (transparence : visible par le pilote).
+#[tauri::command]
+pub async fn ai_context(state: State<'_, AppState>, session_id: i64) -> R<String> {
+    blocking(state.svc.clone(), move |s| s.ai_context(session_id)).await
+}
+
+/// Compile et installe le plugin SimHub d'Apex (LEDs du volant).
+#[tauri::command]
+pub async fn simhub_install(state: State<'_, AppState>, dir: Option<String>) -> R<String> {
+    blocking(state.svc.clone(), move |s| s.simhub_install(dir.as_deref().map(std::path::Path::new))).await
+}
+

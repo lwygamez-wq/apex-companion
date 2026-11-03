@@ -9,6 +9,9 @@
 //! - [`detect`] : détection des processus et machine à états de session
 //! - [`mock`] : données de démonstration déterministes
 
+pub mod ai;
+pub mod led;
+pub mod simhub;
 pub mod analysis;
 pub mod codec;
 pub mod connectors;

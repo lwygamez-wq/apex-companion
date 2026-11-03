@@ -2,6 +2,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  ChatMessage,
+  ChatReply,
   RaceLength,
   RaceStrategyView,
   SetupType,
@@ -58,6 +60,9 @@ export const api = {
   setReference: (lapId: number) => call<void>("set_reference", { lapId }),
   setSessionSetup: (id: number, setup: SetupType | null) => call<void>("set_session_setup", { id, setup }),
   trackOverlay: (sessionId: number, spineLapId: number | null) => call<TrackOverlay>("track_overlay", { sessionId, spineLapId }),
+  aiChat: (sessionId: number, messages: ChatMessage[]) => call<ChatReply>("ai_chat", { sessionId, messages }),
+  aiContext: (sessionId: number) => call<string>("ai_context", { sessionId }),
+  simhubInstall: (dir: string | null) => call<string>("simhub_install", { dir }),
   raceStrategy: (c: CircuitOverview, length: RaceLength | null, marginLaps: number, formationLaps: number) =>
     call<RaceStrategyView>("race_strategy", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, setup: c.setup, length, marginLaps, formationLaps }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),

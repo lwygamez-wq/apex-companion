@@ -50,6 +50,15 @@ export function SettingsPage() {
     }
   };
 
+  const [simhubMsg, setSimhubMsg] = useState<string | null>(null);
+  const installSimhub = async (dir: string | null) => {
+    setSimhubMsg("Compilation et installation du plugin…");
+    try {
+      setSimhubMsg(await api.simhubInstall(dir));
+    } catch (e) {
+      setSimhubMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
   const [g61Msg, setG61Msg] = useState<string | null>(null);
   const checkG61 = async () => {
     if (!s) return;
@@ -218,6 +227,60 @@ export function SettingsPage() {
 
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
+          <h2>Débrief IA</h2>
+          <div className="form-row">
+            <div>
+              Clé API Claude
+              <div className="hint">
+                Facultatif. Active l'onglet « Débrief IA » de l'Analyse : un ingénieur de piste IA répond à tes questions sur la séance, uniquement à partir des chiffres calculés par Apex.
+                Crée une clé sur console.anthropic.com (facturé à l'usage par Anthropic, de l'ordre de quelques centimes par question). Elle reste sur ce PC.
+                Seule la synthèse chiffrée de la séance est envoyée, jamais la télémétrie brute ; elle est visible avant envoi dans l'onglet.
+              </div>
+            </div>
+            <input type="password" style={{ minWidth: 280 }} value={s.ai_api_key ?? ""} placeholder="non configurée" onChange={(e) => upd("ai_api_key", e.target.value || null)} />
+          </div>
+          <div className="form-row">
+            <div>Modèle<div className="hint">Sonnet : le meilleur équilibre qualité/prix. Haiku : moins cher, réponses plus simples. Opus : plus fin, plus cher.</div></div>
+            <select value={s.ai_model} onChange={(e) => upd("ai_model", e.target.value)}>
+              <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (conseillé)</option>
+              <option value="claude-haiku-5-5">Claude Haiku 5.5</option>
+              <option value="claude-opus-5-5">Claude Opus 5.5</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {s && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h2>LEDs du volant (SimHub)</h2>
+          <div className="form-row">
+            <div>
+              Repères de freinage
+              <div className="hint">
+                Pendant que tu roules, Apex envoie à SimHub l'approche du prochain point de freinage de ta référence : une barre de LEDs qui se remplit dans la dernière seconde et demie, puis un flash au point de freinage. Nécessite le coach live actif et le plugin ci-dessous.
+              </div>
+            </div>
+            <input type="checkbox" checked={s.led_cues} onChange={(e) => upd("led_cues", e.target.checked)} />
+          </div>
+          <div className="form-row">
+            <div>
+              Plugin SimHub d'Apex
+              <div className="hint">
+                Compilé sur ton PC et copié dans le dossier de SimHub (Windows demande l'autorisation une fois). Ferme SimHub avant, puis rouvre-le et accepte le plugin « Apex Companion ».
+                Il ajoute les propriétés ApexCompanion.BrakeProgress (0 à 1), ApexCompanion.BrakeNow, ApexCompanion.BrakeSeconds, ApexCompanion.SpeedGapKmh et ApexCompanion.Connected, à utiliser dans ton profil LED.
+              </div>
+            </div>
+            <div className="row">
+              <button className="btn" onClick={() => void installSimhub(null)}>Installer le plugin</button>
+              <button className="btn ghost" onClick={() => void open({ directory: true }).then((d) => { if (typeof d === "string") void installSimhub(d); }, (e: unknown) => setMsg(String(e)))} title="Si SimHub n'est pas dans Program Files (x86)">Choisir le dossier de SimHub…</button>
+            </div>
+          </div>
+          {simhubMsg && <div className="muted" style={{ padding: "4px 0 8px", whiteSpace: "pre-line" }}>{simhubMsg}</div>}
+        </div>
+      )}
+
+      {s && (
+        <div className="card" style={{ marginBottom: 14 }}>
           <h2>Coach live</h2>
           <div className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></div>
           <div className="form-row"><div>Audio</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></div>
@@ -246,8 +309,8 @@ export function SettingsPage() {
       <div className="card">
         <h2>Confidentialité et données</h2>
         <p className="muted">
-          Toutes les données restent sur cet ordinateur (base SQLite locale). Aucune fonctionnalité cloud n'existe et aucune donnée n'est envoyée ; la seule connexion est la vérification des mises à jour, désactivable ci-dessus.
-          Les journaux sont locaux et ne contiennent pas de télémétrie.
+          Toutes les données restent sur cet ordinateur (base SQLite locale). Connexions sortantes, seulement si tu les actives : vérification des mises à jour, Garage 61 (avec ton jeton), voix Azure (texte des messages du coach), débrief IA (synthèse chiffrée de la séance, quand tu poses une question).
+          Les repères LED restent sur ce PC (envoi local à SimHub). Les journaux sont locaux et ne contiennent pas de télémétrie.
         </p>
         <div className="row">
           <button className="btn" onClick={() => void save({ defaultPath: "apex-export.json", filters: [{ name: "JSON", extensions: ["json"] }] })

@@ -504,3 +504,11 @@ details.how ul { margin: 8px 0 0; padding-left: 18px; }
 .strategy { padding-top: 10px; padding-bottom: 10px; }
 .risk-cause { font-size: 13px; margin-top: 6px; color: var(--text, #e8e8ee); }
 .risk-cause button.link { padding-left: 4px; }
+.debrief-log { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; max-height: 60vh; overflow-y: auto; }
+.debrief-msg { padding: 10px 12px; border-radius: var(--radius); white-space: pre-wrap; line-height: 1.45; max-width: 85%; }
+.debrief-msg.user { align-self: flex-end; background: #2a2a36; }
+.debrief-msg.assistant { align-self: flex-start; background: var(--panel-2); border-left: 3px solid var(--accent, #ff8a00); }
+.debrief-starters { display: flex; flex-wrap: wrap; gap: 8px; }
+.debrief-input { display: flex; gap: 8px; }
+.debrief-input input { flex: 1; }
+.debrief-ctx { max-height: 260px; overflow: auto; font-size: 11px; background: var(--panel-2); padding: 8px; border-radius: var(--radius); white-space: pre-wrap; }

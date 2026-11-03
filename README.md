@@ -16,6 +16,8 @@ Ce que fait l'application :
 - **Relevé de piste** : vibreurs, bordures peintes et hors-piste relevés sous ta voiture à chaque tour, bords de piste (largeur mesurée sur 25 circuits, sinon estimés d'après tes tours), affichés sur la carte et en relecture.
 - **Séries fixed et open séparées** : type de série lu dans chaque session iRacing ; une référence fixed ne sert qu'aux sessions fixed, une open qu'aux sessions open (analyse, coach en direct, historique).
 - **Le Mans Ultimate** : lecture de la mémoire partagée native du jeu (« Enable Plugins » dans Réglages → Gameplay). LMU n'écrivant pas de fichier de télémétrie lisible, Apex enregistre lui-même chaque passage en piste (~50 Hz, fichiers `.apexlmu` dans son dossier de données) puis l'importe : temps et secteurs officiels, tours invalidés par le jeu, trajectoire, vibreurs, coach vocal en direct, circuit reconnu par son nom dans la banque OpenStreetMap.
+- **Débrief IA** (facultatif, clé API Claude) : onglet de l'Analyse où un ingénieur de piste IA répond à tes questions sur la séance, uniquement à partir des chiffres calculés par Apex (synthèse visible avant envoi, jamais de télémétrie brute).
+- **LEDs du volant** (facultatif, SimHub) : repères de freinage de ta référence envoyés en local à un plugin SimHub compilé sur ton PC (barre d'approche et flash au point de freinage).
 - **Historique** de tous les tours par circuit, **app iPhone** (page installable) qui ouvre les exports de séance.
 
 - Architecture, limites par simulateur, schéma de données : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)

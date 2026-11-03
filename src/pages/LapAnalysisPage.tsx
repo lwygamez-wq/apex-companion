@@ -4,6 +4,7 @@ import { InsightCard } from "../components/InsightCard";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { OffTrackCard } from "../components/OffTrackCard";
 import { RiskCard } from "../components/RiskCard";
+import { DebriefChat } from "../components/DebriefChat";
 import { RaceCard } from "../components/RaceCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap, type MapSize } from "../components/TrackMap";
@@ -58,7 +59,7 @@ function Segmented<T extends string>({ label, value, options, onChange, title }:
   );
 }
 
-type Tab = "advice" | "telemetry" | "corners" | "race" | "laps";
+type Tab = "advice" | "telemetry" | "corners" | "race" | "laps" | "debrief";
 
 /** Fiche voiture en quelques repères lisibles. */
 function carFacts(p: SessionProfile): string[] {
@@ -176,7 +177,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const lapLabel = (l: LapRow) =>
     `Tour ${l.number}, ${lapTime(l.lap_time_s)}${l.id === d?.best_lap_id ? ", meilleur" : ""}${l.is_reference ? ", réf. perso" : ""}${l.clean ? "" : " (perturbé)"}`;
   const timed = d ? d.laps.filter((l) => l.lap_time_s != null) : [];
-  const tabs: [Tab, string][] = [["advice", "Conseils"], ["telemetry", "Télémétrie"], ["corners", "Virages"], ...(d?.race ? ([["race", "Course"]] as [Tab, string][]) : []), ["laps", "Tours"]];
+  const tabs: [Tab, string][] = [["advice", "Conseils"], ["telemetry", "Télémétrie"], ["corners", "Virages"], ...(d?.race ? ([["race", "Course"]] as [Tab, string][]) : []), ["laps", "Tours"], ["debrief", "Débrief IA"]];
   const current: Tab = tabs.some((t) => t[0] === tab) ? tab : "advice";
   const best = d ? d.laps.find((l) => l.id === (d.best_lap_id ?? d.fastest_lap_id))?.lap_time_s : null;
 
@@ -345,6 +346,10 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
           )}
 
           {current === "race" && d.race && <RaceCard r={d.race} laps={d.laps} onLap={(id) => (setCmpId(id), setTab("telemetry"))} />}
+
+          {current === "debrief" && d && (
+            <DebriefChat sessionId={d.id} configured={!!settings.data?.ai_api_key?.trim()} onSetup={() => navigate({ page: "settings" })} />
+          )}
 
           {current === "laps" && (
             <div className="card" style={{ padding: 0 }}>

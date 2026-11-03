@@ -546,6 +546,25 @@ export interface AppSettings {
   /** Commandes vocales au volant. */
   voice_commands: boolean;
   ptt_binding: PttBinding | null;
+  /** Clé API Claude du débrief IA (vide = désactivé). */
+  ai_api_key: string | null;
+  ai_model: string;
+  /** Repères de freinage vers les LEDs du volant (plugin SimHub). */
+  led_cues: boolean;
+  led_port: number;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface ChatReply {
+  text: string;
+  input_tokens: number;
+  cached_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
 }
 
 export interface SessionFilter {

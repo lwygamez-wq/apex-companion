@@ -37,6 +37,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
+            commands::ai_chat,
+            commands::ai_context,
+            commands::simhub_install,
             commands::list_connectors,
             commands::list_sessions,
             commands::get_session,

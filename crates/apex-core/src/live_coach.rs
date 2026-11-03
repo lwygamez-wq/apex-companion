@@ -255,6 +255,8 @@ pub struct LiveCoach {
     builder: LiveLapBuilder,
     meta: SessionMeta,
     reference: Option<ReferenceLap>,
+    /// Points de freinage de la référence (LEDs du volant), recalculés quand elle change.
+    brake_pts: (Option<(u64, usize)>, Vec<crate::led::BrakePoint>),
     /// La référence est ton meilleur tour de cette session (aucune référence enregistrée).
     self_reference: bool,
     history: VecDeque<LapAnalysis>,
@@ -334,7 +336,7 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0 },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]) },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -412,6 +414,20 @@ impl LiveCoach {
             }
             None => callout,
         }
+    }
+
+    /// Repère de freinage pour les LEDs du volant, à l'échantillon `row` (ordre de `LIVE_CHANNELS`).
+    pub fn led_cue(&mut self, row: &[f64; crate::ingest::ibt::LIVE_N]) -> crate::led::LedCue {
+        let key = self.reference.as_ref().map(|r| (r.meta.lap_time_s.unwrap_or(0.0).to_bits(), r.trace.len()));
+        if key != self.brake_pts.0 {
+            self.brake_pts = (key, self.reference.as_ref().map(|r| crate::led::brake_points(&r.trace)).unwrap_or_default());
+        }
+        let len = self.meta.track_length_m.unwrap_or(0.0);
+        // Aux stands ou hors piste : rien à afficher.
+        if row[13] > 0.5 {
+            return crate::led::LedCue { seconds: 99.0, ..Default::default() };
+        }
+        crate::led::cue(&self.brake_pts.1, len, row[1] as f32, row[3] as f32)
     }
 
     /// Programme du jour (commande « plan »).
