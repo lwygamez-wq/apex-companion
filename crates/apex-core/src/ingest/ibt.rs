@@ -640,8 +640,9 @@ impl LiveLapBuilder {
         }
         self.rows.push(v);
         // Sans passage de ligne depuis longtemps (aux stands, menus) : on borne la mémoire.
-        if self.rows.len() > 60 * 60 * 10 {
-            self.rows.drain(..self.rows.len() - 60 * 60 * 5);
+        // 40 min à 60 Hz : un tour très long (Nordschleife en voiture lente, tour de rentrée) garde son départ.
+        if self.rows.len() > 60 * 60 * 40 {
+            self.rows.drain(..self.rows.len() - 60 * 60 * 30);
         }
         if !crossed {
             return None;

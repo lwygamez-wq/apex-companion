@@ -488,6 +488,8 @@ pub struct AppService {
     keep_dir: Option<PathBuf>,
     /// Séances Le Mans Ultimate enregistrées par Apex (fichiers `.apexlmu`).
     lmu_dir: Option<PathBuf>,
+    /// Copie mémoire des réglages (`None` : à relire).
+    settings_cache: std::sync::RwLock<Option<AppSettings>>,
     /// Voix naturelles du coach (moteur et voix téléchargés à la demande).
     tts: Option<crate::tts::Tts>,
     /// Messages déjà synthétisés par Azure (voix|texte → WAV).
@@ -652,6 +654,7 @@ impl AppService {
             retried: Mutex::new(Default::default()),
             keep_dir: db.parent().map(|d| d.join("telemetrie-gardee")),
             lmu_dir: db.parent().map(|d| d.join("enregistrements-lmu")),
+            settings_cache: Default::default(),
             tts: db.parent().map(|d| crate::tts::Tts::new(d.join("voix"))),
             tts_cache: Mutex::new(Default::default()),
             voice: db.parent().map(|d| crate::voice_cmd::VoiceRecognizer::new(d.join("voix"))),
@@ -670,6 +673,7 @@ impl AppService {
             retried: Mutex::new(Default::default()),
             keep_dir: None,
             lmu_dir: None,
+            settings_cache: Default::default(),
             tts: None,
             tts_cache: Mutex::new(Default::default()),
             voice: None,
@@ -709,13 +713,15 @@ impl AppService {
         &self.connectors
     }
 
+    /// Réglages (copie mémoire : lus des dizaines de fois par seconde par le bouton radio et la
+    /// surveillance, sans toucher à la base ni attendre le verrou de la base).
     pub fn settings(&self) -> AppSettings {
-        self.db()
-            .get_setting(SETTINGS_KEY)
-            .ok()
-            .flatten()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
+        if let Some(s) = self.settings_cache.read().unwrap_or_else(|p| p.into_inner()).clone() {
+            return s;
+        }
+        let s: AppSettings = self.db().get_setting(SETTINGS_KEY).ok().flatten().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+        *self.settings_cache.write().unwrap_or_else(|p| p.into_inner()) = Some(s.clone());
+        s
     }
 
     pub fn save_settings(&self, mut s: AppSettings) -> Result<AppSettings> {
@@ -728,6 +734,7 @@ impl AppService {
         s.cloud_enabled = false;
         s.coach_min_interval_s = s.coach_min_interval_s.clamp(3, 60);
         self.db().set_setting(SETTINGS_KEY, &serde_json::to_string(&s).unwrap())?;
+        *self.settings_cache.write().unwrap_or_else(|p| p.into_inner()) = Some(s.clone());
         Ok(s)
     }
 
@@ -788,7 +795,10 @@ impl AppService {
                 let Some(imp) = importer else {
                     return ImportReport { path, outcome: None, laps: 0, error: Some(format!("format .{ext} non pris en charge")) };
                 };
-                match imp.import_file(p) {
+                // Fichier piégé ou cas imprévu du décodeur : une panique ne doit pas tuer la surveillance.
+                let decoded = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| imp.import_file(p)))
+                    .unwrap_or_else(|_| Err(crate::connectors::ConnectorError::Import("fichier illisible (erreur interne du décodeur)".into())));
+                match decoded {
                     Ok(s) => match self.db().insert_session(&s) {
                         Ok(o) => ImportReport { path, outcome: Some(o), laps: s.laps.len(), error: None },
                         Err(e) => ImportReport { path, outcome: None, laps: 0, error: Some(e.to_string()) },
@@ -827,6 +837,10 @@ impl AppService {
         let fname = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         let name = garage61::parse_file_name(&fname)
             .ok_or_else(|| ServiceError::User("nom de fichier non reconnu : garde le nom donné par Garage 61 (« Garage 61 - pilote - voiture - circuit - temps - … .csv »)".into()))?;
+        // Un tour exporté pèse quelques Mo : au-delà, ce n'est pas un export de tour.
+        if std::fs::metadata(path).map(|m| m.len()).unwrap_or(0) > 50 * 1024 * 1024 {
+            return Err(ServiceError::User("fichier trop gros pour un tour Garage 61".into()));
+        }
         let text = std::fs::read_to_string(path).map_err(|e| ServiceError::User(format!("lecture du fichier : {e}")))?;
         self.import_garage61_text(name, &text, fname, None)
     }
@@ -1220,6 +1234,14 @@ impl AppService {
             if !self.should_process(&key, size, mtime)? {
                 continue;
             }
+            // Fichier téléchargé depuis un autre site que Garage 61 (marque « Mark of the Web » de
+            // Windows) : il ne deviendra pas ta référence en silence.
+            if let Some(origin) = download_origin(&p).filter(|o| !o.contains("garage61.net")) {
+                let msg = format!("ignoré : téléchargé depuis {origin}, pas depuis garage61.net");
+                out.push(ExternalImportReport { file: name, result: Err(msg.clone()) });
+                self.db().record_file(&key, size, mtime, None, Some(&msg))?;
+                continue;
+            }
             let (sid, err) = match self.import_garage61(&p) {
                 Ok(r) => {
                     out.push(ExternalImportReport { file: name, result: Ok(r.clone()) });
@@ -1394,7 +1416,12 @@ impl AppService {
     /// Import manuel de tout le dossier iRacing (les doublons sont ignorés).
     pub fn scan_iracing(&self) -> Result<Vec<ImportReport>> {
         let dir = self.iracing_dir()?;
-        let files = self.ibt_files(&dir)?;
+        // Fichier encore en cours d'écriture (séance en cours) : laissé à la synchro, qui attend la fin.
+        let files: Vec<PathBuf> = self
+            .ibt_files(&dir)?
+            .into_iter()
+            .filter(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok().and_then(|m| m.elapsed().ok()).is_none_or(|a| a >= std::time::Duration::from_secs(20)))
+            .collect();
         Ok(self.import_paths(&files))
     }
 
@@ -1515,7 +1542,24 @@ impl AppService {
                 let _ = std::fs::remove_file(g);
             }
         }
+        self.prune_guard(&dir, std::time::Duration::from_secs(60 * 24 * 3600));
         Ok(rep)
+    }
+
+    /// Copies de garde devenues seules copies (original effacé par un autre logiciel) : gardées
+    /// 60 jours après un import réussi, puis supprimées (une séance d'une heure pèse ~250 Mo).
+    fn prune_guard(&self, iracing_dir: &Path, keep_for: std::time::Duration) {
+        let Some(keep) = &self.keep_dir else { return };
+        let Ok(files) = self.ibt_files(keep) else { return };
+        for g in files {
+            let Some(name) = g.file_name() else { continue };
+            let orig = iracing_dir.join(name).to_string_lossy().into_owned();
+            let old = std::fs::metadata(&g).and_then(|m| m.modified()).ok().and_then(|m| m.elapsed().ok()).is_some_and(|a| a >= keep_for);
+            let imported = matches!(self.db().file_record(&orig), Ok(Some((_, _, None))));
+            if old && imported {
+                let _ = std::fs::remove_file(&g);
+            }
+        }
     }
 
     fn guard_path(&self, p: &Path) -> Option<PathBuf> {
@@ -3128,3 +3172,33 @@ mod lmu_tests {
     }
 }
 
+/// Site d'origine d'un fichier téléchargé (flux NTFS `Zone.Identifier` écrit par le navigateur) :
+/// `None` si le fichier n'en porte pas (copié à la main, autre système).
+pub fn download_origin(path: &Path) -> Option<String> {
+    let mut stream = path.as_os_str().to_owned();
+    stream.push(":Zone.Identifier");
+    let text = std::fs::read_to_string(PathBuf::from(stream)).ok()?;
+    zone_origin(&text)
+}
+
+fn zone_origin(text: &str) -> Option<String> {
+    let get = |k: &str| text.lines().find_map(|l| l.trim().strip_prefix(k).map(|v| v.trim().to_string())).filter(|v| !v.is_empty() && v != "about:internet");
+    // Les deux adresses : un export peut venir d'un stockage tiers avec garage61.net comme page d'origine.
+    match (get("HostUrl="), get("ReferrerUrl=")) {
+        (Some(h), Some(r)) => Some(format!("{h} (page {r})")),
+        (h, r) => h.or(r),
+    }
+}
+
+#[cfg(test)]
+mod zone_tests {
+    #[test]
+    fn origin_is_read_from_the_mark_of_the_web() {
+        let z = "[ZoneTransfer]\r\nZoneId=3\r\nReferrerUrl=https://garage61.net/app/laps\r\nHostUrl=https://storage.garage61.net/exports/x.csv\r\n";
+        assert!(super::zone_origin(z).unwrap().contains("garage61.net"));
+        let cdn = "[ZoneTransfer]\r\nHostUrl=https://cdn.example.com/x.csv\r\nReferrerUrl=https://garage61.net/app\r\n";
+        assert!(super::zone_origin(cdn).unwrap().contains("garage61.net"), "export servi par un stockage tiers");
+        assert_eq!(super::zone_origin("[ZoneTransfer]\r\nZoneId=3\r\nHostUrl=about:internet\r\n"), None);
+        assert!(super::download_origin(std::path::Path::new("/n/existe/pas.csv")).is_none());
+    }
+}

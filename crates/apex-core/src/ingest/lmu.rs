@@ -358,9 +358,18 @@ pub fn encode(r: &Recording) -> Vec<u8> {
     gz.finish().unwrap_or_default()
 }
 
+/// Taille décompressée maximale d'un enregistrement (une séance de 24 h à 60 Hz en fait ≈ 400 Mo).
+const MAX_RAW_BYTES: u64 = 512 * 1024 * 1024;
+/// Octets par échantillon dans le fichier (et, 8 + 4 + 4 + 11 × 4 + 1 + 1).
+const BYTES_PER_TICK: usize = 62;
+
 pub fn decode(bytes: &[u8]) -> Result<Recording, String> {
     let mut raw = Vec::new();
-    flate2::read::GzDecoder::new(bytes).read_to_end(&mut raw).map_err(|e| format!("fichier LMU illisible : {e}"))?;
+    // Taille bornée : un fichier piégé (bombe de décompression) ne doit pas épuiser la mémoire.
+    flate2::read::GzDecoder::new(bytes).take(MAX_RAW_BYTES + 1).read_to_end(&mut raw).map_err(|e| format!("fichier LMU illisible : {e}"))?;
+    if raw.len() as u64 > MAX_RAW_BYTES {
+        return Err("fichier LMU trop gros".into());
+    }
     let mut o = 0usize;
     let take = |o: &mut usize, n: usize| -> Result<&[u8], String> {
         let s = raw.get(*o..*o + n).ok_or("fichier LMU tronqué")?;
@@ -371,8 +380,15 @@ pub fn decode(bytes: &[u8]) -> Result<Recording, String> {
         return Err("pas un enregistrement Apex de Le Mans Ultimate".into());
     }
     let ml = u32::from_le_bytes(take(&mut o, 4)?.try_into().unwrap()) as usize;
+    if ml > 16 * 1024 * 1024 {
+        return Err("en-tête LMU invalide".into());
+    }
     let meta: Meta = serde_json::from_slice(take(&mut o, ml)?).map_err(|e| format!("en-tête LMU : {e}"))?;
     let n = u32::from_le_bytes(take(&mut o, 4)?.try_into().unwrap()) as usize;
+    // Nombre d'échantillons annoncé cohérent avec les données présentes, avant toute allocation.
+    if n.checked_mul(BYTES_PER_TICK).is_none_or(|need| need > raw.len().saturating_sub(o)) {
+        return Err("fichier LMU tronqué".into());
+    }
     let mut ticks = vec![Tick::default(); n];
     for (i, c) in take(&mut o, n * 8)?.chunks_exact(8).enumerate() {
         ticks[i].et = f64::from_le_bytes(c.try_into().unwrap());
@@ -824,6 +840,27 @@ pub(crate) mod testkit {
 mod tests {
     use super::testkit::*;
     use super::*;
+
+    #[test]
+    fn crafted_files_are_refused_without_huge_allocations() {
+        use std::io::Write;
+        let gz = |raw: &[u8]| {
+            let mut e = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+            e.write_all(raw).unwrap();
+            e.finish().unwrap()
+        };
+        // 4 milliards d'échantillons annoncés, aucun présent.
+        let mut raw = b"APXL".to_vec();
+        let meta = br#"{"header":{"version":1,"game_version":0,"started_at_unix":0,"track":"x","track_length_m":1000,"car":"y","car_class":null,"vehicle_name":"","session":1,"fixed_setup":null,"fuel_capacity_l":null,"redline_rpm":null,"gears":null,"est_lap_s":null,"air_temp_c":null,"track_temp_c":null,"raining":null,"wetness":null,"hz":50,"field_size":null,"start_position":null},"anchors":[],"laps":[]}"#;
+        raw.extend_from_slice(&(meta.len() as u32).to_le_bytes());
+        raw.extend_from_slice(meta);
+        raw.extend_from_slice(&u32::MAX.to_le_bytes());
+        assert!(decode(&gz(&raw)).unwrap_err().contains("tronqué"));
+        // En-tête annoncé gigantesque.
+        let mut raw = b"APXL".to_vec();
+        raw.extend_from_slice(&u32::MAX.to_le_bytes());
+        assert!(decode(&gz(&raw)).is_err());
+    }
 
     #[test]
     fn recording_round_trips_through_the_file_format() {

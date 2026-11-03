@@ -73,6 +73,15 @@ pub(crate) fn radio(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message
     let _ = app.emit("apex://coach", CoachEvent { message, speak });
 }
 
+/// Remet un drapeau à `false` à la fin du fil, y compris en cas de panique.
+struct ClearOnDrop(Arc<std::sync::atomic::AtomicBool>);
+
+impl Drop for ClearOnDrop {
+    fn drop(&mut self) {
+        self.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
 pub fn set_importing(status: &Arc<Mutex<StatusPayload>>, v: Option<String>) {
     if let Ok(mut s) = status.lock() {
         s.importing = v;
@@ -95,15 +104,21 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         // Coach en direct : (circuit|configuration|voiture, coach).
         let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
-        let mut next_sync = Instant::now();
+        let next_sync = Arc::new(Mutex::new(Instant::now()));
+        let syncing = Arc::new(std::sync::atomic::AtomicBool::new(false));
         // Sessions décodées par une ancienne version : recalculées depuis leurs fichiers .ibt.
-        match svc.reprocess_outdated() {
-            Ok(n) if n > 0 => {
-                log::info!("{n} session(s) recalculée(s) avec le nouveau décodeur");
-                let _ = app.emit("apex://sessions-changed", ());
-            }
-            Ok(_) => {}
-            Err(e) => log::warn!("recalcul des sessions : {e}"),
+        // En arrière-plan : après une mise à jour, recalculer des centaines de fichiers prend des minutes,
+        // pendant lesquelles la lecture live (et l'enregistrement LMU) doit déjà tourner.
+        {
+            let (svc, app) = (svc.clone(), app.clone());
+            std::thread::spawn(move || match svc.reprocess_outdated() {
+                Ok(n) if n > 0 => {
+                    log::info!("{n} session(s) recalculée(s) avec le nouveau décodeur");
+                    let _ = app.emit("apex://sessions-changed", ());
+                }
+                Ok(_) => {}
+                Err(e) => log::warn!("recalcul des sessions : {e}"),
+            });
         }
         // Recherche Garage 61 pour toutes les sessions déjà roulées : au plus une fois par jour.
         let mut next_g61_check = Instant::now() + Duration::from_secs(20);
@@ -229,8 +244,20 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                     radio(&app, &status, hello, settings.coach_audio);
                                 }
                             }
-                            if let (Some(row), Some((_, c))) = (snap.channels, coach.as_mut()) {
-                                if let Some(m) = c.push(row) {
+                            // Coach : une panique imprévue l'arrête (journal), sans tuer la surveillance.
+                            let pushed = match (snap.channels, coach.as_mut()) {
+                                (Some(row), Some((_, c))) => match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.push(row))) {
+                                    Ok(m) => m,
+                                    Err(_) => {
+                                        log::error!("coach en direct arrêté après une erreur interne");
+                                        coach = None;
+                                        None
+                                    }
+                                },
+                                _ => None,
+                            };
+                            if let (Some(m), Some((_, c))) = (pushed, coach.as_mut()) {
+                                {
                                     let kind = c.current_kind();
                                     // Bips de freinage : un son, pas un message (ni journal ni voix).
                                     if m.kind == apex_core::live_coach::CoachMessageKind::Beep {
@@ -291,7 +318,6 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
 
             // Synchro automatique du dossier de télémétrie iRacing, indépendante de la lecture live :
             // un .ibt est importé dès qu'il n'a plus bougé depuis 20 s (iRacing a fini de l'écrire).
-            let mut auto_msg = None;
             // Copie de garde des .ibt dès leur apparition : un autre logiciel (agent Garage 61 réglé pour
             // supprimer après envoi) peut les effacer quelques secondes après la fin de la session.
             if settings.auto_import {
@@ -301,74 +327,88 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                     Err(e) => log::debug!("garde : {e}"),
                 }
             }
-            if settings.auto_import && Instant::now() >= next_sync {
-                next_sync = Instant::now() + Duration::from_secs(15);
-                // Séances Le Mans Ultimate enregistrées par Apex.
-                match svc.sync_lmu_folder(Duration::from_secs(3)) {
-                    Ok(r) if r.imported > 0 || !r.errors.is_empty() => {
-                        let mut m = format!("Le Mans Ultimate : {} séance(s) importée(s)", r.imported);
-                        if !r.errors.is_empty() {
-                            m += &format!(", erreurs : {}", r.errors.join(" ; "));
-                            log::warn!("synchro LMU : {}", r.errors.join(" ; "));
-                        }
-                        auto_msg = Some(m);
-                        let _ = app.emit("apex://sessions-changed", ());
-                    }
-                    Ok(_) => {}
-                    Err(e) => log::debug!("synchro LMU : {e}"),
-                }
-                // Tours Garage 61 téléchargés depuis le site : importés comme références.
-                if settings.watch_downloads {
-                    match svc.sync_downloads() {
-                        Ok(v) if !v.is_empty() => {
-                            let msgs: Vec<String> = v
-                                .iter()
-                                .map(|r| match &r.result {
-                                    Ok(x) => format!("référence {} ({}) importée", x.driver, apex_core::service::fmt_lap(x.lap_time_s)),
-                                    Err(e) => format!("{} : {e}", r.file),
-                                })
-                                .collect();
-                            auto_msg = Some(msgs.join(" ; "));
+            // Synchro des dossiers dans son propre fil : un import de plusieurs secondes (gros .ibt,
+            // copie mobile) ne doit pas interrompre la lecture live ni le coach.
+            let due = Instant::now() >= *next_sync.lock().unwrap_or_else(|p| p.into_inner());
+            if settings.auto_import && due && !syncing.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                *next_sync.lock().unwrap_or_else(|p| p.into_inner()) = Instant::now() + Duration::from_secs(15);
+                let (svc, app, status, syncing, next_sync, settings) = (svc.clone(), app.clone(), status.clone(), syncing.clone(), next_sync.clone(), settings.clone());
+                std::thread::spawn(move || {
+                    // Remis à zéro même si l'import panique : la synchro ne doit pas rester bloquée.
+                    let _done = ClearOnDrop(syncing);
+                    let mut auto_msg: Option<String> = None;
+                    // Séances Le Mans Ultimate enregistrées par Apex.
+                    match svc.sync_lmu_folder(Duration::from_secs(3)) {
+                        Ok(r) if r.imported > 0 || !r.errors.is_empty() => {
+                            let mut m = format!("Le Mans Ultimate : {} séance(s) importée(s)", r.imported);
+                            if !r.errors.is_empty() {
+                                m += &format!(", erreurs : {}", r.errors.join(" ; "));
+                                log::warn!("synchro LMU : {}", r.errors.join(" ; "));
+                            }
+                            auto_msg = Some(m);
                             let _ = app.emit("apex://sessions-changed", ());
                         }
                         Ok(_) => {}
-                        Err(e) => log::debug!("téléchargements : {e}"),
+                        Err(e) => log::debug!("synchro LMU : {e}"),
                     }
-                }
-                match svc.sync_iracing_folder(Duration::from_secs(20)) {
-                    Ok(r) if r.imported > 0 || !r.errors.is_empty() => {
-                        // Nouvelle session : recherche d'une référence plus rapide sur Garage 61, en arrière-plan.
-                        if settings.garage61_auto && settings.garage61_token.as_deref().is_some_and(|t| !t.trim().is_empty()) {
-                            let (svc2, app2, status2, ids) = (svc.clone(), app.clone(), status.clone(), r.new_sessions.clone());
-                            std::thread::spawn(move || {
-                                for id in ids {
-                                    let msg = match svc2.find_garage61_reference(id) {
-                                        Ok(m) => m,
-                                        Err(e) => format!("Garage 61 : {e}"),
-                                    };
-                                    log::info!("{msg}");
-                                    if let Ok(mut s) = status2.lock() {
-                                        s.last_auto_import = Some(msg);
+                    // Tours Garage 61 téléchargés depuis le site : importés comme références.
+                    if settings.watch_downloads {
+                        match svc.sync_downloads() {
+                            Ok(v) if !v.is_empty() => {
+                                let msgs: Vec<String> = v
+                                    .iter()
+                                    .map(|r| match &r.result {
+                                        Ok(x) => format!("référence {} ({}) importée", x.driver, apex_core::service::fmt_lap(x.lap_time_s)),
+                                        Err(e) => format!("{} : {e}", r.file),
+                                    })
+                                    .collect();
+                                auto_msg = Some(msgs.join(" ; "));
+                                let _ = app.emit("apex://sessions-changed", ());
+                            }
+                            Ok(_) => {}
+                            Err(e) => log::debug!("téléchargements : {e}"),
+                        }
+                    }
+                    match svc.sync_iracing_folder(Duration::from_secs(20)) {
+                        Ok(r) if r.imported > 0 || !r.errors.is_empty() => {
+                            // Nouvelle session : recherche d'une référence plus rapide sur Garage 61, en arrière-plan.
+                            if settings.garage61_auto && settings.garage61_token.as_deref().is_some_and(|t| !t.trim().is_empty()) {
+                                let (svc2, app2, status2, ids) = (svc.clone(), app.clone(), status.clone(), r.new_sessions.clone());
+                                std::thread::spawn(move || {
+                                    for id in ids {
+                                        let msg = match svc2.find_garage61_reference(id) {
+                                            Ok(m) => m,
+                                            Err(e) => format!("Garage 61 : {e}"),
+                                        };
+                                        log::info!("{msg}");
+                                        if let Ok(mut s) = status2.lock() {
+                                            s.last_auto_import = Some(msg);
+                                        }
+                                        let _ = app2.emit("apex://sessions-changed", ());
                                     }
-                                    let _ = app2.emit("apex://sessions-changed", ());
-                                }
-                            });
+                                });
+                            }
+                            let mut m = format!("{} session(s) importée(s) automatiquement", r.imported);
+                            if !r.errors.is_empty() {
+                                m += &format!(", {} fichier(s) illisible(s) : {}", r.errors.len(), r.errors.join(" ; "));
+                                log::warn!("synchro : {}", r.errors.join(" ; "));
+                            }
+                            auto_msg = Some(m);
+                            let _ = app.emit("apex://sessions-changed", ());
                         }
-                        let mut m = format!("{} session(s) importée(s) automatiquement", r.imported);
-                        if !r.errors.is_empty() {
-                            m += &format!(", {} fichier(s) illisible(s) : {}", r.errors.len(), r.errors.join(" ; "));
-                            log::warn!("synchro : {}", r.errors.join(" ; "));
+                        Ok(_) => {}
+                        // Dossier absent (iRacing pas installé ou chemin non réglé) : on réessaie plus tard, sans bruit.
+                        Err(e) => {
+                            log::debug!("synchro : {e}");
+                            *next_sync.lock().unwrap_or_else(|p| p.into_inner()) = Instant::now() + Duration::from_secs(60);
                         }
-                        auto_msg = Some(m);
-                        let _ = app.emit("apex://sessions-changed", ());
                     }
-                    Ok(_) => {}
-                    // Dossier absent (iRacing pas installé ou chemin non réglé) : on réessaie plus tard, sans bruit.
-                    Err(e) => {
-                        log::debug!("synchro : {e}");
-                        next_sync = Instant::now() + Duration::from_secs(60);
+                    if let Some(m) = auto_msg {
+                        if let Ok(mut st) = status.lock() {
+                            st.last_auto_import = Some(m);
+                        }
                     }
-                }
+                });
             }
 
             let payload = {
@@ -377,9 +417,6 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 s.state = state;
                 s.running = running;
                 s.live = last_snap.clone();
-                if auto_msg.is_some() {
-                    s.last_auto_import = auto_msg;
-                }
                 s.clone()
             };
             let _ = app.emit("apex://status", payload);

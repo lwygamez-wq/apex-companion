@@ -82,14 +82,24 @@ pub fn verify_signature(data: &[u8], signature_b64: &str) -> Result<(), String> 
     pk.verify(data, &sig, false).map_err(|_| "signature invalide : installeur refusé".to_string())
 }
 
+/// « 1.2.3 » uniquement (chiffres et deux points).
+fn valid_version(v: &str) -> bool {
+    let parts: Vec<&str> = v.split('.').collect();
+    parts.len() == 3 && parts.iter().all(|p| !p.is_empty() && p.len() <= 6 && p.bytes().all(|b| b.is_ascii_digit()))
+}
+
 pub fn check(current: &str) -> Result<Option<UpdateInfo>, String> {
     let m = fetch_manifest()?;
-    Ok(is_newer(&m.version, current).then(|| UpdateInfo { version: m.version, notes: m.notes.filter(|n| !n.trim().is_empty()) }))
+    Ok((valid_version(&m.version) && is_newer(&m.version, current)).then(|| UpdateInfo { version: m.version, notes: m.notes.filter(|n| !n.trim().is_empty()) }))
 }
 
 /// Télécharge, vérifie et lance l'installeur. L'appelant ferme ensuite l'application.
 pub fn download_and_launch(current: &str) -> Result<String, String> {
     let m = fetch_manifest()?;
+    // Version strictement « X.Y.Z » : elle sert dans un nom de fichier.
+    if !valid_version(&m.version) {
+        return Err("numéro de version invalide dans latest.json : mise à jour refusée".into());
+    }
     if !is_newer(&m.version, current) {
         return Err("tu as déjà la dernière version".into());
     }
@@ -109,7 +119,9 @@ pub fn download_and_launch(current: &str) -> Result<String, String> {
         .read_to_vec()
         .map_err(|e| format!("téléchargement interrompu : {e}"))?;
     verify_signature(&bytes, &p.signature)?;
-    let path = std::env::temp_dir().join(format!("ApexCompanion-{}-setup.exe", m.version));
+    let dir = std::env::temp_dir().join(format!("apex-update-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).map_err(|e| format!("dossier temporaire : {e}"))?;
+    let path = dir.join("ApexCompanion-setup.exe");
     std::fs::write(&path, &bytes).map_err(|e| format!("écriture de l'installeur : {e}"))?;
     std::process::Command::new(&path).spawn().map_err(|e| format!("lancement de l'installeur : {e}"))?;
     log::info!("mise à jour {} lancée ({} octets, signature vérifiée)", m.version, bytes.len());
@@ -119,6 +131,14 @@ pub fn download_and_launch(current: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn manifest_versions_must_be_plain_numbers() {
+        assert!(valid_version("0.24.0"));
+        assert!(!valid_version("9.0.0+/../../x"));
+        assert!(!valid_version("1.2"));
+        assert!(!valid_version("1.2.3-beta"));
+    }
 
     #[test]
     fn version_comparison() {

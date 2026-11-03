@@ -1,29 +1,40 @@
 name: Publier une version Windows
 
-# Construit l'installeur signé, crée la release GitHub « vX.Y.Z » et le fichier
-# latest.json que l'application lit pour se mettre à jour.
+# Construit l'installeur, le signe, crée la release GitHub « vX.Y.Z » et le fichier latest.json
+# que l'application lit pour se mettre à jour.
 # La version vient de src-tauri/tauri.conf.json : l'augmenter avant chaque publication.
+#
+# Sécurité : deux étapes séparées.
+# - « build » exécute le code du projet et ses centaines de dépendances (scripts de compilation,
+#   plugins) SANS la clé de signature ni droit d'écriture sur le dépôt.
+# - « release » ne lance aucun code du projet : elle signe l'installeur produit, puis publie.
+# Une dépendance compromise ne peut donc ni lire la clé ni publier une mise à jour.
+# Actions tierces épinglées par empreinte de commit (une étiquette peut être déplacée).
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: ". -> target"
 
@@ -38,19 +49,12 @@ jobs:
           cargo test -p apex-companion
           npm test
 
-      - name: Construire et signer l'installeur
+      - name: Construire l'installeur (non signé)
         shell: bash
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: |
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
-            echo "::error::Le secret TAURI_SIGNING_PRIVATE_KEY est absent (nom exact à vérifier dans Settings > Secrets and variables > Actions)."
-            exit 1
-          fi
-          echo "Clé de signature présente (${#TAURI_SIGNING_PRIVATE_KEY} caractères)."
           set +e
-          npm run tauri build 2>&1 | tee build.log
+          # Artefacts de mise à jour signés ailleurs (étape « release ») : la clé n'est pas ici.
+          npm run tauri build -- --config '{"bundle":{"createUpdaterArtifacts":false}}' 2>&1 | tee build.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             # Remonte les dernières lignes en annotations (lisibles sans ouvrir le journal complet).
@@ -59,23 +63,62 @@ jobs:
           fi
           exit $rc
 
-      - name: Publier la release et latest.json
+      - name: Préparer l'installeur
+        id: v
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          EXE=$(ls target/release/bundle/nsis/*-setup.exe | head -1)
-          if [ ! -f "$EXE.sig" ]; then
-            echo "::error::Installeur non signé : le secret TAURI_SIGNING_PRIVATE_KEY est absent ou invalide."
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          mkdir -p out
+          cp "$(ls target/release/bundle/nsis/*-setup.exe | head -1)" "out/ApexCompanion_${VERSION}_x64-setup.exe"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: installeur
+          path: out/*.exe
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: installeur
+          path: release
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Signer l'installeur
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::Le secret TAURI_SIGNING_PRIVATE_KEY est absent (nom exact à vérifier dans Settings > Secrets and variables > Actions)."
             exit 1
           fi
-          mkdir -p release
+          # Outil officiel de signature Tauri, version figée (même format que la signature à la compilation).
+          npx --yes @tauri-apps/cli@2.12.0 signer sign "release/ApexCompanion_${VERSION}_x64-setup.exe"
+          test -s "release/ApexCompanion_${VERSION}_x64-setup.exe.sig"
+
+      - name: Publier la release et latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
           FILE="ApexCompanion_${VERSION}_x64-setup.exe"
-          cp "$EXE" "release/$FILE"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/${FILE}"
-          SIG_PATH="$EXE.sig" URL="$URL" VERSION="$VERSION" node -e '
+          URL="https://github.com/${REPO}/releases/download/v${VERSION}/${FILE}"
+          SIG_PATH="release/$FILE.sig" URL="$URL" node -e '
             const fs = require("fs");
             const m = {
               version: process.env.VERSION,
@@ -85,17 +128,10 @@ jobs:
             };
             fs.writeFileSync("release/latest.json", JSON.stringify(m, null, 2));'
           cat release/latest.json
-          if gh release view "v$VERSION" >/dev/null 2>&1; then
+          if gh release view "v$VERSION" -R "$REPO" >/dev/null 2>&1; then
             echo "::error::La version $VERSION est déjà publiée : augmente le numéro de version."
             exit 1
           fi
-          gh release create "v$VERSION" "release/$FILE" release/latest.json \
+          gh release create "v$VERSION" "release/$FILE" release/latest.json -R "$REPO" --target "$GITHUB_SHA" \
             --title "Apex Companion v$VERSION" \
             --notes "Première installation : télécharge **$FILE** ci-dessous et lance-le. Si l'application est déjà installée (v0.3.0 ou plus), elle te proposera cette mise à jour au démarrage."
-
-      # Copie de secours, téléchargeable depuis l'onglet Actions.
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Apex-Companion-Windows
-          path: release/*.exe
-          if-no-files-found: error

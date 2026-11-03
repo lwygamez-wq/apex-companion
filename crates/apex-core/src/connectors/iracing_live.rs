@@ -10,7 +10,7 @@ use super::{ConnectorError, LiveSnapshot, LiveSource};
 use crate::ingest::ibt::{parse_header, parse_var_headers, read_value, VarHeader, HEADER_LEN};
 use std::collections::HashMap;
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
-use windows_sys::Win32::System::Memory::{MapViewOfFile, OpenFileMappingW, UnmapViewOfFile, FILE_MAP_READ, MEMORY_MAPPED_VIEW_ADDRESS};
+use windows_sys::Win32::System::Memory::{MapViewOfFile, OpenFileMappingW, UnmapViewOfFile, VirtualQuery, FILE_MAP_READ, MEMORY_BASIC_INFORMATION, MEMORY_MAPPED_VIEW_ADDRESS};
 use windows_sys::Win32::System::Threading::{OpenEventW, WaitForSingleObject};
 
 const SYNCHRONIZE: u32 = 0x0010_0000;
@@ -23,6 +23,8 @@ fn wide(s: &str) -> Vec<u16> {
 pub struct IrsdkLive {
     mapping: HANDLE,
     view: MEMORY_MAPPED_VIEW_ADDRESS,
+    /// Taille lisible de la vue : toute copie est bornée par elle (offsets lus dans la mémoire partagée).
+    size: usize,
     event: HANDLE,
     vars: HashMap<String, VarHeader>,
     last_tick: i32,
@@ -45,8 +47,15 @@ impl IrsdkLive {
                 CloseHandle(mapping);
                 return Err(ConnectorError::Import("MapViewOfFile a échoué".into()));
             }
+            let mut info: MEMORY_BASIC_INFORMATION = std::mem::zeroed();
+            let n = VirtualQuery(view.Value, &mut info, std::mem::size_of::<MEMORY_BASIC_INFORMATION>());
+            if n == 0 || info.RegionSize < HEADER_LEN {
+                UnmapViewOfFile(view);
+                CloseHandle(mapping);
+                return Err(ConnectorError::Import("mémoire partagée iRacing illisible".into()));
+            }
             let event = OpenEventW(SYNCHRONIZE, 0, wide("Local\\IRSDKDataValidEvent").as_ptr());
-            Ok(Self { mapping, view, event, vars: HashMap::new(), last_tick: -1, last_session_info: -1 })
+            Ok(Self { mapping, view, size: info.RegionSize, event, vars: HashMap::new(), last_tick: -1, last_session_info: -1 })
         }
     }
 
@@ -54,11 +63,15 @@ impl IrsdkLive {
         self.view.Value as *const u8
     }
 
-    /// Copie `len` octets depuis l'offset `off` de la vue.
-    fn copy(&self, off: usize, len: usize) -> Vec<u8> {
+    /// Copie `len` octets depuis l'offset `off` de la vue, refusée si elle déborde de la vue
+    /// (en-tête incohérent : changement de version, lecture pendant une écriture).
+    fn copy(&self, off: usize, len: usize) -> Result<Vec<u8>, ConnectorError> {
+        if off.checked_add(len).is_none_or(|end| end > self.size) {
+            return Err(ConnectorError::Import("mémoire partagée iRacing incohérente".into()));
+        }
         let mut v = vec![0u8; len];
         unsafe { std::ptr::copy_nonoverlapping(self.base().add(off), v.as_mut_ptr(), len) };
-        v
+        Ok(v)
     }
 }
 
@@ -70,14 +83,14 @@ impl LiveSource for IrsdkLive {
                 return Ok(None);
             }
         }
-        let hdr_bytes = self.copy(0, HEADER_LEN);
-        let h = parse_header(&hdr_bytes).map_err(|e| ConnectorError::Import(e.to_string()))?;
+        let hdr_bytes = self.copy(0, HEADER_LEN)?;
+        let mut h = parse_header(&hdr_bytes).map_err(|e| ConnectorError::Import(e.to_string()))?;
         if h.status & STATUS_CONNECTED == 0 {
             return Ok(Some(LiveSnapshot { connected: false, on_track: false, session_time_s: 0.0, lap: 0, lap_dist_pct: 0.0, speed_kmh: 0.0, gear: 0, throttle: 0.0, brake: 0.0, tick: 0, disk_logging: None, channels: None, session_info: None }));
         }
         if self.vars.is_empty() {
             let len = h.var_header_offset + h.num_vars * crate::ingest::ibt::VAR_HEADER_LEN;
-            let all = self.copy(0, len);
+            let all = self.copy(0, len)?;
             let vars = parse_var_headers(&all, &h).map_err(|e| ConnectorError::Import(e.to_string()))?;
             self.vars = vars.into_iter().map(|v| (v.name.clone(), v)).collect();
         }
@@ -87,14 +100,14 @@ impl LiveSource for IrsdkLive {
             if tick == self.last_tick {
                 return Ok(None);
             }
-            let rec = self.copy(off, h.buf_len);
-            let h2 = parse_header(&self.copy(0, HEADER_LEN)).map_err(|e| ConnectorError::Import(e.to_string()))?;
+            let rec = self.copy(off, h.buf_len)?;
+            let h2 = parse_header(&self.copy(0, HEADER_LEN)?).map_err(|e| ConnectorError::Import(e.to_string()))?;
             if h2.var_bufs.iter().any(|b| b.1 == off && b.0 == tick) {
                 self.last_tick = tick;
                 // YAML de session : relu seulement quand iRacing l'a modifié (il fait ~60 ko).
                 let session_info = if h2.session_info_update != self.last_session_info && h2.session_info_len > 0 {
                     self.last_session_info = h2.session_info_update;
-                    let raw = self.copy(h2.session_info_offset, h2.session_info_len);
+                    let raw = self.copy(h2.session_info_offset, h2.session_info_len)?;
                     let end = raw.iter().position(|&c| c == 0).unwrap_or(raw.len());
                     Some(crate::ingest::ibt::decode_text(&raw[..end]))
                 } else {
@@ -121,6 +134,8 @@ impl LiveSource for IrsdkLive {
                     session_info,
                 }));
             }
+            // Buffer réécrit pendant la copie : nouvel essai avec l'en-tête relu.
+            h = h2;
         }
         Ok(None)
     }

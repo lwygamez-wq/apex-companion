@@ -100,7 +100,11 @@ pub fn write_recording(dir: &Path, r: &Recording, done: bool) -> std::io::Result
     let part = dir.join(format!("{stem}.{}", rec::PART_EXT));
     let bytes = rec::encode(r);
     if !done {
-        let tmp = dir.join(format!("{stem}.tmp"));
+        // Séance déjà terminée entre-temps : ne pas recréer de provisoire (il serait importé en double).
+        if dir.join(format!("{stem}.{}", rec::EXT)).exists() {
+            return Ok(part);
+        }
+        let tmp = dir.join(format!("{stem}.part.tmp"));
         std::fs::write(&tmp, &bytes)?;
         std::fs::rename(&tmp, &part)?;
         return Ok(part);
@@ -148,14 +152,18 @@ pub struct LmuDriver {
     pub idle_after: Duration,
     /// Fichiers terminés écrits par ce pilote (pour les tests et le journal).
     pub written: Vec<PathBuf>,
+    /// Écritures sérialisées (provisoire en arrière-plan, définitive à la fin de séance).
+    write_lock: Arc<std::sync::Mutex<()>>,
+    part_busy: Arc<AtomicBool>,
 }
 
 impl LmuDriver {
     pub fn new(dir: PathBuf, hz: f32) -> Self {
-        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![] }
+        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default() }
     }
 
     fn save(&mut self, r: &Recording, done: bool) {
+        let _w = self.write_lock.lock().unwrap_or_else(|p| p.into_inner());
         match write_recording(&self.dir, r, done) {
             Ok(p) if done => {
                 log::info!("séance LMU enregistrée : {}", p.display());
@@ -166,9 +174,35 @@ impl LmuDriver {
         }
     }
 
+    /// Séance abandonnée (trop courte) : son fichier provisoire éventuel est supprimé, sinon il serait
+    /// repris et importé comme une séance.
+    fn drop_part(&self, stem: &str) {
+        let _w = self.write_lock.lock().unwrap_or_else(|p| p.into_inner());
+        let _ = std::fs::remove_file(self.dir.join(format!("{stem}.{}", rec::PART_EXT)));
+    }
+
+    /// Termine la séance en cours : écrite si elle vaut la peine, sinon provisoire supprimé.
+    fn close(&mut self) {
+        let stem = self.recorder.current().map(file_stem);
+        match self.recorder.finish() {
+            Some(r) => self.save(&r, true),
+            None => {
+                if let Some(s) = stem {
+                    self.drop_part(&s);
+                }
+            }
+        }
+    }
+
     pub fn step(&mut self, f: &Frame, now_unix: i64) -> LiveSnapshot {
-        if let Some(done) = self.recorder.push(f, now_unix) {
+        let before = self.recorder.current().map(file_stem);
+        let done = self.recorder.push(f, now_unix);
+        let changed = before.is_some() && self.recorder.current().map(file_stem) != before;
+        if let Some(done) = done {
             self.save(&done, true);
+            self.live = LiveState::default();
+        } else if changed {
+            self.drop_part(before.as_deref().unwrap_or_default());
             self.live = LiveState::default();
         }
         let in_car = f.info.mInRealtime != 0 && f.telem.is_some();
@@ -179,16 +213,24 @@ impl LmuDriver {
             if since.elapsed() >= self.idle_after {
                 self.out_since = None;
                 self.yaml_key = None;
-                if let Some(r) = self.recorder.finish() {
-                    self.save(&r, true);
-                }
+                self.close();
             }
         }
         // Sauvegarde provisoire toutes les 2 minutes : rien de perdu si Apex est fermé brutalement.
-        if self.last_part.elapsed() >= Duration::from_secs(120) {
+        // Compression et écriture dans un autre fil : sur une longue séance elles prennent plus d'une
+        // seconde, et la lecture à 50 Hz ne doit pas s'interrompre (le tour serait perdu).
+        if self.last_part.elapsed() >= Duration::from_secs(120) && !self.part_busy.load(Ordering::SeqCst) {
             self.last_part = Instant::now();
             if let Some(r) = self.recorder.current().filter(|r| r.ticks.len() > 500).cloned() {
-                self.save(&r, false);
+                let (dir, lock, busy) = (self.dir.clone(), self.write_lock.clone(), self.part_busy.clone());
+                busy.store(true, Ordering::SeqCst);
+                std::thread::spawn(move || {
+                    let _w = lock.lock().unwrap_or_else(|p| p.into_inner());
+                    if let Err(e) = write_recording(&dir, &r, false) {
+                        log::warn!("sauvegarde provisoire LMU : {e}");
+                    }
+                    busy.store(false, Ordering::SeqCst);
+                });
             }
         }
         self.tick += 1;
@@ -222,9 +264,7 @@ impl LmuDriver {
 
     /// Fin de lecture (jeu fermé, Apex quitté) : la séance en cours est écrite.
     pub fn finish(&mut self) {
-        if let Some(r) = self.recorder.finish() {
-            self.save(&r, true);
-        }
+        self.close();
     }
 }
 
@@ -351,6 +391,24 @@ mod tests {
         assert_eq!(d.written.len(), 1);
         // Retour en piste dans la même séance : nouveau passage, nouveau YAML pour le coach.
         assert!(d.step(&frame(et + 60.0, 1), 0).session_info.is_some());
+    }
+
+    #[test]
+    fn a_discarded_short_run_leaves_no_part_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut d = LmuDriver::new(dir.path().to_path_buf(), 50.0);
+        let mut et = 0.0f64;
+        while et < 10.0 {
+            d.step(&frame(et, 1), 0);
+            et += 0.02;
+        }
+        // Provisoire écrit pendant la séance (Apex aurait pu être fermé ici).
+        let r = d.recorder.current().unwrap().clone();
+        let part = write_recording(dir.path(), &r, false).unwrap();
+        assert!(part.exists());
+        d.finish();
+        assert!(d.written.is_empty(), "10 s de roulage : rien à garder");
+        assert!(!part.exists(), "provisoire d'une séance abandonnée laissé sur le disque");
     }
 
     #[test]

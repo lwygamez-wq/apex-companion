@@ -9,6 +9,8 @@ use serde::Serialize;
 use std::path::PathBuf;
 
 const LIB_URL: &str = "https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45.zip";
+/// Empreinte SHA-256 de l'archive de la bibliothèque (chargée dans Apex) : un fichier modifié est refusé.
+const LIB_SHA256: &str = "f1dcc9cca460630f81ea8f71794f69c80bed6556d2a4e6237b5785e1d2dff34b";
 const LIB_DIR: &str = "vosk-win64-0.3.45";
 const MODEL_URL: &str = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip";
 const MODEL_DIR: &str = "vosk-model-small-fr-0.22";
@@ -132,12 +134,12 @@ impl VoiceRecognizer {
             return Err(VoiceError::Unsupported);
         }
         std::fs::create_dir_all(&self.dir).map_err(|e| VoiceError::Install(e.to_string()))?;
-        for (url, marker, zip) in [(LIB_URL, self.dir.join(LIB_DIR).join("libvosk.dll"), "vosk-lib.zip"), (MODEL_URL, self.dir.join(MODEL_DIR).join("conf"), "vosk-model.zip")] {
+        for (url, sha, marker, zip) in [(LIB_URL, Some(LIB_SHA256), self.dir.join(LIB_DIR).join("libvosk.dll"), "vosk-lib.zip"), (MODEL_URL, None, self.dir.join(MODEL_DIR).join("conf"), "vosk-model.zip")] {
             if marker.exists() {
                 continue;
             }
             let z = self.dir.join(zip);
-            crate::tts::download_to(url, &z).map_err(|e| VoiceError::Download(e.to_string()))?;
+            crate::tts::download_checked(url, &z, sha).map_err(|e| VoiceError::Download(e.to_string()))?;
             crate::tts::extract_zip(&z, &self.dir).map_err(|e| VoiceError::Install(e.to_string()))?;
             let _ = std::fs::remove_file(&z);
             if !marker.exists() {

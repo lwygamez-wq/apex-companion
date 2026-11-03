@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 const ENGINE_URL: &str = "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip";
+/// Empreinte SHA-256 de l'archive du moteur (programme exécuté) : un fichier modifié à la source est refusé.
+const ENGINE_SHA256: &str = "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea";
 const VOICES_URL: &str = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0";
 
 #[derive(Debug, Clone, Copy)]
@@ -85,6 +87,12 @@ pub fn piper_args(model: &Path, out: &Path, speaker: Option<i64>) -> Vec<String>
 
 /// Téléchargement vers un fichier (via un fichier temporaire renommé à la fin).
 pub fn download_to(url: &str, dest: &Path) -> Result<(), TtsError> {
+    download_checked(url, dest, None)
+}
+
+/// Téléchargement vérifié : `sha256` (hexadécimal) attendu pour les programmes et bibliothèques
+/// exécutés par Apex ; le fichier est refusé et supprimé s'il ne correspond pas.
+pub fn download_checked(url: &str, dest: &Path, sha256: Option<&str>) -> Result<(), TtsError> {
     let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(std::time::Duration::from_secs(600))).build().into();
     let mut resp = agent.get(url).header("User-Agent", "apex-companion").call().map_err(|e| TtsError::Download(e.to_string()))?;
     let tmp = dest.with_extension("part");
@@ -95,7 +103,22 @@ pub fn download_to(url: &str, dest: &Path) -> Result<(), TtsError> {
         let _ = std::fs::remove_file(&tmp);
         return Err(TtsError::Download("fichier vide".into()));
     }
+    if let Some(want) = sha256 {
+        let got = sha256_file(&tmp).map_err(|e| TtsError::Install(e.to_string()))?;
+        if !got.eq_ignore_ascii_case(want) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(TtsError::Download("fichier téléchargé différent de la version vérifiée : installation refusée".into()));
+        }
+    }
     std::fs::rename(&tmp, dest).map_err(|e| TtsError::Install(e.to_string()))
+}
+
+/// Empreinte SHA-256 d'un fichier, en hexadécimal.
+pub fn sha256_file(p: &Path) -> std::io::Result<String> {
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    std::io::copy(&mut std::fs::File::open(p)?, &mut h)?;
+    Ok(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
 }
 
 impl Tts {
@@ -125,7 +148,7 @@ impl Tts {
         std::fs::create_dir_all(&self.dir).map_err(|e| TtsError::Install(e.to_string()))?;
         if !self.engine().exists() {
             let zip = self.dir.join("piper_windows_amd64.zip");
-            download_to(ENGINE_URL, &zip)?;
+            download_checked(ENGINE_URL, &zip, Some(ENGINE_SHA256))?;
             extract_zip(&zip, &self.dir)?;
             let _ = std::fs::remove_file(&zip);
             if !self.engine().exists() {
@@ -225,7 +248,9 @@ pub fn azure_synthesize(key: &str, region: &str, voice: &str, text: &str) -> Res
 
 /// Extraction d'une archive .zip avec tar.exe, fourni par Windows depuis Windows 10.
 pub fn extract_zip(zip: &Path, dest: &Path) -> Result<(), TtsError> {
-    let mut cmd = std::process::Command::new("tar");
+    // Chemin complet : Windows cherche d'abord un « tar.exe » dans le dossier de l'application.
+    let tar = std::env::var_os("SystemRoot").map(|r| std::path::PathBuf::from(r).join("System32").join("tar.exe")).filter(|p| p.exists()).unwrap_or_else(|| "tar".into());
+    let mut cmd = std::process::Command::new(tar);
     cmd.arg("-xf").arg(zip).arg("-C").arg(dest);
     no_window(&mut cmd);
     let st = cmd.status().map_err(|e| TtsError::Install(format!("extraction : {e}")))?;
@@ -291,5 +316,16 @@ mod tests {
             assert!(wav.len() > 20_000 && &wav[..4] == b"RIFF" && &wav[8..12] == b"WAVE", "{id} : {} octets", wav.len());
             assert!(t.installed(id));
         }
+    }
+}
+
+#[cfg(test)]
+mod sha_tests {
+    #[test]
+    fn sha256_of_a_file() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("x");
+        std::fs::write(&p, b"abc").unwrap();
+        assert_eq!(super::sha256_file(&p).unwrap(), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     }
 }

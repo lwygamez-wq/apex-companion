@@ -243,6 +243,13 @@ impl Store {
                 .query_row("SELECT id FROM sessions WHERE source_path = ?1 AND external_driver IS NULL AND sim = ?2", params![path, s.meta.sim.as_str()], |r| r.get(0))
                 .optional()?
             {
+                // Fichier importé pendant qu'il s'écrivait encore (import manuel en pleine séance) : la
+                // version terminée, plus complète, remplace les tours de l'import partiel.
+                let have: i64 = self.conn.query_row("SELECT COUNT(*) FROM laps WHERE session_id = ?1", [id], |r| r.get(0))?;
+                if s.laps.len() as i64 > have {
+                    self.replace_laps(id, s)?;
+                    self.conn.execute("UPDATE sessions SET source_fingerprint = ?1 WHERE id = ?2", params![s.meta.source_fingerprint, id])?;
+                }
                 return Ok(InsertOutcome::Duplicate(id));
             }
         }
@@ -319,7 +326,7 @@ impl Store {
     /// Sessions iRacing décodées par une version antérieure du décodeur : (id, fichier source).
     pub fn outdated_sessions(&self) -> Result<Vec<(i64, String)>, StoreError> {
         let mut st = self.conn.prepare(
-            "SELECT id, source_path FROM sessions WHERE parser_version < ?1 AND sim = 'iracing' AND source_path IS NOT NULL AND external_driver IS NULL ORDER BY id",
+            "SELECT id, source_path FROM sessions WHERE parser_version < ?1 AND sim IN ('iracing', 'lmu') AND source_path IS NOT NULL AND external_driver IS NULL ORDER BY id",
         )?;
         let rows = st.query_map([PARSER_VERSION], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
         Ok(rows)
