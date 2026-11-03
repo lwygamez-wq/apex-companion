@@ -41,6 +41,7 @@ export function ReplayStudio({ cmp, store, title, onClose, overlay = null }: { c
   const [gapUnit, setGapUnit] = useState<GapUnit>("s");
   const [seg, setSeg] = useState<number>(-1);
   const gm = useMemo(() => gapMeters(cmp), [cmp]);
+  const gmFilled = useMemo(() => gm.map((v) => v ?? 0), [gm]);
   const main = useRef<HTMLDivElement>(null);
   const [h, setH] = useState(600);
 
@@ -92,7 +93,7 @@ export function ReplayStudio({ cmp, store, title, onClose, overlay = null }: { c
   const segDelta = seg < 0 ? (cmp.delta_s[cmp.delta_s.length - 1] ?? 0) : corners[seg]!.time_delta_s;
 
   const gapS = at(cmp.delta_s, ci) ?? 0;
-  const gapM = at(gm.map((v) => v ?? 0), ci) ?? 0;
+  const gapM = at(gmFilled, ci) ?? 0;
   const where = ci * cmp.step_m;
   const inCorner = corners.find((k) => where >= k.corner.entry_m && where <= k.corner.exit_m);
   const refName = cmp.reference.driver ?? `Réf. tour ${cmp.reference.number}`;

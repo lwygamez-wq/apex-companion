@@ -15,16 +15,25 @@ type Screen = { s: "list" } | { s: "session"; key: string } | { s: "lap"; key: s
 function useBack(screen: Screen, setScreen: (s: Screen) => void) {
   // Le geste « retour » d'iOS / le bouton retour ramènent à l'écran précédent.
   const first = useRef(true);
+  // Écran atteint par le geste retour : déjà dans l'historique, il ne faut pas l'y remettre.
+  const fromPop = useRef(false);
   useEffect(() => {
     if (first.current) {
       first.current = false;
       history.replaceState(screen, "");
       return;
     }
+    if (fromPop.current) {
+      fromPop.current = false;
+      return;
+    }
     history.pushState(screen, "");
   }, [screen]);
   useEffect(() => {
-    const on = (e: PopStateEvent) => setScreen((e.state as Screen | null) ?? { s: "list" });
+    const on = (e: PopStateEvent) => {
+      fromPop.current = true;
+      setScreen((e.state as Screen | null) ?? { s: "list" });
+    };
     window.addEventListener("popstate", on);
     return () => window.removeEventListener("popstate", on);
   }, [setScreen]);
@@ -39,7 +48,7 @@ export function MobileApp() {
   const fileInput = useRef<HTMLInputElement>(null);
   useBack(screen, setScreen);
 
-  const refresh = () => void listSessions().then(setList);
+  const refresh = () => void listSessions().then(setList, (e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
   useEffect(refresh, []);
 
   // Charge la session affichée (depuis le stockage du téléphone).

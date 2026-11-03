@@ -68,7 +68,12 @@ export function stopVoice(): void {
   stop();
 }
 
+/** Génération de lecture : un message dont la synthèse finit après un message plus récent, ou après
+ * un arrêt (bouton radio enfoncé), n'est jamais joué. */
+let gen = 0;
+
 function stop(): void {
+  gen++;
   if (playing) {
     playing.pause();
     URL.revokeObjectURL(playing.src);
@@ -83,14 +88,19 @@ function stop(): void {
  */
 export async function speak(text: string, voice: string = current): Promise<void> {
   stop();
+  const my = gen;
   if (voice === "windows" || !isTauri()) return speakWindows(text);
   try {
     const wav = await api.ttsSpeak(voice, text);
+    // Message plus récent ou radio coupée pendant la synthèse : celui-ci est périmé.
+    if (my !== gen) return;
     const a = new Audio(URL.createObjectURL(new Blob([wav], { type: "audio/wav" })));
+    a.addEventListener("ended", () => URL.revokeObjectURL(a.src), { once: true });
     a.volume = volume;
     playing = a;
     await a.play();
   } catch (e) {
+    if (my !== gen) return;
     console.warn("voix naturelle indisponible, repli sur Windows :", e);
     speakWindows(text);
   }

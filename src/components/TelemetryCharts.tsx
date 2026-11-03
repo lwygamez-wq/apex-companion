@@ -333,8 +333,11 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
         programmatic = false;
       }
     };
-    return store.subscribe(apply);
-  }, [store, cmp, view]);
+    // Nouvelles courbes (« Plus de courbes ») : fenêtre et curseur réappliqués tout de suite.
+    const un = store.subscribe(apply);
+    requestAnimationFrame(apply);
+    return un;
+  }, [store, cmp, view, specs]);
 
   return (
     <div className={`charts charts-${variant}`}>

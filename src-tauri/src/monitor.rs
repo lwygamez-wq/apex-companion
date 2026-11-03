@@ -87,6 +87,11 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         let mut last_snap: Option<LiveSnapshot> = None;
         // Dernière erreur d'ouverture de source live signalée (pour ne pas la répéter toutes les 2 s).
         let mut live_error: Option<String> = None;
+        // Dernière description de séance reçue : permet de lancer le coach en cours de séance (activé
+        // après coup), la source ne la renvoyant qu'à un changement de séance.
+        let mut last_yaml: Option<String> = None;
+        // Une seule tentative par description (le YAML iRacing est long : pas d'analyse à chaque échantillon).
+        let mut yaml_fresh = false;
         // Coach en direct : (circuit|configuration|voiture, coach).
         let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
@@ -144,9 +149,19 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
             // pas de fichier de télémétrie : sa source sert aussi à enregistrer les séances, elle reste
             // ouverte même sans coach tant que la synchro automatique est active.
             let wanted = |sim: SimId| settings.live_enabled || (sim == SimId::Lmu && settings.auto_import);
+            // Coach coupé dans les réglages : il se tait tout de suite, même si la source reste ouverte (LMU).
+            if !settings.live_enabled {
+                if coach.take().is_some() {
+                    yaml_fresh = true;
+                }
+            } else if coach.is_none() && last_yaml.is_some() && !yaml_fresh {
+                // Coach (ré)activé en cours de séance : on retente avec la dernière description reçue.
+                yaml_fresh = true;
+            }
             if live.as_ref().is_some_and(|(sim, _)| !running.contains(sim) || !wanted(*sim)) {
                 live = None;
                 last_snap = None;
+                last_yaml = None;
                 coach = None;
             }
             if live.is_none() {
@@ -186,7 +201,15 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 while Instant::now() < until {
                     match src.poll(20) {
                         Ok(Some(snap)) => {
-                            if let Some(yaml) = snap.session_info.as_ref().filter(|_| settings.live_enabled) {
+                            if let Some(y) = &snap.session_info {
+                                last_yaml = Some(y.clone());
+                                yaml_fresh = true;
+                            }
+                            let pending = if yaml_fresh && settings.live_enabled { last_yaml.as_ref() } else { None };
+                            if pending.is_some() {
+                                yaml_fresh = false;
+                            }
+                            if let Some(yaml) = pending {
                                 let meta = session_meta_from_yaml(yaml);
                                 let key = format!("{}|{}|{}|{:?}", meta.track, meta.track_config.clone().unwrap_or_default(), meta.car, meta.setup);
                                 if coach.as_ref().is_none_or(|(k, _)| *k != key) && meta.track != "Circuit inconnu" {

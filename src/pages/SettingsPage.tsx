@@ -36,7 +36,7 @@ export function SettingsPage() {
   const [version, setVersion] = useState<string>("");
   const [updMsg, setUpdMsg] = useState<string | null>(null);
   useEffect(() => {
-    if (isTauri()) void getVersion().then(setVersion);
+    if (isTauri()) void getVersion().then(setVersion, () => undefined);
   }, []);
   const checkNow = async () => {
     setUpdMsg("Recherche…");
@@ -103,7 +103,7 @@ export function SettingsPage() {
             <div>Dossier de télémétrie iRacing<div className="hint">Vide = Documents\iRacing\telemetry</div></div>
             <div className="row">
               <input type="text" style={{ flex: 1, minWidth: 320 }} value={s.iracing_telemetry_dir ?? ""} placeholder="par défaut" onChange={(e) => upd("iracing_telemetry_dir", e.target.value || null)} />
-              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("iracing_telemetry_dir", d))}>Parcourir</button>
+              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("iracing_telemetry_dir", d), (e: unknown) => setMsg(String(e)))}>Parcourir</button>
             </div>
           </div>
           <div className="form-row">
@@ -115,7 +115,7 @@ export function SettingsPage() {
             </div>
             <div className="row">
               <input type="text" style={{ flex: 1, minWidth: 320 }} value={s.mobile_export_dir ?? ""} placeholder="désactivé" onChange={(e) => upd("mobile_export_dir", e.target.value || null)} />
-              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("mobile_export_dir", d))}>Parcourir</button>
+              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("mobile_export_dir", d), (e: unknown) => setMsg(String(e)))}>Parcourir</button>
             </div>
           </div>
           <div className="form-row">
@@ -179,7 +179,7 @@ export function SettingsPage() {
             <div>Dossier de téléchargements<div className="hint">Vide = le dossier Téléchargements de Windows, détecté automatiquement même s'il a été déplacé (ex. D:\Téléchargements).</div></div>
             <div className="row">
               <input type="text" style={{ flex: 1, minWidth: 280 }} value={s.downloads_dir ?? ""} placeholder="détection automatique" onChange={(e) => upd("downloads_dir", e.target.value || null)} />
-              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("downloads_dir", d))}>Parcourir</button>
+              <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("downloads_dir", d), (e: unknown) => setMsg(String(e)))}>Parcourir</button>
             </div>
           </div>
           <div className="form-row">

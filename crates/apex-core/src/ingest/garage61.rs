@@ -86,6 +86,8 @@ pub struct G61Lap {
 
 /// Décode le CSV. `track_length_m` : longueur du tracé (distance = LapDistPct × longueur).
 pub fn parse_csv(text: &str, track_length_m: f32, lap_time_s: f64) -> Result<G61Lap, String> {
+    // Exports enregistrés par Excel ou un éditeur Windows : marque d'ordre des octets en tête.
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut lines = text.lines().filter(|l| !l.trim().is_empty());
     let header: Vec<&str> = lines.next().ok_or("fichier vide")?.split(',').map(str::trim).collect();
     let col = |name: &str| header.iter().position(|h| h.eq_ignore_ascii_case(name));
@@ -162,7 +164,18 @@ pub fn parse_csv(text: &str, track_length_m: f32, lap_time_s: f64) -> Result<G61
         }
         _ => (None, None),
     };
-    let surface = col_f(c_pos);
+    // Case vide = valeur inconnue, pas « hors piste » (0) : on reprend la dernière valeur connue.
+    let surface: Option<Vec<f32>> = c_pos.map(|c| {
+        let mut last = 3.0f32;
+        (a..b)
+            .map(|i| {
+                if let Some(v) = num(&rows[i], c) {
+                    last = v as f32;
+                }
+                last
+            })
+            .collect()
+    });
     let off_track = surface.as_ref().is_some_and(|s| s.contains(&0.0));
     let mut extra = BTreeMap::new();
     if let Some(s) = surface {
@@ -242,5 +255,23 @@ mod tests {
         assert!((t.time_s[1] - t.time_s[0] - 1.0 / 60.0).abs() < 1e-3, "pas de temps {}", t.time_s[1] - t.time_s[0]);
         assert!(lap.off_track);
         assert!(t.pos_x.is_some() && t.steer_rad.is_some());
+    }
+
+    #[test]
+    fn excel_saved_csv_with_bom_crlf_and_blank_cells() {
+        let mut s = String::from("\u{feff}Speed,LapDistPct,Brake,Throttle,PositionType\r\n");
+        s += "50,0.9999,0,1,3\r\n";
+        for i in 0..2400 {
+            let pct = 0.0004 + i as f64 * (50.0 / 60.0) / 2000.0;
+            if pct >= 1.0 {
+                break;
+            }
+            // Cases de surface vides par endroits : inconnues, pas « hors piste ».
+            s += &format!("50,{pct},0,1,{}\r\n", if i % 7 == 0 { "" } else { "3" });
+        }
+        s += "50,0.0003,0,1,3\r\n";
+        let lap = parse_csv(&s, 2000.0, 40.0).expect("BOM et CRLF acceptés");
+        assert!(!lap.off_track, "case vide prise pour un hors-piste");
+        assert!(lap.trace.pos_x.is_none());
     }
 }

@@ -397,13 +397,16 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   const [view, setView] = useState<View | null>(null);
   useEffect(() => setView(null), [cmp]);
 
+  // Le conteneur n'existe qu'avec une carte : l'observateur est (ré)attaché quand elle apparaît.
+  const hasMap = geo != null;
   useEffect(() => {
     const el = host.current;
     if (!el) return;
+    setPx(el.clientWidth || 400);
     const ro = new ResizeObserver(() => setPx(el.clientWidth || 400));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [hasMap]);
 
   const rs = useReplay(store);
   const { ci, ri } = positionsAt(cmp, rs.t, rs.ghost);
@@ -493,19 +496,19 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
     },
     [v, follow, px, full],
   );
-  const onWheel = useCallback(
-    (e: WheelEvent) => {
-      e.preventDefault();
-      zoomBy(Math.exp(e.deltaY * 0.0015), e.clientX, e.clientY);
-    },
-    [zoomBy],
-  );
+  // Écouteur de molette posé une fois : la vue change à chaque image pendant la lecture.
+  const zoomRef = useRef(zoomBy);
+  zoomRef.current = zoomBy;
   useEffect(() => {
     const el = host.current;
     if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      zoomRef.current(Math.exp(e.deltaY * 0.0015), e.clientX, e.clientY);
+    };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [onWheel]);
+  }, [hasMap]);
 
   if (!geo || !v) {
     return <div className="card empty" style={{ padding: 30 }}>Carte non disponible : la source ne fournit pas la position du véhicule.</div>;

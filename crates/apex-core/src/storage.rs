@@ -764,6 +764,48 @@ mod tests {
     use super::*;
     use crate::mock::demo_session;
 
+    /// Base créée par une ancienne version (toutes les migrations sauf les dernières), avec une session
+    /// déjà en place : la mise à jour doit la conserver et la rendre lisible.
+    #[test]
+    fn old_database_upgrades_and_keeps_its_sessions() {
+        for keep in [1usize, 4, MIGRATIONS.len() - 2] {
+            let conn = Connection::open_in_memory().unwrap();
+            for (i, sql) in MIGRATIONS.iter().enumerate().take(keep) {
+                conn.execute_batch(sql).unwrap();
+                conn.pragma_update(None, "user_version", (i + 1) as i64).unwrap();
+            }
+            // Ligne minimale d'après le schéma de l'époque : colonnes obligatoires sans valeur par défaut.
+            let cols: Vec<(String, String, bool, bool)> = conn
+                .prepare("PRAGMA table_info(sessions)")
+                .unwrap()
+                .query_map([], |r| Ok((r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)? != 0, r.get::<_, Option<String>>(4)?.is_some())))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            let (mut names, mut vals) = (vec![], vec![]);
+            for (n, ty, notnull, has_default) in cols {
+                if n == "id" || !notnull || has_default {
+                    continue;
+                }
+                let v = match (n.as_str(), ty.to_ascii_uppercase().as_str()) {
+                    ("sim", _) => "'iracing'".to_string(),
+                    ("kind", _) => "'practice'".to_string(),
+                    (_, t) if t.contains("INT") || t.contains("REAL") => "1".to_string(),
+                    (n, _) => format!("'{n}-x'"),
+                };
+                names.push(n);
+                vals.push(v);
+            }
+            conn.execute(&format!("INSERT INTO sessions ({}) VALUES ({})", names.join(","), vals.join(",")), []).unwrap();
+            let store = Store::init(conn).unwrap_or_else(|e| panic!("migration depuis v{keep} : {e}"));
+            let v: i64 = store.conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+            assert_eq!(v as usize, MIGRATIONS.len());
+            let list = store.list_sessions(&SessionFilter::default()).unwrap();
+            assert_eq!(list.len(), 1, "session perdue en migrant depuis v{keep}");
+            assert!(store.session_meta(list[0].id).is_ok());
+        }
+    }
+
     #[test]
     fn outdated_session_is_replaced_in_place() {
         let mut st = Store::open_in_memory().unwrap();

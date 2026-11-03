@@ -68,6 +68,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
       try {
         const wav = await api.ttsSpeak(sel, SAMPLE);
         const a = new Audio(URL.createObjectURL(new Blob([wav], { type: "audio/wav" })));
+        a.addEventListener("ended", () => URL.revokeObjectURL(a.src), { once: true });
         a.volume = coachVolume() / 100;
         await a.play();
       } catch (e) {
@@ -86,7 +87,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
       }
     }
     setBusy(null);
-    await speak(SAMPLE, sel);
+    await speak(SAMPLE, sel).catch((e: unknown) => setBusy(e instanceof Error ? e.message : String(e)));
     setTimeout(() => setWinVoice(voiceName()), 300);
   };
   const all = [{ id: "windows", label: "Windows (synthèse intégrée)", installed: true }, ...(voices.data ?? [])];

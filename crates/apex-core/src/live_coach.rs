@@ -375,9 +375,18 @@ impl LiveCoach {
         if callout.is_none() {
             if let Some((brake, v)) = self.beeps {
                 let marks = [brake - v * 1.0, brake - v * 0.5, brake];
-                let stage = self.beep_stage as usize;
-                if stage < 3 && self.last_dist < marks[stage] as f64 && dist >= marks[stage] as f64 && dist - self.last_dist < 100.0 {
+                // Un échantillon peut sauter plusieurs repères (boucle ralentie) : on les passe tous et on
+                // joue le dernier, pour que le bip long du point de freinage ne soit jamais perdu.
+                let mut fired = None;
+                while (self.beep_stage as usize) < 3 && dist - self.last_dist < 100.0 {
+                    let m = marks[self.beep_stage as usize] as f64;
+                    if !(self.last_dist < m && dist >= m) {
+                        break;
+                    }
+                    fired = Some(self.beep_stage);
                     self.beep_stage += 1;
+                }
+                if let Some(stage) = fired {
                     callout = Some(CoachMessage { kind: CoachMessageKind::Beep, lap: row[6] as i32, text: if stage == 2 { "long".into() } else { "bip".into() }, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
                 }
             }

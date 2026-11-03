@@ -101,7 +101,14 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const [cmpId, setCmpId] = useState<number | null>(route.cmpLapId ?? null);
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [mapSize, setMapSize] = usePref<MapSize>("apex.mapSize", "normal");
+  // Taille de carte mémorisée, sauf le plein écran (sinon la relecture se rouvrirait seule à la visite suivante).
+  const [savedSize, setSavedSize] = usePref<MapSize>("apex.mapSize", "normal");
+  const [full, setFull] = useState(false);
+  const mapSize: MapSize = full ? "full" : savedSize === "full" ? "normal" : savedSize;
+  const setMapSize = (s: MapSize) => {
+    setFull(s === "full");
+    if (s !== "full") setSavedSize(s);
+  };
   const bigMap = mapSize !== "normal";
   const winH = useWindowHeight();
   useEffect(() => {
@@ -133,7 +140,9 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   );
 
   const d = detail.data;
-  const c = cmp.data;
+  // Comparaison de la paire affichée seulement : pendant le calcul d'une nouvelle paire (changement de
+  // session ou de tour), l'ancienne ne doit ni s'afficher ni servir aux boutons (programme, noms).
+  const c = cmp.data && cmp.data.reference.lap_id === refId && cmp.data.compared.lap_id === cmpId && d?.laps.some((l) => l.id === cmpId) ? cmp.data : null;
   const overlay = useAsync(() => (d && refId != null ? api.trackOverlay(d.id, refId).catch(() => null) : Promise.resolve(null)), [d?.id, refId]);
   const store = useMemo(() => (c ? new ReplayStore(...replayBounds(c)) : null), [c]);
   useEffect(() => () => store?.dispose(), [store]);

@@ -37,7 +37,9 @@ export function RadioControlCard({ status }: { status: StatusPayload | null }) {
   const save = async (patch: Partial<AppSettings>) => {
     if (!s) return;
     try {
-      setS(await api.saveSettings({ ...s, ...patch }));
+      // Relecture avant écriture : un autre panneau a pu changer d'autres réglages entre-temps.
+      const fresh = await api.settings();
+      setS(await api.saveSettings({ ...fresh, ...patch }));
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
     }

@@ -7,14 +7,20 @@ import type { PlanView } from "../lib/types";
 export function PlanCard({ sessionId }: { sessionId: number }) {
   const [plan, setPlan] = useState<PlanView | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const load = () => api.trainingPlan(sessionId).then(setPlan, (e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
+  const fail = (e: unknown) => setErr(e instanceof Error ? e.message : String(e));
   useEffect(() => {
+    // Réponse d'une autre session arrivée en retard : ignorée.
+    let alive = true;
+    const load = () => api.trainingPlan(sessionId).then((p) => alive && (setPlan(p), setErr(null)), (e: unknown) => alive && fail(e));
+    setPlan(null);
     void load();
     const un = onSessionsChanged(() => void load());
-    return () => void un.then((f) => f());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      alive = false;
+      void un.then((f) => f());
+    };
   }, [sessionId]);
-  const renew = () => api.newTrainingPlan(sessionId).then(setPlan, (e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
+  const renew = () => api.newTrainingPlan(sessionId).then((p) => (setPlan(p), setErr(null)), fail);
 
   if (err) return <div className="error">{err}</div>;
   if (!plan) return null;
