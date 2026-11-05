@@ -87,7 +87,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
   return (
     <>
       <div className="page-title">
-        <h1>Sessions</h1>
+        <h1>Séances</h1>
         <ImportActions compact onDone={reload} />
       </div>
       {msg && <div className="warning" onClick={() => setMsg(null)}>{msg}</div>}

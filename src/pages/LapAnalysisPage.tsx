@@ -60,7 +60,7 @@ function Segmented<T extends string>({ label, value, options, onChange, title }:
   );
 }
 
-type Tab = "advice" | "telemetry" | "corners" | "race" | "laps" | "debrief";
+type Tab = "summary" | "data" | "debrief";
 
 /** Fiche voiture en quelques repères lisibles. */
 function carFacts(p: SessionProfile): string[] {
@@ -97,12 +97,13 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const sessions = useAsync(() => api.sessions(), []);
   // Par défaut : la session la plus récente qui a des tours chronométrés (pas une sortie des stands).
   const sessionId = route.sessionId ?? (sessions.data?.find((s) => s.best_lap_s != null || s.lap_count > 3) ?? sessions.data?.[0])?.id;
-  const [tab, setTab] = usePref<Tab>("apex.analysisTab", "advice");
+  const [tab, setTab] = usePref<Tab>("apex.sessionTab", "summary");
   const detail = useAsync(() => (sessionId != null ? api.session(sessionId) : Promise.resolve(null)), [sessionId]);
   const [refId, setRefId] = useState<number | null>(route.refLapId ?? null);
   const [cmpId, setCmpId] = useState<number | null>(route.cmpLapId ?? null);
   const [corner, setCorner] = useState<number | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [askQ, setAskQ] = useState<string | null>(null);
   // Taille de carte mémorisée, sauf le plein écran (sinon la relecture se rouvrirait seule à la visite suivante).
   const [savedSize, setSavedSize] = usePref<MapSize>("apex.mapSize", "normal");
   const [full, setFull] = useState(false);
@@ -120,13 +121,13 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const [axis, setAxis] = usePref<Axis>("apex.axis", "distance");
   const [gapUnit, setGapUnit] = usePref<GapUnit>("apex.gap", "s");
   const [more, setMore] = usePref<boolean>("apex.moreCharts", false);
+  const [showOpts, setShowOpts] = usePref<boolean>("apex.chartOpts", false);
   const saveName = async (apex: number, name: string) => {
     if (!detail.data) return;
     await api.setCornerName(detail.data.id, apex, name);
     cmp.reload();
   };
   const settings = useAsync(() => api.settings(), []);
-  const beginner = settings.data?.beginner_mode ?? true;
 
   useEffect(() => {
     if (!detail.data) return;
@@ -178,19 +179,18 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const lapLabel = (l: LapRow) =>
     `Tour ${l.number}, ${lapTime(l.lap_time_s)}${l.id === d?.best_lap_id ? ", meilleur" : ""}${l.is_reference ? ", réf. perso" : ""}${l.clean ? "" : " (perturbé)"}`;
   const timed = d ? d.laps.filter((l) => l.lap_time_s != null) : [];
-  const tabs: [Tab, string][] = [["advice", "Conseils"], ["telemetry", "Télémétrie"], ["corners", "Virages"], ...(d?.race ? ([["race", "Course"]] as [Tab, string][]) : []), ["laps", "Tours"], ["debrief", "Débrief IA"]];
-  const current: Tab = tabs.some((t) => t[0] === tab) ? tab : "advice";
+  const tabs: [Tab, string][] = [["summary", "Résumé"], ["data", "Données"], ["debrief", "Débrief IA"]];
+  const current: Tab = tabs.some((t) => t[0] === tab) ? tab : "summary";
   const best = d ? d.laps.find((l) => l.id === (d.best_lap_id ?? d.fastest_lap_id))?.lap_time_s : null;
 
   return (
     <>
       <div className="page-title">
-        <h1>Analyse</h1>
-        <select className="session-pick" value={sessionId ?? ""} onChange={(e) => navigate({ page: "analysis", sessionId: Number(e.target.value) })} aria-label="Session">
-          {(sessions.data ?? []).map((s) => (
-            <option key={s.id} value={s.id}>{dateTime(s.started_at_unix)} · {s.track} · {SESSION_KIND_FR[s.kind]}{s.best_lap_s != null ? ` · ${lapTime(s.best_lap_s)}` : ""}</option>
-          ))}
-        </select>
+        <h1>Séance</h1>
+        <div className="row">
+          {d && <span className="muted">{dateTime(d.meta.started_at_unix)}</span>}
+          <button className="btn" onClick={() => navigate({ page: "sessions" })}>← Toutes les séances</button>
+        </div>
       </div>
       {sessions.data?.length === 0 && <div className="card empty"><h2>Aucune session</h2><p>Importe une session depuis l'écran Sessions.</p></div>}
       {detail.error && <div className="error">{detail.error}</div>}
@@ -284,27 +284,48 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
 
               {!c && !cmp.error && refId !== cmpId && <div className="card muted">Comparaison des deux tours en cours…</div>}
 
-              {c && store && current === "advice" && (
-                <div className="insights-strip">
-                  {corner != null && (
-                    <div className="row" style={{ marginBottom: 8 }}>
-                      <span className="muted">Conseils pour <b>{c.corners.find((k) => k.corner.id === corner)?.corner.name}</b></span>
-                      <button className="btn ghost small" onClick={() => setCorner(null)}>tous les virages</button>
+              {c && store && current === "summary" && (
+                <>
+                  <div className="summary">
+                    <div className="card summary-map">
+                      <TrackMap simple overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(380, Math.round(winH * 0.52))} />
+                    </div>
+                    <div className="summary-side">
+                      <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+                        <h2 className="section-title" style={{ margin: 0 }}>
+                          {corner != null ? <>Conseils pour {c.corners.find((k) => k.corner.id === corner)?.corner.name}</> : <>Tes priorités sur ce tour</>}
+                        </h2>
+                        {corner != null && <button className="btn ghost small" onClick={() => setCorner(null)}>tous les virages</button>}
+                      </div>
+                      {insights.length === 0 && <div className="card muted">Aucun écart significatif{corner != null ? " sur ce virage" : " avec la référence"} : continue comme ça.</div>}
+                      <div className="insight-stack">
+                        {(corner == null && !showAll ? insights.slice(0, 3) : insights).map((i, k) => <InsightCard key={i.id} insight={i} sessionId={d.id} rank={k + 1} onAsk={(q) => (setAskQ(q), setTab("debrief"))} />)}
+                      </div>
+                      {corner == null && insights.length > 3 && (
+                        <button className="btn ghost" onClick={() => setShowAll((v) => !v)}>
+                          {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="section-title">Virage par virage</h3>
+                  <CornerList corners={c.corners} selected={corner} onSelect={(id) => setCorner(id)} onRename={(apex, name) => void saveName(apex, name)} />
+                  {(d.risk.length > 0 || d.off_tracks.length > 0) && (
+                    <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>
+                      <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} causes={d.regularity?.corners} onLap={(n) => { const l = d.laps.find((x) => x.number === n && x.lap_time_s != null); if (l) { setCmpId(l.id); setTab("data"); } }} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
+                      <OffTrackCard zones={d.off_tracks} />
                     </div>
                   )}
-                  {insights.length === 0 && <div className="card muted">Aucun écart significatif détecté{corner != null ? " sur ce virage" : ""}.</div>}
-                  <div className="insight-grid">
-                    {(beginner && corner == null && !showAll ? insights.slice(0, 3) : insights).map((i, k) => <InsightCard key={i.id} insight={i} sessionId={d.id} rank={k + 1} />)}
-                  </div>
-                  {beginner && corner == null && insights.length > 3 && (
-                    <button className="btn ghost" onClick={() => setShowAll((v) => !v)}>
-                      {showAll ? "Revenir aux 3 priorités" : `Voir les ${insights.length - 3} autres conseils`}
-                    </button>
+                  {d.race && (
+                    <div style={{ marginTop: 14 }}>
+                      <RaceCard r={d.race} laps={d.laps} onLap={(id) => (setCmpId(id), setTab("data"))} />
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
-              {c && store && current === "telemetry" && (
+              {c && store && current === "data" && (
                 <>
                   {mapSize === "half" && (
                     <div className="replay-big">
@@ -320,9 +341,10 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                           <span><i className="swatch cmp" />Toi, tour {c.compared.number}</span>
                         </div>
                         <div className="row" style={{ gap: 10 }}>
-                          <Segmented label="Axe" value={axis} onChange={setAxis} options={[["distance", "Distance"], ["time", "Temps"]]} title="Distance : la référence est calée au même endroit de la piste. Temps : chaque tour à son chrono." />
-                          <Segmented label="Écart" value={gapUnit} onChange={setGapUnit} options={[["s", "s"], ["m", "m"]]} title="Écart en secondes ou en mètres de retard sur la référence" />
+                          {showOpts && <Segmented label="Axe" value={axis} onChange={setAxis} options={[["distance", "Distance"], ["time", "Temps"]]} title="Distance : la référence est calée au même endroit de la piste. Temps : chaque tour à son chrono." />}
+                          {showOpts && <Segmented label="Écart" value={gapUnit} onChange={setGapUnit} options={[["s", "s"], ["m", "m"]]} title="Écart en secondes ou en mètres de retard sur la référence" />}
                           <button className={`btn ghost small ${more ? "on" : ""}`} onClick={() => setMore((v) => !v)}>{more ? "Moins de courbes" : "Plus de courbes"}</button>
+                          <button className={`btn ghost small ${showOpts ? "on" : ""}`} onClick={() => setShowOpts((v) => !v)} title="Axe distance / temps, écart en secondes / mètres">⚙</button>
                         </div>
                       </div>
                       <TelemetryCharts cmp={c} onCursorTime={onChartCursor} axis={axis} gapUnit={gapUnit} more={more} selected={corner} store={store ?? undefined} />
@@ -336,32 +358,21 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   </div>
                 </>
               )}
-
-              {c && store && current === "corners" && (
-                <>
-                  <CornerList corners={c.corners} selected={corner} onSelect={(id) => setCorner(id)} onRename={(apex, name) => void saveName(apex, name)} />
-                  <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>
-                    <RiskCard risk={d.risk} headline={d.risk_headline} limit={4} causes={d.regularity?.corners} onLap={(n) => { const l = d.laps.find((x) => x.number === n && x.lap_time_s != null); if (l) { setCmpId(l.id); setTab("telemetry"); } }} onCorner={(apex) => { const k = c.corners.find((x) => Math.abs(x.corner.apex_m - apex) < 60); if (k) setCorner(corner === k.corner.id ? null : k.corner.id); }} />
-                    <OffTrackCard zones={d.off_tracks} />
-                  </div>
-                </>
-              )}
             </>
           )}
 
-          {current === "race" && d.race && <RaceCard r={d.race} laps={d.laps} onLap={(id) => (setCmpId(id), setTab("telemetry"))} />}
-
           {current === "debrief" && d && (
-            <DebriefChat sessionId={d.id} configured={!!settings.data?.ai_api_key?.trim()} onSetup={() => navigate({ page: "settings" })} />
+            <DebriefChat sessionId={d.id} configured={!!settings.data?.ai_api_key?.trim()} onSetup={() => navigate({ page: "settings" })} question={askQ} onAsked={() => setAskQ(null)} />
           )}
 
-          {current === "laps" && (
-            <div className="card" style={{ padding: 0 }}>
+          {current === "data" && (
+            <details className="card laps-card" style={{ padding: 0, marginTop: 14 }}>
+              <summary>Tous les tours ({d.laps.length}) : temps, état, carburant, tour de référence</summary>
               <table>
                 <thead><tr><th>Tour</th><th className="num">Temps</th><th>État</th><th>Détail</th><th className="num">Carburant</th><th /></tr></thead>
                 <tbody>
                   {d.laps.map((l) => (
-                    <tr key={l.id} className={l.lap_time_s == null ? "dim" : ""}>
+                    <tr key={l.id} className={`${l.lap_time_s == null ? "dim" : ""} lap-row`}>
                       <td className="mono">{l.number}{l.id === d.best_lap_id && <span className="chip best" style={{ marginLeft: 6 }}>meilleur</span>}</td>
                       <td className="num">{lapTime(l.lap_time_s)}</td>
                       <td>
@@ -371,14 +382,14 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                       <td className="num">{l.fuel_used_l != null ? `${l.fuel_used_l.toFixed(2)} L` : "—"}</td>
                       <td>
                         {l.is_reference ? <span className="chip warn">référence perso</span> : l.lap_time_s != null && l.kind === "flying" && (
-                          <button className="btn ghost small" onClick={() => void markReference(l.id)} title={l.clean ? "" : "Tour perturbé : référence déconseillée"}>Prendre comme référence</button>
+                          <button className="btn ghost small reveal" onClick={() => void markReference(l.id)} title={l.clean ? "" : "Tour perturbé : référence déconseillée"}>Prendre comme référence</button>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </details>
           )}
           {mapSize === "full" && c && store && <ReplayStudio overlay={overlay.data} cmp={c} store={store} title={`${d.meta.track} · ${d.meta.car}`} onClose={() => setMapSize("normal")} />}
         </>

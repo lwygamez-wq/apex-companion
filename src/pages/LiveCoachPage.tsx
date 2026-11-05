@@ -101,7 +101,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
   return (
     <>
       <div className="page-title">
-        <h1>Coach live</h1>
+        <h1>Au volant</h1>
         <span className={`chip ${live?.on_track ? "good" : ""}`}>{status?.label ?? "—"}</span>
       </div>
       <div className="grid cols-2" style={{ alignItems: "start" }}>

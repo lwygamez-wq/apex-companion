@@ -6,6 +6,8 @@ import { PlanCard } from "../components/PlanCard";
 import { api, onSessionsChanged } from "../lib/api";
 import { dateTime, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
+import type { StatusPayload } from "../lib/types";
+import { ReadyCard } from "../components/ReadyCard";
 
 function Sparkline({ points }: { points: [number, number][] }) {
   if (points.length < 2) return <div className="muted">Au moins 2 sessions sur ce combo sont nécessaires.</div>;
@@ -19,7 +21,7 @@ function Sparkline({ points }: { points: [number, number][] }) {
   );
 }
 
-export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
+export function DashboardPage({ navigate, status }: { navigate: (r: Route) => void; status: StatusPayload | null }) {
   const dash = useAsync(() => api.dashboard(), []);
   const autolog = useAsync(() => api.iracingAutolog().catch(() => null), []);
   const [msg, setMsg] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
   return (
     <>
       <div className="page-title">
-        <h1>Accueil</h1>
+        <h1>Briefing</h1>
         {s && <ImportActions compact onDone={dash.reload} />}
       </div>
       {dash.error && <div className="error">{dash.error}</div>}
@@ -61,7 +63,12 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
       )}
       {s && d && (
         <>
-          <h3 className="section-title">Dernière session</h3>
+          <div className="briefing-top">
+            <PlanCard sessionId={s.id} />
+            <ReadyCard status={status} onSetup={() => navigate({ page: "live" })} />
+          </div>
+
+          <h3 className="section-title">Dernière séance</h3>
           <div className="session-strip clickable" role="button" tabIndex={0} onClick={() => navigate({ page: "analysis", sessionId: s.id })} onKeyDown={(e) => e.key === "Enter" && navigate({ page: "analysis", sessionId: s.id })}>
             <div className="ss-where">
               <b>{s.track}</b>
@@ -87,8 +94,6 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
               <button className="btn ghost small" onClick={() => run(api.archiveGoal(d.active_goal!.id), "Objectif clôturé.")}>Clôturer</button>
             </div>
           )}
-
-          <PlanCard sessionId={s.id} />
 
           {(d.progress_zones.length > 0 || d.consistency_trend.length >= 2) && (
             <div className="grid cols-2" style={{ alignItems: "start" }}>

@@ -92,7 +92,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
       scales: { x: { time: false }, y: spec.range ? { range: spec.range } : { auto: true } },
       axes: [
         showX ? { ...AXIS, size: 24, space: 80, values: (_u, v) => v.map(xFmt) } : { ...AXIS, size: 0, values: () => [] },
-        { ...AXIS, size: 40, space: 30, values: (_u, v) => v.map((n) => (spec.key === "pedals" ? `${Math.abs(n)}` : `${n}`)) },
+        { ...AXIS, size: spec.key === "pedals" ? 62 : 40, space: 30, values: (_u, v) => v.map((n) => (spec.key === "pedals" ? (n > 0 ? `gaz ${n}` : n < 0 ? `frein ${-n}` : "0") : `${n}`)) },
       ],
       series: [
         {},

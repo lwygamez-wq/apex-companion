@@ -13,7 +13,7 @@ const STARTERS = [
  * Débrief par IA : conversation sur la séance affichée. L'IA ne reçoit que la synthèse chiffrée
  * calculée par Apex (bouton « Voir ce qui est envoyé »), jamais la télémétrie brute.
  */
-export function DebriefChat({ sessionId, configured, onSetup }: { sessionId: number; configured: boolean; onSetup: () => void }) {
+export function DebriefChat({ sessionId, configured, onSetup, question, onAsked }: { sessionId: number; configured: boolean; onSetup: () => void; question?: string | null; onAsked?: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,6 +51,18 @@ export function DebriefChat({ sessionId, configured, onSetup }: { sessionId: num
       setBusy(false);
     }
   };
+
+  // Question venue d'un conseil (« Demander à l'ingé ») : posée une fois, à l'ouverture.
+  useEffect(() => {
+    if (question && configured && !busy) {
+      onAsked?.();
+      void ask(question);
+    } else if (question && !configured) {
+      setDraft(question);
+      onAsked?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question, configured]);
 
   if (!configured) {
     return (

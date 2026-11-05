@@ -7,7 +7,7 @@ import type { Insight } from "../lib/types";
  * Un conseil, lisible en 3 secondes : le virage, le problème, ce qu'il faut faire.
  * L'explication et les mesures restent à un clic (« Pourquoi »).
  */
-export function InsightCard({ insight, active, onFocus, sessionId, rank }: { insight: Insight; active?: boolean; onFocus?: () => void; sessionId?: number; rank?: number }) {
+export function InsightCard({ insight, active, onFocus, sessionId, rank, onAsk }: { insight: Insight; active?: boolean; onFocus?: () => void; sessionId?: number; rank?: number; onAsk?: (question: string) => void }) {
   const g = insight.est_gain_s;
   const [goalMsg, setGoalMsg] = useState<string | null>(null);
   const [where, what] = insight.title.includes(" : ") ? insight.title.split(" : ", 2) : [insight.segment ?? "", insight.title];
@@ -38,6 +38,11 @@ export function InsightCard({ insight, active, onFocus, sessionId, rank }: { ins
           </table>
           <div className="muted" style={{ fontSize: 13 }}>Confiance : {CONFIDENCE_FR[insight.confidence]}{insight.confidence_notes.length > 0 ? ` · ${insight.confidence_notes.join(" · ")}` : ""}</div>
         </details>
+        {onAsk && (
+          <button className="btn ghost small" title="Pose la question à l'ingénieur IA" onClick={(e) => { e.stopPropagation(); onAsk(`Explique-moi ce conseil et comment l'appliquer au prochain tour : « ${insight.title} ».`); }}>
+            Demander à l'ingé IA
+          </button>
+        )}
         {insight.goal && sessionId != null && (
           <button
             className="btn ghost small"
@@ -51,7 +56,7 @@ export function InsightCard({ insight, active, onFocus, sessionId, rank }: { ins
               );
             }}
           >
-            {goalMsg === "ajouté" ? "✓ Dans le programme" : goalMsg ?? "+ Programme"}
+            {goalMsg === "ajouté" ? "✓ Dans le programme" : goalMsg ?? "+ Ajouter au programme"}
           </button>
         )}
       </div>

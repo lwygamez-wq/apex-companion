@@ -359,7 +359,9 @@ const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y:
   );
 });
 
-export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false, overlay = null }: {
+export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false, overlay = null, simple = false }: {
+  /** Vue résumé : outils repliés derrière un bouton, la carte gain / perte seule. */
+  simple?: boolean;
   /** Relevé de la piste (vibreurs, bords) d'après tes tours. */
   overlay?: TrackOverlay | null;
   cmp: Comparison;
@@ -377,6 +379,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   const host = useRef<HTMLDivElement>(null);
   const [px, setPx] = useState(400);
   const [mode, setMode] = useState<ColorMode>(studio ? "studio" : "delta");
+  const [tools, setTools] = useState(!simple);
   const [follow, setFollow] = useState(studio);
   /** Caméra inclinée « poursuite » (relecture plein écran). */
   const [tilt, setTilt] = useState(false);
@@ -524,7 +527,12 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
 
   return (
     <div className={`trackmap ${studio ? "trackmap-studio" : ""}`}>
-      {!studio && <div className="trackmap-tools">
+      {!studio && simple && !tools && (
+        <div className="trackmap-tools">
+          <button className="btn ghost small" onClick={() => setTools(true)}>Options de la carte</button>
+        </div>
+      )}
+      {!studio && tools && <div className="trackmap-tools">
         <div className="seg">
           {([["delta", "Gain / perte"], ["inputs", "Frein / gaz"], ["speed", "Vitesse"]] as const).map(([k, l]) => (
             <button key={k} className={mode === k ? "on" : ""} onClick={() => setMode(k)}>{l}</button>
@@ -685,7 +693,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         </div>
       </div>
       {!studio && <div className="trackmap-legend">
-        <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture bleue transparente</span>
+        <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture grise transparente</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
         {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
         {mode === "delta" && <span><i style={{ background: "#2bd576" }} />gain <i style={{ background: "#ffd400", marginLeft: 6 }} />perte</span>}
