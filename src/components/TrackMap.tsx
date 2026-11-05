@@ -261,6 +261,61 @@ function squares(pts: [number, number][], size: number, keep?: (p: [number, numb
   return d;
 }
 
+/**
+ * Tronçons d'un bord de piste qui portent des points relevés (vibreur, ligne peinte) : chaque point
+ * du bord est marqué s'il a un relevé à moins de `reach` m ; les trous d'un point sont comblés et les
+ * tronçons de moins de `minPts` points ignorés (bruit). Rend une polyligne par tronçon.
+ */
+export function edgeRuns(edge: [number, number][], marks: [number, number][], reach = 4.5, minPts = 3): string {
+  if (edge.length < 2 || marks.length === 0) return "";
+  // Grille de 8 m sur les points du bord, pour trouver le segment le plus proche de chaque relevé.
+  const cell = 8;
+  const grid = new Map<string, number[]>();
+  edge.forEach((p, i) => {
+    const k = `${Math.floor(p[0] / cell)},${Math.floor(p[1] / cell)}`;
+    const a = grid.get(k);
+    if (a) a.push(i);
+    else grid.set(k, [i]);
+  });
+  const segDist = (m: [number, number], a: [number, number], b: [number, number]) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((m[0] - a[0]) * dx + (m[1] - a[1]) * dy) / l2));
+    return Math.hypot(m[0] - a[0] - t * dx, m[1] - a[1] - t * dy);
+  };
+  const on = new Array<boolean>(edge.length).fill(false);
+  for (const m of marks) {
+    const cx = Math.floor(m[0] / cell), cy = Math.floor(m[1] / cell);
+    let best = Infinity, bi = -1;
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+      for (const k of grid.get(`${cx + i},${cy + j}`) ?? []) {
+        for (const s of [k - 1, k]) {
+          if (s < 0 || s + 1 >= edge.length) continue;
+          const a = edge[s]!, b = edge[s + 1]!;
+          if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 15) continue;
+          const d = segDist(m, a, b);
+          if (d < best) (best = d), (bi = s);
+        }
+      }
+    }
+    if (bi >= 0 && best <= reach) on[bi] = on[bi + 1] = true;
+  }
+  for (let i = 1; i < on.length - 1; i++) if (!on[i] && on[i - 1] && on[i + 1]) on[i] = true;
+  let d = "";
+  let run: [number, number][] = [];
+  const flush = () => {
+    if (run.length >= minPts) d += run.map((p, k) => `${k ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("");
+    run = [];
+  };
+  edge.forEach((p, i) => {
+    // Un bord coupé (trou > 15 m) coupe aussi le tronçon.
+    if (run.length && Math.hypot(p[0] - run[run.length - 1]![0], p[1] - run[run.length - 1]![1]) > 15) flush();
+    if (on[i]) run.push(p);
+    else flush();
+  });
+  flush();
+  return d;
+}
+
 /** Polyligne coupée là où il manque des tranches (trous > 15 m). */
 function brokenLine(pts: [number, number][]): string {
   let d = "";
@@ -285,14 +340,18 @@ const OverlayLayer = memo(function OverlayLayer({ ov, studio, flip }: { ov: Trac
     const R = e ? e.right.map(flip) : [];
     const ring = e ? `M${L.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}Z M${R.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}Z` : "";
     const kerbs = ov.kerbs.map(flip);
-    const parity = (p: [number, number]) => (Math.floor(p[0] / 1.5) + Math.floor(p[1] / 1.5)) % 2 === 0;
+    const lines = ov.lines.map(flip);
+    // Avec les bords : vibreurs et lignes dessinés le long du bord, en bandes continues.
+    // Sans bords : repli sur les points relevés.
+    const along = (pts: [number, number][]) => (e ? edgeRuns(L, pts) + edgeRuns(R, pts) : "");
     return {
       ring,
       left: e ? brokenLine(L) : "",
       right: e ? brokenLine(R) : "",
-      kerbRed: squares(kerbs, 1.3, parity),
-      kerbWhite: squares(kerbs, 1.3, (p) => !parity(p)),
-      lines: squares(ov.lines.map(flip), 1.0),
+      kerbs: along(kerbs),
+      kerbDots: e ? "" : squares(kerbs, 1.3),
+      lines: e ? along(lines) : "",
+      lineDots: e ? "" : squares(lines, 1.0),
       off: studio ? squares(ov.off.map(flip), 1.2) : "",
     };
   }, [ov, studio, flip]);
@@ -302,9 +361,12 @@ const OverlayLayer = memo(function OverlayLayer({ ov, studio, flip }: { ov: Trac
       {d.off && <path d={d.off} fill="rgba(76,150,80,0.45)" />}
       {d.left && <path d={d.left} stroke="rgba(255,255,255,0.75)" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
       {d.right && <path d={d.right} stroke="rgba(255,255,255,0.75)" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
-      {d.lines && <path d={d.lines} fill="rgba(240,240,245,0.8)" />}
-      {d.kerbRed && <path d={d.kerbRed} fill="#e0302a" />}
-      {d.kerbWhite && <path d={d.kerbWhite} fill="#f2f2f2" />}
+      {d.lines && <path d={d.lines} stroke="rgba(240,240,245,0.9)" strokeWidth={0.6} strokeLinejoin="round" fill="none" />}
+      {d.lineDots && <path d={d.lineDots} fill="rgba(240,240,245,0.8)" />}
+      {/* Vibreur : bande de 2,4 m au bord, rouge et blanc par pavés de 2 m, comme en vrai. */}
+      {d.kerbs && <path d={d.kerbs} stroke="#d42b25" strokeWidth={2.4} strokeLinejoin="round" fill="none" />}
+      {d.kerbs && <path d={d.kerbs} stroke="#f4f4f4" strokeWidth={2.4} strokeDasharray="2 2" strokeLinejoin="round" fill="none" />}
+      {d.kerbDots && <path d={d.kerbDots} fill="#e0302a" />}
     </g>
   );
 });
