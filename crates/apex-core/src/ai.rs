@@ -134,7 +134,7 @@ impl Provider {
     pub fn default_model(self) -> &'static str {
         match self {
             Provider::Anthropic => DEFAULT_MODEL,
-            Provider::Gemini => "gemini-2.5-flash",
+            Provider::Gemini => "gemini-3.8-flash",
             Provider::Mistral => "mistral-small-latest",
             Provider::Groq => "llama-3.3-70b-versatile",
             Provider::Ollama => "mistral",
@@ -329,6 +329,20 @@ pub fn pick_model(provider: Provider, models: &[String]) -> Option<String> {
     }
 }
 
+/// Erreur « ce modèle n'existe pas / plus » (message d'Apex pour un 404, ou du fournisseur).
+pub fn is_model_error(e: &str) -> bool {
+    e.contains("introuvable chez") || e.contains("no longer available") || e.contains("not found for API version") || e.contains("is not found")
+}
+
+/// Modèle que le fournisseur conseille dans son message d'erreur, par exemple
+/// « Please update your code to use models/gemini-3.8-flash ».
+pub fn suggested_model(e: &str) -> Option<String> {
+    let i = e.find("use models/")? + "use models/".len();
+    let m: String = e[i..].chars().take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_')).collect();
+    let m = m.trim_end_matches('.').to_string();
+    (!m.is_empty()).then_some(m)
+}
+
 pub fn check(provider: Provider, api_key: &str, model: &str) -> Result<CheckResult, String> {
     if provider.needs_key() && api_key.trim().is_empty() {
         return Err("aucune clé saisie".into());
@@ -346,13 +360,28 @@ pub fn check(provider: Provider, api_key: &str, model: &str) -> Result<CheckResu
     if provider == Provider::Ollama && models.is_empty() {
         return Err("Ollama ne répond pas ou n'a aucun modèle : installe-le (ollama.com), lance-le, puis télécharge un modèle (« ollama pull mistral »).".into());
     }
-    let ok = match provider {
-        Provider::Anthropic => ask(api_key, &check_request(&model)).map(|_| ()),
-        // Réponse vide acceptée : le modèle a pu dépenser ses quelques jetons à réfléchir, la connexion est bonne.
-        p => match ask_openai(p, Some(api_key), &json!({ "model": model, "max_tokens": 64, "messages": [{ "role": "user", "content": "Réponds seulement : OK" }] })) {
-            Err(e) if e == EMPTY => Ok(()),
-            r => r.map(|_| ()),
-        },
+    // Essai ; si le modèle est refusé (retiré « pour les nouveaux utilisateurs », renommé), on passe au
+    // modèle que conseille le fournisseur dans son message, sinon au meilleur suivant de la liste.
+    let mut tried: Vec<String> = vec![];
+    let ok = loop {
+        let r = match provider {
+            Provider::Anthropic => ask(api_key, &check_request(&model)).map(|_| ()),
+            // Réponse vide acceptée : le modèle a pu dépenser ses quelques jetons à réfléchir, la connexion est bonne.
+            p => match ask_openai(p, Some(api_key), &json!({ "model": model, "max_tokens": 64, "messages": [{ "role": "user", "content": "Réponds seulement : OK" }] })) {
+                Err(e) if e == EMPTY => Ok(()),
+                r => r.map(|_| ()),
+            },
+        };
+        match r {
+            Err(e) if is_model_error(&e) && tried.len() < 4 => {
+                tried.push(model.clone());
+                let rest: Vec<String> = models.iter().filter(|m| !tried.contains(m)).cloned().collect();
+                let Some(next) = suggested_model(&e).filter(|m| !tried.contains(m)).or_else(|| pick_model(provider, &rest)) else { break Err(e) };
+                note = format!(" (« {} » n'est plus disponible chez {} : remplacé par {next})", tried[0], provider.name());
+                model = next;
+            }
+            r => break r,
+        }
     };
     ok.map(|_| CheckResult { message: format!("Connexion réussie : {} répond avec le modèle {model}{note}.", provider.name()), model, models })
 }
@@ -426,6 +455,10 @@ mod tests {
             { "id": "models/gemini-3.6-flash" }, { "id": "models/gemini-3.8-flash-tts" }, { "id": "models/gemini-embedding-2" }, { "id": "models/gemini-2.5-pro" } ] }));
         assert!(!list.iter().any(|m| m.contains("tts") || m.contains("embedding")));
         assert_eq!(pick_model(Provider::Gemini, &list).as_deref(), Some("gemini-3.6-flash"));
+        let e = "modèle « gemini-2.5-flash » introuvable chez Gemini : … (This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements.)";
+        assert!(is_model_error(e));
+        assert_eq!(suggested_model(e).as_deref(), Some("gemini-3.8-flash"));
+        assert_eq!(suggested_model("autre erreur"), None);
         assert_eq!(pick_model(Provider::Mistral, &["mistral-large-latest".into(), "mistral-small-latest".into()]).as_deref(), Some("mistral-small-latest"));
         assert!(check(Provider::Gemini, "", "x").unwrap_err().contains("aucune clé"));
     }

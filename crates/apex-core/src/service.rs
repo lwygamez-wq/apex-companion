@@ -1948,7 +1948,19 @@ impl AppService {
         }
         let context = self.ai_context(session_id)?;
         let model = if st.ai_model.trim().is_empty() { provider.default_model().to_string() } else { st.ai_model.clone() };
-        crate::ai::chat(provider, key.as_deref(), &model, &crate::ai::system_prompt(st.beginner_mode), &context, history).map_err(ServiceError::User)
+        let system = crate::ai::system_prompt(st.beginner_mode);
+        match crate::ai::chat(provider, key.as_deref(), &model, &system, &context, history) {
+            // Modèle retiré : on prend celui que le fournisseur conseille et on le garde pour la suite.
+            Err(e) if crate::ai::is_model_error(&e) => {
+                let Some(next) = crate::ai::suggested_model(&e).filter(|m| *m != model) else { return Err(ServiceError::User(e)) };
+                let reply = crate::ai::chat(provider, key.as_deref(), &next, &system, &context, history).map_err(ServiceError::User)?;
+                let mut s2 = self.settings();
+                s2.ai_model = next;
+                let _ = self.save_settings(s2);
+                Ok(reply)
+            }
+            r => r.map_err(ServiceError::User),
+        }
     }
 
     /// Télémétrie brute d'un tour.
