@@ -28,7 +28,7 @@ fn main() {
         hist.insert(format!("{}|{}|{:?}", ci.track, ci.car, ci.setup), serde_json::to_value(h).unwrap());
     }
     let mut st = serde_json::to_value(svc.settings()).unwrap();
-    for k in ["garage61_token", "azure_tts_key"] {
+    for k in ["garage61_token", "azure_tts_key", "ai_api_key"] {
         if st.get(k).is_some_and(|v| !v.is_null()) {
             st[k] = json!("••••");
         }
