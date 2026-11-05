@@ -67,7 +67,7 @@ export function DebriefChat({ sessionId, configured, onSetup }: { sessionId: num
     <div className="card debrief">
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <h2 style={{ margin: 0 }}>Débrief IA</h2>
-        <span className="muted" style={{ fontSize: 12 }}>
+        <span className="muted" style={{ fontSize: 13 }}>
           {cost > 0 && `≈ ${cost < 0.01 ? "< 0,01" : cost.toFixed(2).replace(".", ",")} $ · `}
           <button className="link" onClick={() => void (ctx ? setCtx(null) : api.aiContext(sessionId).then(setCtx, (e: unknown) => setErr(String(e))))}>
             {ctx ? "masquer les données" : "voir ce qui est envoyé"}

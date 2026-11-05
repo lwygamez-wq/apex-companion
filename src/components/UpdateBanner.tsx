@@ -49,8 +49,8 @@ export function UpdateBanner() {
     <div className="update-banner">
       <div>
         <b>Nouvelle version {update.version} disponible</b>
-        {update.notes && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{update.notes}</div>}
-        {error && <div className="pos" style={{ fontSize: 12, marginTop: 4 }}>Échec : {error}</div>}
+        {update.notes && <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{update.notes}</div>}
+        {error && <div className="pos" style={{ fontSize: 13, marginTop: 4 }}>Échec : {error}</div>}
       </div>
       <div className="row">
         {!busy && <button className="btn" onClick={() => setHidden(true)}>Plus tard</button>}

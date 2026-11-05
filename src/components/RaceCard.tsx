@@ -47,7 +47,7 @@ export function RaceCard({ r, laps, onLap }: { r: RaceReport; laps: LapRow[]; on
     <div className="card race" style={{ marginBottom: 14 }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <h2>Coach de course</h2>
-        <span className="muted" style={{ fontSize: 12 }}>{r.field_size} pilotes{r.field_irating ? ` · iRating moyen ${r.field_irating}` : ""}</span>
+        <span className="muted" style={{ fontSize: 13 }}>{r.field_size} pilotes{r.field_irating ? ` · iRating moyen ${r.field_irating}` : ""}</span>
       </div>
       <div className="risk-headline">{r.headline}</div>
       <div className="grid cols-4" style={{ marginBottom: 10 }}>
@@ -102,7 +102,7 @@ export function RaceCard({ r, laps, onLap }: { r: RaceReport; laps: LapRow[]; on
           </tbody>
         </table>
       )}
-      <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+      <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
         L'enregistrement ne contient que ta voiture : positions relevées au passage de la ligne, sans écarts ni lieu des dépassements. Temps perdu = écart à ton tour médian propre.
       </div>
     </div>

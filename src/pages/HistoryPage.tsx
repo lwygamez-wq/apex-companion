@@ -83,7 +83,12 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
   const [sel, setSel] = useState<string | null>(null);
   const [onlyClean, setOnlyClean] = useState(true);
   const [sort, setSort] = useState<"date" | "time">("date");
-  const current = useMemo(() => circuits.data?.find((c) => key(c) === sel) ?? circuits.data?.[0] ?? null, [circuits.data, sel]);
+  // Par défaut : le combo roulé le plus récemment qui a au moins un tour propre (sinon un graphe vide).
+  const current = useMemo(() => {
+    const list = circuits.data ?? [];
+    const recent = [...list].sort((a, b) => b.last_unix - a.last_unix);
+    return list.find((c) => key(c) === sel) ?? recent.find((c) => c.clean_laps > 0) ?? recent[0] ?? null;
+  }, [circuits.data, sel]);
   const history = useAsync(
     () => (current ? api.lapHistory(current.sim, current.track, current.track_config, current.car, current.setup) : Promise.resolve([] as HistoryLap[])),
     [current ? key(current) : ""],
@@ -128,7 +133,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
               <div className="card">
                 <h2>Référence externe</h2>
                 <div className="kpi" style={{ fontSize: 26 }}>{current.external_reference ? lapTime(current.external_reference[1]) : "—"}</div>
-                <div className="kpi-sub">{current.external_reference ? current.external_reference[0] : "aucune (export Garage 61)"}</div>
+                <div className="kpi-sub">{current.external_reference ? current.external_reference[0] : "aucune : exporte un tour depuis Garage 61"}</div>
               </div>
             </div>
             <div className="card" style={{ marginBottom: 12 }}>
@@ -141,7 +146,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                 </span>
               </div>
               <LapChart laps={history.data ?? []} best={current.best_clean_s ?? current.best_any_s} external={current.external_reference} />
-              <div className="muted" style={{ fontSize: 12 }}>
+              <div className="muted" style={{ fontSize: 13 }}>
                 {current.sessions} session{current.sessions > 1 ? "s" : ""} du {dateTime(current.first_unix)} au {dateTime(current.last_unix)} · {NAMES_FR[current.corner_names]}
               </div>
             </div>
@@ -182,7 +187,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                   ))}
                 </tbody>
               </table>
-              {rows.length === 0 && <div className="empty">Aucun tour{onlyClean ? " propre" : ""}.</div>}
+              {rows.length === 0 && <div className="empty">{onlyClean ? "Aucun tour propre sur ce combo pour l\u2019instant : décoche « tours propres seulement » pour voir tous tes tours." : "Aucun tour chronométré."}</div>}
             </div>
           </div>
         </div>

@@ -105,8 +105,8 @@ export function ReplayStudio({ cmp, store, title, onClose, overlay = null }: { c
           <b>{title}</b>
           <span className="muted">{inCorner ? inCorner.corner.name : `${(where / 1000).toFixed(2)} km`}</span>
         </div>
-        <DriverCard name={refName} lap={cmp.reference.lap_time_s} tr={cmp.ref_trace} i={ri} color="#8fb4ff" dashed />
-        <DriverCard name={`Toi, tour ${cmp.compared.number}`} lap={cmp.compared.lap_time_s} tr={cmp.cmp_trace} i={ci} color="#ff3b30" />
+        <DriverCard name={refName} lap={cmp.reference.lap_time_s} tr={cmp.ref_trace} i={ri} color="#b4b4c6" dashed />
+        <DriverCard name={`Toi, tour ${cmp.compared.number}`} lap={cmp.compared.lap_time_s} tr={cmp.cmp_trace} i={ci} color="#46c8e8" />
         <button className="btn ghost" onClick={onClose} title="Échap">✕ Fermer</button>
       </div>
       <div className="studio-main" ref={main}>

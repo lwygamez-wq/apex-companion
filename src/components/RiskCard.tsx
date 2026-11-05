@@ -26,7 +26,7 @@ export function RiskCard({ risk, headline, onCorner, compact = false, limit, cau
     <div className="card risk">
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <h2>Carte de risque</h2>
-        <span className="muted" style={{ fontSize: 12 }}>{passes} tours lancés · {sessions} session{sessions > 1 ? "s" : ""}</span>
+        <span className="muted" style={{ fontSize: 13 }}>{passes} tours lancés · {sessions} session{sessions > 1 ? "s" : ""}</span>
       </div>
       {headline && <div className="risk-headline">{headline}</div>}
       {judged.length === 0 && <div className="muted">Il faut au moins 4 tours lancés sur ce circuit avec cette voiture pour juger le risque par virage.</div>}
@@ -61,7 +61,7 @@ export function RiskCard({ risk, headline, onCorner, compact = false, limit, cau
       {limit != null && judged.length > limit && (
         <button className="btn ghost small" style={{ marginTop: 8 }} onClick={() => setAll((v) => !v)}>{all ? "Réduire" : `Voir les ${judged.length - limit} autres virages`}</button>
       )}
-      <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+      <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
         « À prendre » = répéter ton propre meilleur passage propre, pas celui d'un autre pilote.{causes?.length ? " La phrase sous le virage compare tes bons et tes mauvais passages de cette session." : ""} Une sortie coûte aussi un tour invalide et un incident, non comptés ici.
       </div>
     </div>

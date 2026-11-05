@@ -144,7 +144,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
             Références d'autres pilotes ({refs.data!.length})
             {untyped > 0 && <span className="chip warn" style={{ marginLeft: 8 }}>{untyped} sans série</span>}
           </summary>
-          <p className="muted small-note">Une référence <b>Fixed</b> ne sert qu'à tes sessions fixed, une <b>Open</b> qu'à tes sessions open. Le fichier Garage 61 ne dit pas la série : choisis-la.</p>
+          <p className="muted small-note">Une référence en <b>setup imposé</b> ne sert qu'à tes sessions en setup imposé, une en <b>setup libre</b> qu'à tes sessions en setup libre. Le fichier Garage 61 ne dit pas la série : choisis-la.</p>
           {refs.data!.map((r) => (
             <div key={r.id} className="ref-row">
               <b>{r.external_driver}</b>

@@ -2382,7 +2382,10 @@ impl AppService {
     pub fn training_plan(&self, session_id: i64) -> Result<PlanView> {
         let meta = self.db().session_meta(session_id)?;
         let key = track_key(&meta);
-        if self.db().active_plan(&key, &meta.car)?.is_none() {
+        // Programme absent, ou écrit avec l'ancien vocabulaire (« freiner à 728 m ou plus loin »,
+        // « écart-type ») : on le régénère avec les consignes relatives.
+        let legacy = |j: &str| j.contains("ou plus loin") || j.contains("écart-type") || j.contains("remettre les gaz avant");
+        if self.db().active_plan(&key, &meta.car)?.is_none_or(|p| legacy(&p.3)) {
             self.generate_plan(&meta)?;
         }
         self.plan_view(&meta)
@@ -2499,7 +2502,7 @@ impl AppService {
             ))
         } else if let (Some(sd), Some(best)) = (last.stddev_clean_s, last.best_lap_s) {
             if sd > 0.5 {
-                suggestion = Some(GoalSuggestion { title: "Régularité : écart-type ≤ 0,5 s".into(), metric: GoalMetric::Consistency { target_sd_s: 0.5 } });
+                suggestion = Some(GoalSuggestion { title: "Régularité : tous tes tours à ±0,50 s".into(), metric: GoalMetric::Consistency { target_sd_s: 0.5 } });
             }
             (sd > 0.5).then(|| format!(
                 "Priorité : la régularité. Tes tours propres varient de ±{:.1} s. Objectif : 5 tours d'affilée à moins de 0,5 s de ton meilleur tour ({}), avec les mêmes points de freinage à chaque tour.",

@@ -9,7 +9,7 @@ export function RecordingAlert({ status }: { status: StatusPayload | null }) {
       <div>
         <b>La télémétrie n'est pas enregistrée.</b> Appuie sur <b>Alt+L</b> dans iRacing, sinon cette session ne pourra pas être analysée.
       </div>
-      <span className="muted" style={{ fontSize: 12 }}>Astuce : active l'enregistrement automatique dans Réglages.</span>
+      <span className="muted" style={{ fontSize: 13 }}>Astuce : active l'enregistrement automatique dans Réglages.</span>
     </div>
   );
 }

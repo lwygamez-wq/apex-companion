@@ -182,7 +182,7 @@ pub fn corner_insight(
                 (be * 0.7).max(5.0), fmt_opt_m(rf.brake_on_m), v(rf.min_speed_kmh)
             ),
             be >= th.brake_m * 1.5,
-            rf.brake_on_m.map(|t| (format!("{seg} : commencer à freiner à {t:.0} m ou plus loin"), GoalMetric::BrakePoint { apex_m: corner.apex_m, target_m: t })),
+            rf.brake_on_m.map(|t| (format!("{seg} : freiner {:.0} m plus tard", (be * 0.7).max(5.0)), GoalMetric::BrakePoint { apex_m: corner.apex_m, target_m: t })),
         )
     } else if let Some(bl) = brake_early.filter(|b| -*b >= th.brake_m && (vmin_deficit >= th.speed_kmh || exit_deficit >= th.speed_kmh)) {
         let bl = -bl;
@@ -244,7 +244,7 @@ pub fn corner_insight(
                 fmt_opt_m(rf.throttle_on_m)
             ),
             tl >= th.throttle_m * 2.0,
-            rf.throttle_on_m.map(|t| (format!("{seg} : remettre les gaz avant {t:.0} m"), GoalMetric::ThrottleOn { apex_m: corner.apex_m, target_m: t })),
+            rf.throttle_on_m.map(|t| (format!("{seg} : remettre les gaz {:.0} m plus tôt", (tl * 0.7).max(5.0)), GoalMetric::ThrottleOn { apex_m: corner.apex_m, target_m: t })),
         )
     } else if exit_deficit >= th.speed_kmh {
         (

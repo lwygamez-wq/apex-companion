@@ -7,13 +7,13 @@ import type { Comparison } from "../lib/types";
 /** Vrai pendant qu'on place le curseur par programme (relecture) : on ignore alors l'événement. */
 let programmatic = false;
 
-export const REF_COLOR = "#8fb4ff";
-export const CMP_COLOR = "#ff3b30";
+export const REF_COLOR = "#b4b4c6";
+export const CMP_COLOR = "#46c8e8";
 const THR = "#2bd576";
 const BRK = "#ff5a4e";
 const LOSS = "#ffd400";
 const GRID = { stroke: "#22222c", width: 1 };
-const FONT = "12px 'Archivo Variable', system-ui, sans-serif";
+const FONT = "13px 'Archivo Variable', system-ui, sans-serif";
 const AXIS = { stroke: "#8c8c9c", grid: GRID, ticks: { show: false }, font: FONT };
 /** Largeur de la fenêtre glissante pendant la relecture. */
 const WINDOW = { distance: 700, time: 12 };
@@ -286,15 +286,15 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
         range: [-100, 100],
         zeroLine: true,
         series: [
-          { label: "Gaz réf.", color: "rgba(143,180,255,0.9)", data: view.ref.throttle, dash: [5, 4], width: 1.2 },
-          { label: "Frein réf.", color: "rgba(143,180,255,0.9)", data: neg(view.ref.brake), dash: [5, 4], width: 1.2, abs: true },
+          { label: "Gaz réf.", color: "rgba(180,180,198,0.9)", data: view.ref.throttle, dash: [5, 4], width: 1.2 },
+          { label: "Frein réf.", color: "rgba(180,180,198,0.9)", data: neg(view.ref.brake), dash: [5, 4], width: 1.2, abs: true },
           { label: "Gaz", color: THR, data: view.cmp.throttle, width: 1.8 },
           { label: "Frein", color: BRK, data: neg(view.cmp.brake), width: 1.8, abs: true, fill: "rgba(255,90,78,0.12)" },
         ],
       },
     ];
     if (more && view.line) {
-      s.push({ key: "line", title: "Trajectoire", hint: "écart latéral, au-dessus = plus à gauche que la réf.", unit: "m", digits: 1, height: 90, zeroLine: true, series: [{ label: "Écart", color: CMP_COLOR, data: view.line, fill: "rgba(255,59,48,0.08)" }] });
+      s.push({ key: "line", title: "Trajectoire", hint: "écart latéral, au-dessus = plus à gauche que la réf.", unit: "m", digits: 1, height: 90, zeroLine: true, series: [{ label: "Écart", color: CMP_COLOR, data: view.line, fill: "rgba(70,200,232,0.08)" }] });
     }
     if (more && view.ref.gear && view.cmp.gear) {
       s.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 64, series: [{ label: "Réf.", color: REF_COLOR, data: view.ref.gear, dash: [5, 4] }, { label: "Toi", color: CMP_COLOR, data: view.cmp.gear, width: 1.8 }] });

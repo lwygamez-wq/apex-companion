@@ -130,7 +130,7 @@ export function SettingsPage() {
           <div className="form-row">
             <div>
               Enregistrement automatique iRacing
-              <div className="hint">Toutes les sessions sont enregistrées sans Alt+L (réglage irsdkAutoLogDisk d'iRacing, fichier sauvegardé avant modification). iRacing doit être fermé. Environ 200 Mo par heure.</div>
+              <div className="hint">Chaque sortie en piste est enregistrée sans avoir à appuyer sur Alt+L. À activer iRacing fermé. Environ 200 Mo par heure de roulage.</div>
             </div>
             <div className="row">
               {autolog.error && <span className="muted">{autolog.error}</span>}
@@ -151,11 +151,11 @@ export function SettingsPage() {
             <input type="checkbox" checked={s.auto_import} onChange={(e) => upd("auto_import", e.target.checked)} />
           </div>
           <div className="form-row">
-            <div>Télémétrie live<div className="hint">Lecture de la mémoire partagée pendant la session.</div></div>
+            <div>Télémétrie live<div className="hint">Apex suit ta voiture en direct pendant que tu roules : indispensable au coach vocal et aux LEDs.</div></div>
             <input type="checkbox" checked={s.live_enabled} onChange={(e) => upd("live_enabled", e.target.checked)} />
           </div>
           <div className="form-row">
-            <div>Fréquence d'enregistrement live<div className="hint">60 Hz : points de freinage précis à ±1,5 m à 300 km/h. 20 Hz : ±4 m, CPU minimal.</div></div>
+            <div>Fréquence d'enregistrement live<div className="hint">60 Hz (conseillé) : points de freinage précis à 1–2 m près. 20 Hz : moins précis, pour un PC juste en puissance.</div></div>
             <select value={s.sample_rate_hz} onChange={(e) => upd("sample_rate_hz", Number(e.target.value))}>
               {[20, 30, 60].map((h) => <option key={h} value={h}>{h} Hz</option>)}
             </select>
@@ -331,7 +331,7 @@ export function SettingsPage() {
           <div key={c.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
             <div className="row" style={{ justifyContent: "space-between" }}>
               <b>{c.name}</b>
-              <span className="muted" style={{ fontSize: 12 }}>{c.capabilities.data_source}</span>
+              <span className="muted" style={{ fontSize: 13 }}>{c.capabilities.data_source}</span>
             </div>
             <div className="cap-grid">
               {CAP_LABELS.map(([k, label]) => {
@@ -339,7 +339,7 @@ export function SettingsPage() {
                 return <div className="cap" key={k}><span>{label}</span><span className={`chip ${SUPPORT_CLS[v]}`}>{SUPPORT_FR[v]}</span></div>;
               })}
             </div>
-            <div className="muted" style={{ fontSize: 12 }}>
+            <div className="muted" style={{ fontSize: 13 }}>
               <div>Installation : {c.install.detail}</div>
               <div>Processus détectés : {c.process_names.join(", ")}</div>
               {c.capabilities.notes.map((n) => <div key={n}>• {n}</div>)}

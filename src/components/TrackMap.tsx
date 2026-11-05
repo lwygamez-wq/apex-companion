@@ -13,8 +13,8 @@ export type ColorMode = "delta" | "inputs" | "speed" | "studio";
 /** Taille de la carte : dans la page, moitié de l'écran, ou plein écran. */
 export type MapSize = "normal" | "half" | "full";
 
-const REF_LINE = "#8fb4ff";
-const CMP_LINE = "#ff3b30";
+const REF_LINE = "#b4b4c6";
+const CMP_LINE = "#46c8e8";
 const BRAKE = "#ff3b30";
 const GAS = "#2bd576";
 
@@ -23,7 +23,7 @@ const GAS = "#2bd576";
  * `braking` allume le feu arrière.
  */
 function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: number; heading: number; scale: number; body: string; ghost?: boolean; braking: boolean }) {
-  const tyre = ghost ? "rgba(143,180,255,0.35)" : "#0d0d12";
+  const tyre = ghost ? "rgba(180,180,198,0.35)" : "#0d0d12";
   const op = ghost ? 0.9 : 1;
   return (
     <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${heading.toFixed(1)}) scale(${scale.toFixed(4)})`} opacity={op} style={{ pointerEvents: "none" }}>
@@ -42,7 +42,7 @@ function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: num
       {/* coque et pontons */}
       <path
         d="M-2.1 -0.42 L-1.25 -0.58 L0.15 -0.55 L0.55 -0.24 L1.95 -0.12 L2.28 0 L1.95 0.12 L0.55 0.24 L0.15 0.55 L-1.25 0.58 L-2.1 0.42 Z"
-        fill={ghost ? "rgba(143,180,255,0.6)" : body}
+        fill={ghost ? "rgba(180,180,198,0.6)" : body}
         stroke={ghost ? body : "#ffffff"}
         strokeWidth={ghost ? 0.1 : 0.07}
         strokeDasharray={undefined}

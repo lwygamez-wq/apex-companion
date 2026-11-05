@@ -81,7 +81,7 @@ export function ReplayPanel({ cmp, store, compact = false }: { cmp: Comparison; 
           store.seek(Number(e.target.value));
         }}
       />
-      <div className="row" style={{ justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
+      <div className="row" style={{ justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
         <span className="rp-where">{(distM / 1000).toFixed(2)} km{corner ? <b> · {corner.corner.name}</b> : null}</span>
         <div className="seg small" title="Pendant la lecture, les courbes peuvent zoomer automatiquement autour de la voiture">
           <button className={s.chartFollow ? "on" : ""} onClick={() => store.setChartFollow(true)}>Courbes : zoom voiture</button>

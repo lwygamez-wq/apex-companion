@@ -75,8 +75,8 @@ pub fn build_plan(p: &PlanInput) -> Vec<PlanObjective> {
         if let Some(sd) = p.stddev_s.filter(|s| *s > 0.35) {
             let target = ((sd * 0.8 * 20.0).round() / 20.0).max(0.3) as f32;
             out.push(PlanObjective {
-                title: format!("Régularité : écart-type ≤ {target:.2} s"),
-                why: format!("Tes tours propres varient de ±{sd:.2} s : les mêmes repères à chaque tour."),
+                title: format!("Régularité : tous tes tours à ±{} s", fr2(target)),
+                why: format!("Tes tours propres varient de ±{} s : garde les mêmes repères à chaque tour.", fr2(sd)),
                 metric: GoalMetric::Consistency { target_sd_s: target },
                 apex_m: None,
                 spoken: "régularité, mêmes repères à chaque tour".into(),
@@ -106,9 +106,15 @@ pub fn build_plan(p: &PlanInput) -> Vec<PlanObjective> {
     out
 }
 
+/// 0.6 → « 0,60 » (virgule française).
+fn fr2(x: impl Into<f64>) -> String {
+    let x: f64 = x.into();
+    format!("{x:.2}").replace('.', ",")
+}
+
 /// Constat d'une zone : le conseil représentatif (celui dont vient l'objectif) et sa récurrence.
 fn zone_why(z: &ProgressZone) -> String {
-    format!("{} : perte sur {}/{} tours propres, ≈{:.2} s à chaque fois.", z.example.title, z.occurrences, z.laps_compared, z.avg_loss_s)
+    format!("{} : perte sur {}/{} tours propres, ≈{} s à chaque fois.", z.example.title, z.occurrences, z.laps_compared, fr2(z.avg_loss_s))
 }
 
 fn objective_from(g: GoalSuggestion, why: String) -> PlanObjective {
@@ -176,7 +182,7 @@ mod tests {
     }
 
     fn zone(name: &str, apex: f32, occ: usize) -> ProgressZone {
-        let goal = GoalSuggestion { title: format!("{name} : commencer à freiner à {:.0} m ou plus loin", apex - 120.0), metric: GoalMetric::BrakePoint { apex_m: apex, target_m: apex - 120.0 } };
+        let goal = GoalSuggestion { title: format!("{name} : freiner 10 m plus tard"), metric: GoalMetric::BrakePoint { apex_m: apex, target_m: apex - 120.0 } };
         ProgressZone {
             segment: name.into(),
             range_m: [apex - 100.0, apex + 100.0],

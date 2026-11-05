@@ -177,7 +177,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
             </div>
             <details className="azure-box" open={azureMissing}>
               <summary>Clé Azure {voices.data?.some((v) => v.id.startsWith("azure:") && v.installed) ? "(enregistrée)" : ""}</summary>
-              <div className="muted" style={{ fontSize: 12, margin: "6px 0" }}>
+              <div className="muted" style={{ fontSize: 13, margin: "6px 0" }}>
                 portal.azure.com → ressource « Speech », niveau <b>Free F0</b>, région France Central → « Clés et point de terminaison » : copie la Clé 1. Seul le texte des messages radio est envoyé à Azure.
               </div>
               <div className="row" style={{ gap: 8 }}>
@@ -190,7 +190,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
             </details>
             {busy && <div className="muted" style={{ marginTop: 8 }}>{busy}</div>}
             {!voiceAvailable() && sel === "windows" && <div className="warning">Synthèse vocale Windows indisponible sur ce poste.</div>}
-            {sel === "windows" && winVoice && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{winVoice}</div>}
+            {sel === "windows" && winVoice && <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>{winVoice}</div>}
           </div>
           <RadioControlCard status={status} />
         </div>

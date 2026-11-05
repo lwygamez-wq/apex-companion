@@ -14,6 +14,7 @@ import { dateTime, LAP_KIND_FR, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { ReplayStore, replayBounds } from "../lib/replay";
 import type { LapRow, SessionDetail, SessionProfile } from "../lib/types";
+import { NoCleanLaps } from "../components/NoCleanLaps";
 import { SetupChip } from "../components/SetupChip";
 import { CornerList } from "../components/CornerList";
 import { finalGap, fmtGap, type Axis, type GapUnit } from "../lib/compareView";
@@ -208,21 +209,22 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               )}
             </div>
             <div className="ss-kpi"><span>{d.best_lap_id != null || d.fastest_lap_id == null ? "Meilleur tour" : "Plus rapide (invalide)"}</span><b className="mono best">{lapTime(best)}</b></div>
-            <div className="ss-kpi"><span>Théorique</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
-            <div className="ss-kpi"><span>Régularité</span><b className="mono">{d.consistency ? `± ${d.consistency.stddev_s.toFixed(2)} s` : "—"}</b></div>
+            <div className="ss-kpi" title="Tes meilleurs secteurs de la séance mis bout à bout"><span>Tour idéal</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
+            <div className="ss-kpi" title="De combien tes tours propres varient d'un tour à l'autre (plus petit = plus régulier)"><span>Régularité</span><b className="mono">{d.consistency ? `± ${d.consistency.stddev_s.toFixed(2)} s` : "—"}</b></div>
             <div className="ss-kpi"><span>Tours propres</span><b className="mono">{d.laps.filter((l) => l.clean).length}/{timed.length}</b></div>
           </div>
+          <NoCleanLaps clean={d.laps.filter((l) => l.clean).length} timed={timed.length} />
 
           {d.untyped_references.length > 0 && (
             <div className="warning untyped">
               <div>
-                Ta session est en série <b>{d.meta.setup === "fixed" ? "Fixed" : "Open"}</b>. Indique la série de ces références (elles ne sont pas utilisées en attendant) :
+                Ta session est en <b>{d.meta.setup === "fixed" ? "setup imposé" : "setup libre"}</b>. Indique la série de ces références (elles ne sont pas utilisées en attendant) :
               </div>
               {d.untyped_references.map((u) => (
                 <div key={u.session_id} className="row" style={{ gap: 8, marginTop: 6 }}>
                   <b>{u.driver}</b> <span className="mono">{lapTime(u.lap_time_s)}</span>
-                  <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "fixed").then(() => (detail.reload(), overlay.reload()))}>Fixed</button>
-                  <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "open").then(() => (detail.reload(), overlay.reload()))}>Open</button>
+                  <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "fixed").then(() => (detail.reload(), overlay.reload()))}>Setup imposé</button>
+                  <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "open").then(() => (detail.reload(), overlay.reload()))}>Setup libre</button>
                 </div>
               ))}
             </div>
@@ -248,7 +250,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                       <button className="link" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">chercher sur Garage 61</button>
                     )}
                   </div>
-                  {g61Msg && <div className="muted" style={{ fontSize: 12 }}>{g61Msg}</div>}
+                  {g61Msg && <div className="muted" style={{ fontSize: 13 }}>{g61Msg}</div>}
                 </div>
                 <div className="duel-gap">
                   <button className="btn ghost small" title="Inverser référence et tour analysé" onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
@@ -279,6 +281,8 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   <button key={k} role="tab" aria-selected={current === k} className={current === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>
                 ))}
               </div>
+
+              {!c && !cmp.error && refId !== cmpId && <div className="card muted">Comparaison des deux tours en cours…</div>}
 
               {c && store && current === "advice" && (
                 <div className="insights-strip">

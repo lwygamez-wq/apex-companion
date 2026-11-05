@@ -36,7 +36,7 @@ export function InsightCard({ insight, active, onFocus, sessionId, rank }: { ins
               ))}
             </tbody>
           </table>
-          <div className="muted" style={{ fontSize: 12 }}>Confiance : {CONFIDENCE_FR[insight.confidence]}{insight.confidence_notes.length > 0 ? ` · ${insight.confidence_notes.join(" · ")}` : ""}</div>
+          <div className="muted" style={{ fontSize: 13 }}>Confiance : {CONFIDENCE_FR[insight.confidence]}{insight.confidence_notes.length > 0 ? ` · ${insight.confidence_notes.join(" · ")}` : ""}</div>
         </details>
         {insight.goal && sessionId != null && (
           <button

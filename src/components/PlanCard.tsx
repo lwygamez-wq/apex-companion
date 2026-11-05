@@ -30,7 +30,7 @@ export function PlanCard({ sessionId }: { sessionId: number }) {
     <div className="card plan" style={{ marginBottom: 14 }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <h2 style={{ margin: 0 }}>{evaluated ? "Bilan du programme" : "Programme de ta prochaine séance"}</h2>
-        <span className="muted" style={{ fontSize: 12 }}>{plan.track} · {plan.car} · créé le {dateTime(plan.created_at_unix)}</span>
+        <span className="muted" style={{ fontSize: 13 }}>{plan.track} · {plan.car} · créé le {dateTime(plan.created_at_unix)}</span>
       </div>
       {evaluated && <div className="risk-headline">{done} objectif{done > 1 ? "s" : ""} atteint{done > 1 ? "s" : ""} sur {plan.objectives.length}.</div>}
       <ol className="plan-list">
@@ -45,7 +45,7 @@ export function PlanCard({ sessionId }: { sessionId: number }) {
         ))}
       </ol>
       <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
-        <span className="muted" style={{ fontSize: 12 }}>
+        <span className="muted" style={{ fontSize: 13 }}>
           {evaluated ? "Prochaine étape : un nouveau programme à partir de cette séance." : "Le coach vocal privilégie ces virages et te lit le plan au départ (« plan » au volant)."}
         </span>
         <button className={`btn ${evaluated ? "primary" : ""}`} onClick={() => void renew()}>{evaluated ? "Nouveau programme" : "Recalculer"}</button>

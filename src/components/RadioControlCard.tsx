@@ -114,7 +114,7 @@ export function RadioControlCard({ status }: { status: StatusPayload | null }) {
         </div>
       )}
       {msg && <div className="muted" style={{ marginTop: 8 }}>{msg}</div>}
-      <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+      <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
         Maintiens le bouton, dis le mot, relâche : la voix du coach se coupe pendant que tu parles. En qualification, la radio se tait automatiquement (sauf réponses demandées).
       </div>
     </div>

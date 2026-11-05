@@ -16,7 +16,7 @@ export function OffTrackCard({ zones, onZone }: { zones: OffTrackZone[]; onZone?
           </button>
         ))}
       </div>
-      <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+      <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
         Chaque sortie invalide le tour (et coûte un incident sur iRacing). Rester sur la piste à ces endroits passe avant la recherche de vitesse.
       </div>
     </div>

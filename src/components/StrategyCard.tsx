@@ -34,7 +34,7 @@ export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
         )}
         <span className="muted strategy-more">régler</span>
       </summary>
-      {v && <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>D'après tes {v.laps_used} derniers tours propres.</div>}
+      {v && <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>D'après tes {v.laps_used} derniers tours propres.</div>}
       <div className="strategy-inputs">
         <div className="seg">
           <button className={len.kind === "minutes" ? "on" : ""} onClick={() => setLength({ kind: "minutes", value: len.kind === "minutes" ? len.value : 30 })}>Minutes</button>
@@ -80,7 +80,7 @@ export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
               ))}
             </div>
           )}
-          <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
             {v.fuel_per_lap_l.toFixed(2).replace(".", ",")} L/tour en moyenne (max {v.fuel_per_lap_max_l.toFixed(2).replace(".", ",")}), rythme {lapTime(v.lap_time_s)}
             {v.tank_l != null ? `, réservoir ${Math.round(v.tank_l)} L` : ", réservoir inconnu"}. Au volant, « carburant » te dit en course s'il y a de quoi finir.
           </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
+import { NoCleanLaps } from "../components/NoCleanLaps";
 import { PlanCard } from "../components/PlanCard";
 import { api, onSessionsChanged } from "../lib/api";
 import { dateTime, lapTime, SESSION_KIND_FR } from "../lib/format";
@@ -46,7 +47,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
         <div className="card notice">
           <div>
             <b>iRacing n'enregistre tes sessions que si tu appuies sur Alt+L.</b>
-            <div className="muted" style={{ fontSize: 12 }}>Active l'enregistrement automatique (iRacing fermé). Environ 200 Mo par heure de roulage.</div>
+            <div className="muted" style={{ fontSize: 13 }}>Active l'enregistrement automatique (iRacing fermé). Environ 200 Mo par heure de roulage.</div>
           </div>
           <button className="btn primary" onClick={() => run(api.setIracingAutolog(true), "Enregistrement automatique activé.")}>Activer</button>
         </div>
@@ -68,15 +69,16 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
               <span className="link-like">Analyser →</span>
             </div>
             <div className="ss-kpi"><span>Meilleur tour propre</span><b className="mono best">{lapTime(s.best_lap_s)}</b></div>
-            <div className="ss-kpi"><span>Théorique</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
-            <div className="ss-kpi"><span>Régularité</span><b className="mono">{s.stddev_clean_s != null ? `± ${s.stddev_clean_s.toFixed(2)} s` : "—"}</b></div>
+            <div className="ss-kpi" title="Tes meilleurs secteurs de la séance mis bout à bout"><span>Tour idéal</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
+            <div className="ss-kpi" title="De combien tes tours propres varient d'un tour à l'autre (plus petit = plus régulier)"><span>Régularité</span><b className="mono">{s.stddev_clean_s != null ? `± ${s.stddev_clean_s.toFixed(2)} s` : "—"}</b></div>
             <div className="ss-kpi"><span>Tours propres</span><b className="mono">{s.clean_lap_count}/{s.lap_count}</b></div>
           </div>
+          <NoCleanLaps clean={s.clean_lap_count} timed={s.lap_count} />
 
           {d.active_goal && (
             <div className="card notice">
               <div>
-                <span className="muted" style={{ fontSize: 12 }}>Objectif en cours</span>
+                <span className="muted" style={{ fontSize: 13 }}>Objectif en cours</span>
                 <div style={{ fontWeight: 650 }}>{d.active_goal.title}</div>
                 <div className="muted" style={{ fontSize: 13 }}>
                   {d.active_goal.result ? <><span className={`chip ${d.active_goal.result.achieved ? "good" : "warn"}`}>{d.active_goal.result.achieved ? "Atteint" : "Pas encore"}</span> {d.active_goal.result.summary}</> : "Vérifié sur ta prochaine session sur ce circuit."}
@@ -98,7 +100,7 @@ export function DashboardPage({ navigate }: { navigate: (r: Route) => void }) {
                       <b>{z.segment}</b>
                       <span className="muted">{z.typical_issue.split(" : ")[1] ?? z.typical_issue}</span>
                       <span className="mono">{z.avg_loss_s.toFixed(2)} s</span>
-                      <span className="muted" style={{ fontSize: 12 }}>{z.occurrences}/{z.laps_compared} tours</span>
+                      <span className="muted" style={{ fontSize: 13 }}>{z.occurrences}/{z.laps_compared} tours</span>
                     </div>
                   ))}
                 </div>

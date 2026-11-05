@@ -137,7 +137,7 @@ function SessionList({ list, onOpen, onDelete, onPick }: { list: StoredSummary[]
           <li>Ici : « Ouvrir » → Fichiers → iCloud Drive → choisis la session.</li>
         </ol>
         <button className="btn primary" onClick={onPick}>Ouvrir un export</button>
-        <p className="muted" style={{ fontSize: 12 }}>Tout reste dans ton téléphone : rien n'est envoyé sur Internet.</p>
+        <p className="muted" style={{ fontSize: 13 }}>Tout reste dans ton téléphone : rien n'est envoyé sur Internet.</p>
       </div>
     );
   }
@@ -193,7 +193,7 @@ function SessionScreen({ s, onLap }: { s: MobileSession; onLap: (id: number) => 
         ) : (
           <div className="card"><h2>Plus rapide</h2><div className="kpi m-kpi">{lapTime(s.laps.find((l) => l.id === s.fastest_lap_id)?.lap_time_s)}</div><div className="kpi-sub">invalide</div></div>
         )}
-        <div className="card"><h2>Théorique</h2><div className="kpi best m-kpi">{lapTime(s.theoretical_best_s)}</div></div>
+        <div className="card"><h2>Tour idéal</h2><div className="kpi best m-kpi">{lapTime(s.theoretical_best_s)}</div></div>
         <div className="card"><h2>Régularité</h2><div className="kpi m-kpi">{s.consistency ? `σ ${s.consistency.stddev_s.toFixed(2)}` : "—"}</div></div>
       </div>
       <RiskCard risk={s.risk} headline={s.risk_headline} compact />
