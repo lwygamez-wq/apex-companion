@@ -71,6 +71,7 @@ export function SettingsPage() {
     }
   };
   const [g61Msg, setG61Msg] = useState<string | null>(null);
+  const [aiModels, setAiModels] = useState<string[]>([]);
   const [aiMsg, setAiMsg] = useState<{ kind: "wait" | "ok" | "err"; text: string } | null>(null);
   const checkG61 = async () => {
     if (!s) return;
@@ -316,7 +317,7 @@ export function SettingsPage() {
           </p>
           <div className="form-row">
             <div>Fournisseur<div className="hint">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.hint}</div></div>
-            <select value={s.ai_provider || "anthropic"} onChange={(e) => { const p = PROVIDERS.find((x) => x.id === e.target.value)!; setS((x) => (x ? { ...x, ai_provider: p.id, ai_model: p.models[0]!, ai_api_key: x.ai_provider === p.id ? x.ai_api_key : null } : x)); setAiMsg(null); }}>
+            <select value={s.ai_provider || "anthropic"} onChange={(e) => { const p = PROVIDERS.find((x) => x.id === e.target.value)!; setS((x) => (x ? { ...x, ai_provider: p.id, ai_model: p.models[0]!, ai_api_key: x.ai_provider === p.id ? x.ai_api_key : null } : x)); setAiMsg(null); setAiModels([]); }}>
               {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </div>
@@ -327,14 +328,18 @@ export function SettingsPage() {
             </div>
           )}
           <div className="form-row">
-            <div>Modèle<div className="hint">Le premier de la liste est conseillé. Tu peux en saisir un autre.</div></div>
+            <div>Modèle<div className="hint">« Tester » vérifie qu'il existe et le remplace au besoin par le meilleur modèle disponible avec ta clé ; la liste se remplit alors avec les modèles de ton compte.</div></div>
             <div className="row" style={{ justifyContent: "flex-end" }}>
               <input type="text" list="ai-models" style={{ minWidth: 240 }} value={s.ai_model} onChange={(e) => { upd("ai_model", e.target.value); setAiMsg(null); }} />
-              <datalist id="ai-models">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.models.map((m) => <option key={m} value={m} />)}</datalist>
+              <datalist id="ai-models">{(aiModels.length ? aiModels : PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.models ?? []).map((m) => <option key={m} value={m} />)}</datalist>
               <button className="btn" disabled={((s.ai_provider || "anthropic") !== "ollama" && !s.ai_api_key?.trim()) || aiMsg?.kind === "wait"} onClick={() => {
                 setAiMsg({ kind: "wait", text: "Test en cours…" });
                 api.aiCheck(s.ai_provider || "anthropic", s.ai_api_key ?? "", s.ai_model).then(
-                  (t) => setAiMsg({ kind: "ok", text: t }),
+                  (r) => {
+                    setAiMsg({ kind: "ok", text: r.message });
+                    setAiModels(r.models);
+                    if (r.model !== s.ai_model) upd("ai_model", r.model);
+                  },
                   (e: unknown) => setAiMsg({ kind: "err", text: e instanceof Error ? e.message : String(e) }),
                 );
               }}>Tester</button>

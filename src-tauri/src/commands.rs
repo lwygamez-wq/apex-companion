@@ -308,7 +308,7 @@ pub async fn ai_chat(state: State<'_, AppState>, session_id: i64, messages: Vec<
 
 /// Essai de la clé API du débrief IA (clé et modèle saisis, enregistrés ou non).
 #[tauri::command]
-pub async fn ai_check(provider: String, api_key: String, model: String) -> R<String> {
+pub async fn ai_check(provider: String, api_key: String, model: String) -> R<apex_core::ai::CheckResult> {
     tauri::async_runtime::spawn_blocking(move || apex_core::ai::check(apex_core::ai::Provider::parse(&provider), &api_key, &model))
         .await
         .map_err(|e| ServiceError::User(e.to_string()))?

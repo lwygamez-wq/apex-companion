@@ -215,7 +215,12 @@ pub fn ask_openai(provider: Provider, api_key: Option<&str>, body: &serde_json::
     match status {
         200 => parse_openai_reply(&v),
         401 | 403 => Err(format!("clé refusée par {} : vérifie-la dans Réglages → Comptes & clés", provider.name())),
-        404 => Err(format!("modèle « {} » introuvable chez {} : choisis-en un autre", body["model"].as_str().unwrap_or("?"), provider.name())),
+        404 => Err(format!(
+            "modèle « {} » introuvable chez {} : clique sur « Tester », Apex choisira un modèle disponible{}",
+            body["model"].as_str().unwrap_or("?"),
+            provider.name(),
+            openai_error(&v).map(|m| format!(" ({m})")).unwrap_or_default()
+        )),
         429 => Err(format!("limite de l'offre gratuite {} atteinte : réessaie dans une minute (ou demain si c'est la limite du jour)", provider.name())),
         _ => Err(openai_error(&v).map(|m| format!("{} ({status}) : {m}", provider.name())).unwrap_or_else(|| format!("{} : erreur {status}", provider.name()))),
     }
@@ -258,20 +263,98 @@ pub fn check_request(model: &str) -> serde_json::Value {
     json!({ "model": model, "max_tokens": 16, "messages": [{ "role": "user", "content": "Réponds seulement : OK" }] })
 }
 
-pub fn check(provider: Provider, api_key: &str, model: &str) -> Result<String, String> {
+/// Résultat de « Tester » : message, modèle retenu (corrigé s'il n'existe pas chez le fournisseur),
+/// et la liste des modèles de chat disponibles avec cette clé.
+#[derive(Debug, Clone, Serialize)]
+pub struct CheckResult {
+    pub message: String,
+    pub model: String,
+    pub models: Vec<String>,
+}
+
+/// Modèles de chat proposés par un fournisseur au format OpenAI (`GET …/models`), sans le préfixe
+/// « models/ » de Gemini ni les modèles d'images, de voix ou d'intégration.
+pub fn list_models(provider: Provider, api_key: &str) -> Result<Vec<String>, String> {
+    if provider == Provider::Anthropic {
+        return Ok(vec![]);
+    }
+    let url = provider.url().replace("/chat/completions", "/models");
+    let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(std::time::Duration::from_secs(20))).http_status_as_error(false).build().into();
+    let mut req = agent.get(&url);
+    if !api_key.trim().is_empty() {
+        req = req.header("authorization", &format!("Bearer {}", api_key.trim()));
+    }
+    let mut resp = req.call().map_err(|e| format!("liste des modèles indisponible ({e})"))?;
+    let status = resp.status().as_u16();
+    let v: serde_json::Value = resp.body_mut().read_json().unwrap_or(serde_json::Value::Null);
+    if status != 200 {
+        return Err(openai_error(&v).unwrap_or_else(|| format!("liste des modèles : erreur {status}")));
+    }
+    Ok(chat_models(&v))
+}
+
+/// Identifiants des modèles de texte d'une réponse `/models`.
+pub fn chat_models(v: &serde_json::Value) -> Vec<String> {
+    const SKIP: [&str; 12] = ["embed", "image", "tts", "audio", "live", "vision", "whisper", "moderation", "guard", "veo", "imagen", "native"];
+    let mut out: Vec<String> = v["data"]
+        .as_array()
+        .map(|a| a.iter().filter_map(|m| m["id"].as_str()).map(|id| id.trim_start_matches("models/").to_string()).collect())
+        .unwrap_or_default();
+    out.retain(|id| !SKIP.iter().any(|s| id.to_lowercase().contains(s)));
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Version d'un nom de modèle (« gemini-3.5-flash » → 3.5), pour prendre le plus récent.
+fn version_of(id: &str) -> f32 {
+    id.split(['-', '_']).find_map(|p| p.parse::<f32>().ok()).unwrap_or(0.0)
+}
+
+/// Meilleur modèle de débrief parmi ceux disponibles : un « Flash » Gemini récent et stable,
+/// un « small » Mistral, un gros Llama chez Groq, le premier modèle installé chez Ollama.
+pub fn pick_model(provider: Provider, models: &[String]) -> Option<String> {
+    let stable = |m: &&String| !m.contains("preview") && !m.contains("exp");
+    let best = |f: &dyn Fn(&String) -> bool| -> Option<String> {
+        let mut c: Vec<&String> = models.iter().filter(|m| f(m)).collect();
+        c.sort_by(|a, b| stable(b).cmp(&stable(a)).then(version_of(b).total_cmp(&version_of(a))).then(a.len().cmp(&b.len())));
+        c.first().map(|s| s.to_string())
+    };
+    match provider {
+        Provider::Gemini => best(&|m| m.starts_with("gemini") && m.contains("flash") && !m.contains("lite") && !m.contains("thinking")).or_else(|| best(&|m| m.starts_with("gemini"))),
+        Provider::Mistral => models.iter().find(|m| *m == "mistral-small-latest").cloned().or_else(|| best(&|m| m.contains("small"))).or_else(|| models.first().cloned()),
+        Provider::Groq => best(&|m| m.contains("llama") && m.contains("70b")).or_else(|| models.first().cloned()),
+        Provider::Ollama => models.first().cloned(),
+        Provider::Anthropic => None,
+    }
+}
+
+pub fn check(provider: Provider, api_key: &str, model: &str) -> Result<CheckResult, String> {
     if provider.needs_key() && api_key.trim().is_empty() {
         return Err("aucune clé saisie".into());
     }
-    let model = if model.trim().is_empty() { provider.default_model() } else { model.trim() };
+    let mut model = if model.trim().is_empty() { provider.default_model().to_string() } else { model.trim().to_string() };
+    // Liste des modèles de la clé : le modèle saisi est remplacé s'il n'y figure pas (renommé, retiré).
+    let models = list_models(provider, api_key).unwrap_or_default();
+    let mut note = String::new();
+    if !models.is_empty() && !models.contains(&model) {
+        if let Some(m) = pick_model(provider, &models) {
+            note = format!(" (« {model} » n'existe plus chez {} : remplacé par {m})", provider.name());
+            model = m;
+        }
+    }
+    if provider == Provider::Ollama && models.is_empty() {
+        return Err("Ollama ne répond pas ou n'a aucun modèle : installe-le (ollama.com), lance-le, puis télécharge un modèle (« ollama pull mistral »).".into());
+    }
     let ok = match provider {
-        Provider::Anthropic => ask(api_key, &check_request(model)).map(|_| ()),
+        Provider::Anthropic => ask(api_key, &check_request(&model)).map(|_| ()),
         // Réponse vide acceptée : le modèle a pu dépenser ses quelques jetons à réfléchir, la connexion est bonne.
         p => match ask_openai(p, Some(api_key), &json!({ "model": model, "max_tokens": 64, "messages": [{ "role": "user", "content": "Réponds seulement : OK" }] })) {
             Err(e) if e == EMPTY => Ok(()),
             r => r.map(|_| ()),
         },
     };
-    ok.map(|_| format!("Connexion réussie : {} répond avec le modèle {model}.", provider.name()))
+    ok.map(|_| CheckResult { message: format!("Connexion réussie : {} répond avec le modèle {model}{note}.", provider.name()), model, models })
 }
 
 /// Coût approximatif (USD), pour l'afficher au pilote. Tarif public de Claude Sonnet 5.5 (novembre 2026) :
@@ -338,6 +421,12 @@ mod tests {
         assert_eq!(b["max_tokens"], 16);
         assert_eq!(b["model"], "claude-sonnet-5-5");
         assert!(check(Provider::Anthropic, "  ", "x").unwrap_err().contains("aucune clé"));
+        let list = chat_models(&json!({ "data": [
+            { "id": "models/gemini-2.5-flash-lite" }, { "id": "models/gemini-3.5-flash" }, { "id": "models/gemini-3.8-flash-preview-05" },
+            { "id": "models/gemini-3.6-flash" }, { "id": "models/gemini-3.8-flash-tts" }, { "id": "models/gemini-embedding-2" }, { "id": "models/gemini-2.5-pro" } ] }));
+        assert!(!list.iter().any(|m| m.contains("tts") || m.contains("embedding")));
+        assert_eq!(pick_model(Provider::Gemini, &list).as_deref(), Some("gemini-3.6-flash"));
+        assert_eq!(pick_model(Provider::Mistral, &["mistral-large-latest".into(), "mistral-small-latest".into()]).as_deref(), Some("mistral-small-latest"));
         assert!(check(Provider::Gemini, "", "x").unwrap_err().contains("aucune clé"));
     }
 
