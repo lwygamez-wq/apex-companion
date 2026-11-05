@@ -24,6 +24,7 @@ function Sparkline({ points }: { points: [number, number][] }) {
 export function DashboardPage({ navigate, status }: { navigate: (r: Route) => void; status: StatusPayload | null }) {
   const dash = useAsync(() => api.dashboard(), []);
   const autolog = useAsync(() => api.iracingAutolog().catch(() => null), []);
+  const plan = useAsync(() => (dash.data?.last_session ? api.trainingPlan(dash.data.last_session.id).catch(() => null) : Promise.resolve(null)), [dash.data?.last_session?.id]);
   const [msg, setMsg] = useState<string | null>(null);
   const run = (p: Promise<unknown>, ok: string) =>
     p.then(
@@ -63,6 +64,19 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
       )}
       {s && d && (
         <>
+          {plan.data?.objectives[0] && !plan.data.evaluated_session_id && (() => {
+            const o = plan.data.objectives[0]!;
+            const [where, what] = o.title.includes(" : ") ? o.title.split(" : ", 2) : ["", o.title];
+            return (
+              <div className="card one-thing">
+                <div>
+                  <span className="label">Prochain run · une seule chose</span>
+                  <h2>{where && <>{where} · </>}<em>{what}</em></h2>
+                  <p>{o.why}</p>
+                </div>
+              </div>
+            );
+          })()}
           <div className="briefing-top">
             <PlanCard sessionId={s.id} />
             <ReadyCard status={status} onSetup={() => navigate({ page: "live" })} />

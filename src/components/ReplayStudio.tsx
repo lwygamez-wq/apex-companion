@@ -21,7 +21,7 @@ function DriverCard({ name, lap, tr, i, color, dashed }: { name: string; lap: nu
         <span className="mono sd-lap">{lapTime(lap)}</span>
       </div>
       <div className="sd-vals">
-        <div className="sd-bar" title="Gaz"><i style={{ width: `${th * 100}%`, background: "#2bd576" }} /><span>{Math.round(th * 100)} %</span></div>
+        <div className="sd-bar" title="Gaz"><i style={{ width: `${th * 100}%`, background: "#3dd9b3" }} /><span>{Math.round(th * 100)} %</span></div>
         <div className="sd-bar" title="Frein"><i style={{ width: `${br * 100}%`, background: "#ff3b30" }} /><span>{Math.round(br * 100)} %</span></div>
         <span className="mono sd-speed">{Math.round(at(tr.speed_kmh, i) ?? 0)}<small> km/h</small></span>
         {g != null && <span className="mono sd-gear">{Math.round(g) || "N"}</span>}
@@ -106,7 +106,7 @@ export function ReplayStudio({ cmp, store, title, onClose, overlay = null }: { c
           <span className="muted">{inCorner ? inCorner.corner.name : `${(where / 1000).toFixed(2)} km`}</span>
         </div>
         <DriverCard name={refName} lap={cmp.reference.lap_time_s} tr={cmp.ref_trace} i={ri} color="#b4b4c6" dashed />
-        <DriverCard name={`Toi, tour ${cmp.compared.number}`} lap={cmp.compared.lap_time_s} tr={cmp.cmp_trace} i={ci} color="#46c8e8" />
+        <DriverCard name={`Toi, tour ${cmp.compared.number}`} lap={cmp.compared.lap_time_s} tr={cmp.cmp_trace} i={ci} color="#5cc8ff" />
         <button className="btn ghost" onClick={onClose} title="Échap">✕ Fermer</button>
       </div>
       <div className="studio-main" ref={main}>

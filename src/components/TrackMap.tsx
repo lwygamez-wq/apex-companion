@@ -14,9 +14,9 @@ export type ColorMode = "delta" | "inputs" | "speed" | "studio";
 export type MapSize = "normal" | "half" | "full";
 
 const REF_LINE = "#b4b4c6";
-const CMP_LINE = "#46c8e8";
+const CMP_LINE = "#5cc8ff";
 const BRAKE = "#ff3b30";
-const GAS = "#2bd576";
+const GAS = "#3dd9b3";
 
 /**
  * Monoplace vue de dessus (dessin générique, 5 m × 2 m, avant vers +x), centrée sur l'origine.
@@ -50,7 +50,7 @@ function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: num
       {/* aileron avant */}
       <rect x={2.12} y={-0.86} width={0.32} height={1.72} rx={0.08} fill={body} stroke={ghost ? body : "#fff"} strokeWidth={0.08} />
       {/* casque */}
-      <circle cx={-0.25} cy={0} r={0.24} fill={ghost ? body : "#ffd400"} stroke="#111" strokeWidth={0.05} />
+      <circle cx={-0.25} cy={0} r={0.24} fill={ghost ? body : "#ff9a5c"} stroke="#111" strokeWidth={0.05} />
     </g>
   );
 }
@@ -156,7 +156,7 @@ function linePath(X: number[], Y: number[], step = 2): string {
   return d;
 }
 
-const SPEED_COLORS = ["#2f6bff", "#3fa7ff", "#2bd576", "#ffd400", "#ff8a00", "#e10600"];
+const SPEED_COLORS = ["#2f6bff", "#3fa7ff", "#3dd9b3", "#ff9a5c", "#ff8a00", "#e10600"];
 
 /** Couches fixes (ne dépendent pas du temps) : mémorisées. */
 const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false }: { c: Comparison; geo: Geo; mode: ColorMode; hasEdges?: boolean }) {
@@ -172,8 +172,8 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
         const rate = ((c.delta_s[j] ?? 0) - (c.delta_s[i] ?? 0)) / ((j - i) * c.step_m || 1);
         const k = Math.max(-1, Math.min(1, rate * 400));
         const q = Math.round(Math.abs(k) * 4) / 4;
-        if (k > 0.05) return `rgba(255,212,0,${(0.3 + 0.7 * q).toFixed(2)})`;
-        if (k < -0.05) return `rgba(43,213,118,${(0.3 + 0.7 * q).toFixed(2)})`;
+        if (k > 0.05) return `rgba(255,154,92,${(0.3 + 0.7 * q).toFixed(2)})`;
+        if (k < -0.05) return `rgba(61,217,179,${(0.3 + 0.7 * q).toFixed(2)})`;
         return "#34344a";
       });
     } else if (mode === "studio") {
@@ -184,7 +184,7 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
           const b = t.brake[i] ?? 0;
           const th = t.throttle[i] ?? 0;
           if (b > 0.05) return "#ff3b30";
-          if (th > 0.9) return "#2bd576";
+          if (th > 0.9) return "#3dd9b3";
           if (th > 0.05) return "#b7e86a";
           return "#e8e8ee";
         });
@@ -198,8 +198,8 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
             const b = t.brake[i] ?? 0;
             const th = t.throttle[i] ?? 0;
             if (b > 0.05) return b > 0.5 ? "#ff2a1f" : "#ff7a6e";
-            if (th > 0.95) return "#2bd576";
-            if (th > 0.05) return "#ffd400";
+            if (th > 0.95) return "#3dd9b3";
+            if (th > 0.05) return "#ff9a5c";
             return "#ffffff";
           }
           const v = t.speed_kmh[i] ?? 0;
@@ -696,8 +696,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture grise transparente</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
         {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
-        {mode === "delta" && <span><i style={{ background: "#2bd576" }} />gain <i style={{ background: "#ffd400", marginLeft: 6 }} />perte</span>}
-        {mode === "inputs" && <span><i style={{ background: "#ff2a1f" }} />frein <i style={{ background: "#ffd400", marginLeft: 6 }} />gaz partiel <i style={{ background: "#2bd576", marginLeft: 6 }} />plein gaz <i style={{ background: "#fff", marginLeft: 6 }} />roue libre</span>}
+        {mode === "delta" && <span><i style={{ background: "#3dd9b3" }} />gain <i style={{ background: "#ff9a5c", marginLeft: 6 }} />perte</span>}
+        {mode === "inputs" && <span><i style={{ background: "#ff2a1f" }} />frein <i style={{ background: "#ff9a5c", marginLeft: 6 }} />gaz partiel <i style={{ background: "#3dd9b3", marginLeft: 6 }} />plein gaz <i style={{ background: "#fff", marginLeft: 6 }} />roue libre</span>}
         {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 6 }} />G gaz · contour bleu = réf., blanc = toi</span>}
         {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
       </div>}

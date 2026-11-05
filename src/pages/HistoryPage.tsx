@@ -55,18 +55,18 @@ function LapChart({ laps, best, external }: { laps: HistoryLap[]; best: number |
       ))}
       {external && (
         <g>
-          <line x1={P.l} x2={W - P.r} y1={y(external[1])} y2={y(external[1])} stroke="#a259ff" strokeDasharray="6 5" opacity={0.7} />
-          <text x={W - P.r} y={y(external[1]) - 5} textAnchor="end" fontSize={11} fill="#c49bff">{external[0]} {lapTime(external[1])}</text>
+          <line x1={P.l} x2={W - P.r} y1={y(external[1])} y2={y(external[1])} stroke="#a78bfa" strokeDasharray="6 5" opacity={0.7} />
+          <text x={W - P.r} y={y(external[1]) - 5} textAnchor="end" fontSize={11} fill="#c4b5fd">{external[0]} {lapTime(external[1])}</text>
         </g>
       )}
-      <path d={pbPath} stroke="#a259ff" strokeWidth={2} fill="none" />
+      <path d={pbPath} stroke="#a78bfa" strokeWidth={2} fill="none" />
       {timed.map((l, i) => (
         <circle
           key={l.lap_id}
           cx={x(i)}
           cy={y(l.lap_time_s!)}
           r={l.personal_best_at_time ? 4.5 : 3.2}
-          fill={l.personal_best_at_time ? "#a259ff" : l.clean ? "#ffffff" : "none"}
+          fill={l.personal_best_at_time ? "#a78bfa" : l.clean ? "#ffffff" : "none"}
           stroke={l.clean ? "none" : l.off_track ? "#ff8a00" : "#8c8c9c"}
           strokeWidth={1.5}
         >
@@ -144,7 +144,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <h2>Tous tes tours, du plus ancien au plus récent</h2>
                 <span className="legend">
-                  <span><i style={{ background: "#a259ff" }} />record (évolution)</span>
+                  <span><i style={{ background: "#a78bfa" }} />record (évolution)</span>
                   <span><i style={{ background: "#ffffff" }} />propre</span>
                   <span><i style={{ background: "#ff8a00" }} />hors piste</span>
                 </span>

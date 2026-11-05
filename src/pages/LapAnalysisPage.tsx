@@ -18,6 +18,7 @@ import { NoCleanLaps } from "../components/NoCleanLaps";
 import { SetupChip } from "../components/SetupChip";
 import { CornerList } from "../components/CornerList";
 import { finalGap, fmtGap, type Axis, type GapUnit } from "../lib/compareView";
+import { headline } from "../lib/headline";
 
 function useWindowHeight(): number {
   const [h, setH] = useState(() => window.innerHeight);
@@ -234,6 +235,14 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
             <div className="card empty"><h2>Pas assez de tours</h2><p>Cette session n'a {timed.length === 0 ? "aucun tour chronométré" : "qu'un tour chronométré"} : choisis une autre session en haut à droite.</p></div>
           ) : (
             <>
+              {c && (() => {
+                const h = headline(c, finalGap(c, "s"));
+                return (
+                  <p className="headline">
+                    {h.lead}{h.amount && <span className={(finalGap(c, "s") ?? 0) > 0 ? "loss" : "gain"}>{h.amount}</span>}{h.mid}{h.where && <span className={(finalGap(c, "s") ?? 0) > 0 ? "loss" : "gain"}>{h.where}</span>}{h.tail}
+                  </p>
+                );
+              })()}
               <div className="duel">
                 <div className="duel-lap ref">
                   <span className="duel-tag"><i className="swatch ref" />Référence</span>

@@ -96,7 +96,7 @@ export function ReplayPanel({ cmp, store, compact = false }: { cmp: Comparison; 
         <tbody>
           {row("Vitesse", num(r.speed_kmh, 0, " km/h"), num(c.speed_kmh, 0, " km/h"))}
           {r.gear && c.gear && row("Rapport", num(r.gear), num(c.gear))}
-          <tr><th>Gaz</th><td><Bar v={at(r.throttle, ci)} color="#2bd576" /></td><td><Bar v={at(c.throttle, ci)} color="#2bd576" /></td></tr>
+          <tr><th>Gaz</th><td><Bar v={at(r.throttle, ci)} color="#3dd9b3" /></td><td><Bar v={at(c.throttle, ci)} color="#3dd9b3" /></td></tr>
           <tr><th>Frein</th><td><Bar v={at(r.brake, ci)} color="#e10600" /></td><td><Bar v={at(c.brake, ci)} color="#e10600" /></td></tr>
           {r.steer_deg && c.steer_deg && row("Volant", num(r.steer_deg, 0, "°"), num(c.steer_deg, 0, "°"))}
         </tbody>

@@ -36,9 +36,9 @@ export function SessionTrend({ points }: { points: SessionPoint[] }) {
   const last = points.slice(-N);
   if (last.length < 2) return null;
   const cards: { title: string; values: (number | null)[]; fmt: (v: number) => string; hib: boolean; color: string; hint: string }[] = [
-    { title: "Rester en piste", values: last.map((p) => p.clean_rate), fmt: (v) => `${Math.round(v * 100)} % de tours propres`, hib: true, color: "#2bd576", hint: "part de tours propres" },
-    { title: "Régularité", values: last.map((p) => p.spread_s), fmt: (v) => `± ${v.toFixed(2).replace(".", ",")} s entre tes tours`, hib: false, color: "#46c8e8", hint: "écart entre tes tours propres" },
-    { title: "Rythme", values: last.map((p) => p.best_s), fmt: (v) => `meilleur tour propre ${lapTime(v)}`, hib: false, color: "#a259ff", hint: "meilleur tour propre" },
+    { title: "Rester en piste", values: last.map((p) => p.clean_rate), fmt: (v) => `${Math.round(v * 100)} % de tours propres`, hib: true, color: "#3dd9b3", hint: "part de tours propres" },
+    { title: "Régularité", values: last.map((p) => p.spread_s), fmt: (v) => `± ${v.toFixed(2).replace(".", ",")} s entre tes tours`, hib: false, color: "#5cc8ff", hint: "écart entre tes tours propres" },
+    { title: "Rythme", values: last.map((p) => p.best_s), fmt: (v) => `meilleur tour propre ${lapTime(v)}`, hib: false, color: "#a78bfa", hint: "meilleur tour propre" },
   ];
   return (
     <div className="card" style={{ marginBottom: 12 }}>
