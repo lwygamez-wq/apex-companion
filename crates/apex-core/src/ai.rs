@@ -120,6 +120,19 @@ pub fn ask(api_key: &str, body: &serde_json::Value) -> Result<ChatReply, String>
     }
 }
 
+/// Essai de la clé : une question minuscule (quelques jetons, une fraction de centime) au modèle choisi.
+/// Vérifie d'un coup la clé, le modèle et le crédit du compte.
+pub fn check_request(model: &str) -> serde_json::Value {
+    json!({ "model": model, "max_tokens": 16, "messages": [{ "role": "user", "content": "Réponds seulement : OK" }] })
+}
+
+pub fn check(api_key: &str, model: &str) -> Result<String, String> {
+    if api_key.trim().is_empty() {
+        return Err("aucune clé saisie".into());
+    }
+    ask(api_key, &check_request(model)).map(|_| format!("Connexion réussie : la clé fonctionne avec {model}."))
+}
+
 /// Coût approximatif (USD), pour l'afficher au pilote. Tarif public de Claude Sonnet 5.5 (novembre 2026) :
 /// 2 $ / million de jetons en entrée, 10 $ en sortie, lecture du cache à 5 % du prix d'entrée ; indicatif.
 pub fn approx_cost_usd(input: u64, cached: u64, output: u64) -> f64 {
@@ -160,6 +173,14 @@ mod tests {
         assert_eq!(msgs[0]["role"], "user");
         assert!(serde_json::to_string(&msgs[0]).unwrap().contains("DATA"));
         assert_eq!(msgs.last().unwrap()["content"], "dernière");
+    }
+
+    #[test]
+    fn key_check_is_a_tiny_request_and_refuses_an_empty_key() {
+        let b = check_request("claude-sonnet-5-5");
+        assert_eq!(b["max_tokens"], 16);
+        assert_eq!(b["model"], "claude-sonnet-5-5");
+        assert!(check("  ", "x").unwrap_err().contains("aucune clé"));
     }
 
     #[test]

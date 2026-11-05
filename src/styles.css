@@ -607,3 +607,5 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .one-thing h2 em { font-style: normal; color: var(--yellow); }
 .one-thing p { margin: 0; font-size: 19px; color: #d5d9e1; }
 .status { font-size: 14px; }
+.ok-msg { background: rgba(61,217,179,0.12); color: #7fe8cc; border-radius: 12px; padding: 9px 13px; }
+.debrief-input input { border-radius: 12px; padding: 11px 14px; background: var(--panel-2); border: 1px solid var(--line); }

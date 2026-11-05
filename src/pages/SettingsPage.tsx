@@ -32,7 +32,9 @@ export function SettingsPage() {
   const [s, setS] = useState<AppSettings | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  useEffect(() => setS(settings.data), [settings.data]);
+  useEffect(() => {
+    setS(settings.data);
+  }, [settings.data]);
   const [version, setVersion] = useState<string>("");
   const [updMsg, setUpdMsg] = useState<string | null>(null);
   useEffect(() => {
@@ -60,6 +62,7 @@ export function SettingsPage() {
     }
   };
   const [g61Msg, setG61Msg] = useState<string | null>(null);
+  const [aiMsg, setAiMsg] = useState<{ kind: "wait" | "ok" | "err"; text: string } | null>(null);
   const checkG61 = async () => {
     if (!s) return;
     setG61Msg("Vérification…");
@@ -307,8 +310,18 @@ export function SettingsPage() {
                 Seule la synthèse chiffrée de la séance est envoyée, jamais la télémétrie brute ; elle est visible avant envoi dans l'onglet.
               </div>
             </div>
-            <input type="password" style={{ minWidth: 280 }} value={s.ai_api_key ?? ""} placeholder="non configurée" onChange={(e) => upd("ai_api_key", e.target.value || null)} />
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <input type="password" style={{ minWidth: 280 }} value={s.ai_api_key ?? ""} placeholder="non configurée" onChange={(e) => { upd("ai_api_key", e.target.value || null); setAiMsg(null); }} />
+              <button className="btn" disabled={!s.ai_api_key?.trim() || aiMsg?.kind === "wait"} onClick={() => {
+                setAiMsg({ kind: "wait", text: "Test en cours…" });
+                api.aiCheck(s.ai_api_key ?? "", s.ai_model).then(
+                  (t) => setAiMsg({ kind: "ok", text: t }),
+                  (e: unknown) => setAiMsg({ kind: "err", text: e instanceof Error ? e.message : String(e) }),
+                );
+              }}>Tester la clé</button>
+            </div>
           </div>
+          {aiMsg && <div className={aiMsg.kind === "ok" ? "ok-msg" : aiMsg.kind === "err" ? "error" : "muted"} style={{ marginTop: 8 }}>{aiMsg.kind === "ok" ? "✓ " : ""}{aiMsg.text}</div>}
           <div className="form-row">
             <div>Modèle<div className="hint">Sonnet : le meilleur équilibre qualité/prix. Haiku : moins cher, réponses plus simples. Opus : plus fin, plus cher.</div></div>
             <select value={s.ai_model} onChange={(e) => upd("ai_model", e.target.value)}>

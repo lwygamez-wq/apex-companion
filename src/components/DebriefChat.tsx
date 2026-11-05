@@ -29,7 +29,9 @@ export function DebriefChat({ sessionId, configured, onSetup, question, onAsked 
     setCost(0);
     setCtx(null);
   }, [sessionId]);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [msgs, busy]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [msgs, busy]);
 
   const ask = async (q: string) => {
     const text = q.trim();

@@ -39,6 +39,7 @@ pub fn run() {
             commands::get_status,
             commands::ai_chat,
             commands::ai_context,
+            commands::ai_check,
             commands::simhub_install,
             commands::list_connectors,
             commands::list_sessions,

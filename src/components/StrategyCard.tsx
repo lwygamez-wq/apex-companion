@@ -13,7 +13,9 @@ export function StrategyCard({ circuit }: { circuit: CircuitOverview }) {
   const [formation, setFormation] = useState(true);
   const view = useAsync(() => api.raceStrategy(circuit, length, margin, formation ? 0.5 : 0), [circuit.track, circuit.car, circuit.setup, circuit.track_config, length?.kind, length?.value, margin, formation]);
   // Nouveau circuit : on repart du format de la dernière course ici.
-  useEffect(() => setLength(null), [circuit.track, circuit.car, circuit.setup]);
+  useEffect(() => {
+    setLength(null);
+  }, [circuit.track, circuit.car, circuit.setup]);
   const v = view.data;
   const len = length ?? v?.default_length ?? { kind: "minutes", value: 30 };
   const s = v?.strategy;

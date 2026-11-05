@@ -3,6 +3,7 @@ import { RecordingAlert } from "./components/RecordingAlert";
 import { StatusBadge } from "./components/StatusBadge";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { NewSessionBanner } from "./components/NewSessionBanner";
+import { PageBoundary } from "./components/PageBoundary";
 import { isTauri } from "./lib/api";
 import { useCoachVoice, useStatus } from "./lib/hooks";
 import { HistoryPage } from "./pages/HistoryPage";
@@ -59,6 +60,7 @@ export function App() {
         <RecordingAlert status={status} />
         <NewSessionBanner onOpen={(id) => setRoute({ page: "analysis", sessionId: id })} />
         {!isTauri() && <div className="error">Mode navigateur : lance l'application avec « npm run tauri dev » pour accéder aux données.</div>}
+<PageBoundary key={route.page} onHome={() => setRoute({ page: "dashboard" })}>
         {route.page === "dashboard" && <DashboardPage navigate={setRoute} status={status} />}
         {route.page === "sessions" && <SessionsPage navigate={setRoute} />}
         {route.page === "analysis" && <LapAnalysisPage route={route} navigate={setRoute} />}
@@ -66,6 +68,7 @@ export function App() {
         {route.page === "history" && <HistoryPage navigate={setRoute} />}
         {route.page === "live" && <LiveCoachPage status={status} />}
         {route.page === "settings" && <SettingsPage />}
+        </PageBoundary>
       </main>
     </div>
   );

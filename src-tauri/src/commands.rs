@@ -306,6 +306,15 @@ pub async fn ai_chat(state: State<'_, AppState>, session_id: i64, messages: Vec<
     blocking(state.svc.clone(), move |s| s.ai_chat(session_id, &messages)).await
 }
 
+/// Essai de la clé API du débrief IA (clé et modèle saisis, enregistrés ou non).
+#[tauri::command]
+pub async fn ai_check(api_key: String, model: String) -> R<String> {
+    tauri::async_runtime::spawn_blocking(move || apex_core::ai::check(&api_key, &model))
+        .await
+        .map_err(|e| ServiceError::User(e.to_string()))?
+        .map_err(ServiceError::User)
+}
+
 /// Ce qu'Apex envoie à l'IA pour une séance (transparence : visible par le pilote).
 #[tauri::command]
 pub async fn ai_context(state: State<'_, AppState>, session_id: i64) -> R<String> {

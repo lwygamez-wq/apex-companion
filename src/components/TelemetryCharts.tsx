@@ -185,7 +185,9 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
   }, [view, spec, showX, syncKey]);
 
   // Virage choisi : simple redessin, sans recréer le graphique.
-  useEffect(() => plot.current?.redraw(false), [selected]);
+  useEffect(() => {
+    plot.current?.redraw(false);
+  }, [selected]);
 
   return (
     <div className="chart">

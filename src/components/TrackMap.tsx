@@ -398,7 +398,9 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
     return { cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, w };
   }, [geo, px, height]);
   const [view, setView] = useState<View | null>(null);
-  useEffect(() => setView(null), [cmp]);
+  useEffect(() => {
+    setView(null);
+  }, [cmp]);
 
   // Le conteneur n'existe qu'avec une carte : l'observateur est (ré)attaché quand elle apparaît.
   const hasMap = geo != null;
