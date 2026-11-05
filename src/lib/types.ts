@@ -549,6 +549,8 @@ export interface AppSettings {
   /** Clé API Claude du débrief IA (vide = désactivé). */
   ai_api_key: string | null;
   ai_model: string;
+  /** anthropic, gemini, mistral, groq, ollama. */
+  ai_provider: string;
   /** Repères de freinage vers les LEDs du volant (plugin SimHub). */
   led_cues: boolean;
   led_port: number;

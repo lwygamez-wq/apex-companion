@@ -71,8 +71,8 @@ export function DebriefChat({ sessionId, configured, onSetup, question, onAsked 
       <div className="card empty">
         <h2>Débrief IA</h2>
         <p>Pose tes questions sur la séance à un ingénieur de piste IA : il répond uniquement avec les chiffres mesurés par Apex.</p>
-        <p className="muted">Il faut une clé API Claude (compte sur console.anthropic.com, facturé à l'usage : quelques centimes par question).</p>
-        <button className="btn primary" onClick={onSetup}>Ajouter ma clé dans les Réglages</button>
+        <p className="muted">Choisis un fournisseur dans les Réglages : Google Gemini et Mistral ont une offre gratuite (une clé à créer en 2 minutes), Ollama tourne sur ton PC sans clé.</p>
+        <button className="btn primary" onClick={onSetup}>Configurer le débrief IA</button>
       </div>
     );
   }

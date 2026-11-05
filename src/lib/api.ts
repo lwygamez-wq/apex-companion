@@ -62,7 +62,7 @@ export const api = {
   trackOverlay: (sessionId: number, spineLapId: number | null) => call<TrackOverlay>("track_overlay", { sessionId, spineLapId }),
   aiChat: (sessionId: number, messages: ChatMessage[]) => call<ChatReply>("ai_chat", { sessionId, messages }),
   aiContext: (sessionId: number) => call<string>("ai_context", { sessionId }),
-  aiCheck: (apiKey: string, model: string) => call<string>("ai_check", { apiKey, model }),
+  aiCheck: (provider: string, apiKey: string, model: string) => call<string>("ai_check", { provider, apiKey, model }),
   simhubInstall: (dir: string | null) => call<string>("simhub_install", { dir }),
   raceStrategy: (c: CircuitOverview, length: RaceLength | null, marginLaps: number, formationLaps: number) =>
     call<RaceStrategyView>("race_strategy", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, setup: c.setup, length, marginLaps, formationLaps }),

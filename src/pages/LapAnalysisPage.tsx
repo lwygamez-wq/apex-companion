@@ -371,7 +371,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
           )}
 
           {current === "debrief" && d && (
-            <DebriefChat sessionId={d.id} configured={!!settings.data?.ai_api_key?.trim()} onSetup={() => navigate({ page: "settings" })} question={askQ} onAsked={() => setAskQ(null)} />
+            <DebriefChat sessionId={d.id} configured={settings.data?.ai_provider === "ollama" || !!settings.data?.ai_api_key?.trim()} onSetup={() => navigate({ page: "settings" })} question={askQ} onAsked={() => setAskQ(null)} />
           )}
 
           {current === "data" && (

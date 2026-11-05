@@ -81,8 +81,10 @@ pub struct AppSettings {
     pub ptt_binding: Option<crate::ptt::PttBinding>,
     /// Clé API Claude pour le débrief par IA (vide = fonction désactivée, aucune connexion).
     pub ai_api_key: Option<String>,
-    /// Modèle Claude utilisé pour le débrief.
+    /// Modèle utilisé pour le débrief (vide = celui conseillé pour le fournisseur).
     pub ai_model: String,
+    /// Fournisseur du débrief : anthropic, gemini, mistral, groq, ollama.
+    pub ai_provider: String,
     /// Repères de freinage envoyés aux LEDs du volant (plugin SimHub d'Apex).
     pub led_cues: bool,
     /// Port local (UDP) vers le plugin SimHub.
@@ -132,6 +134,7 @@ impl Default for AppSettings {
             ptt_binding: None,
             ai_api_key: None,
             ai_model: crate::ai::DEFAULT_MODEL.into(),
+            ai_provider: "anthropic".into(),
             led_cues: false,
             led_port: crate::led::DEFAULT_PORT,
         }
@@ -1935,14 +1938,17 @@ impl AppService {
     /// Question au débrief IA sur une séance : `history` = conversation, dernière question en dernier.
     pub fn ai_chat(&self, session_id: i64, history: &[crate::ai::ChatMessage]) -> Result<crate::ai::ChatReply> {
         let st = self.settings();
-        let key = st.ai_api_key.clone().filter(|k| !k.trim().is_empty()).ok_or_else(|| ServiceError::User("ajoute ta clé API Claude dans Réglages → Débrief IA".into()))?;
+        let provider = crate::ai::Provider::parse(&st.ai_provider);
+        let key = st.ai_api_key.clone().filter(|k| !k.trim().is_empty());
+        if provider.needs_key() && key.is_none() {
+            return Err(ServiceError::User(format!("ajoute ta clé {} dans Réglages → Comptes & clés", provider.name())));
+        }
         if history.last().is_none_or(|m| m.role != "user" || m.text.trim().is_empty()) {
             return Err(ServiceError::User("pose une question".into()));
         }
         let context = self.ai_context(session_id)?;
-        let model = if st.ai_model.trim().is_empty() { crate::ai::DEFAULT_MODEL.to_string() } else { st.ai_model.clone() };
-        let body = crate::ai::build_request(&model, &crate::ai::system_prompt(st.beginner_mode), &context, history);
-        crate::ai::ask(&key, &body).map_err(ServiceError::User)
+        let model = if st.ai_model.trim().is_empty() { provider.default_model().to_string() } else { st.ai_model.clone() };
+        crate::ai::chat(provider, key.as_deref(), &model, &crate::ai::system_prompt(st.beginner_mode), &context, history).map_err(ServiceError::User)
     }
 
     /// Télémétrie brute d'un tour.
@@ -3314,7 +3320,7 @@ mod lmu_tests {
         assert!(c.len() < 40_000, "contexte trop long : {} caractères", c.len());
         // Sans clé : message clair, aucune connexion.
         let err = svc.ai_chat(id, &[crate::ai::ChatMessage { role: "user".into(), text: "Où je perds ?".into() }]).unwrap_err();
-        assert!(err.to_string().contains("clé API"));
+        assert!(err.to_string().contains("ajoute ta clé"));
         println!("{c}");
     }
 

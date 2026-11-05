@@ -20,6 +20,15 @@ const CAP_LABELS: [keyof Capabilities, string][] = [
 
 const SUPPORT_CLS: Record<Support, string> = { implemented: "good", unverified: "warn", planned: "", unavailable: "bad" };
 
+/** Fournisseurs du débrief IA. Gemini, Mistral, Groq : offres gratuites ; Ollama : IA locale, hors ligne. */
+const PROVIDERS: { id: string; label: string; models: string[]; hint: string; keyHint: string }[] = [
+  { id: "gemini", label: "Google Gemini (gratuit, conseillé)", models: ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"], hint: "Offre gratuite de Google AI Studio : très bon niveau, bon français. En gratuit, Google peut utiliser les échanges pour améliorer ses produits (ici : la synthèse chiffrée de ta séance).", keyHint: "Crée-la gratuitement sur aistudio.google.com (bouton « Get API key »)." },
+  { id: "mistral", label: "Mistral (gratuit, français)", models: ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest"], hint: "Offre gratuite « Experiment » : excellent en français, limites plus basses. Les échanges peuvent servir à entraîner leurs modèles.", keyHint: "Crée-la sur console.mistral.ai (offre Experiment, numéro de téléphone vérifié, sans carte bancaire)." },
+  { id: "groq", label: "Groq (gratuit, modèles open source)", models: ["llama-3.3-70b-versatile"], hint: "Très rapide et gratuit ; français un cran en dessous. Si le modèle n'existe plus, choisis-en un dans leur console.", keyHint: "Crée-la sur console.groq.com." },
+  { id: "ollama", label: "Ollama (IA locale, hors ligne)", models: ["mistral", "llama3.1", "qwen2.5"], hint: "Gratuit et entièrement sur ton PC : installe Ollama (ollama.com) puis télécharge un modèle. Moins bon que les autres ; à utiliser après la séance, pas en roulant.", keyHint: "" },
+  { id: "anthropic", label: "Claude (payant à l'usage)", models: ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"], hint: "Le plus fin. Facturé par Anthropic à l'usage (quelques centimes par question), séparément de l'abonnement Claude Pro.", keyHint: "Crée-la sur console.anthropic.com (crédits prépayés)." },
+];
+
 export function SettingsPage() {
   const settings = useAsync(() => api.settings(), []);
   const connectors = useAsync(() => api.connectors(), []);
@@ -301,35 +310,37 @@ export function SettingsPage() {
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Débrief IA</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Facultatif. Un ingénieur de piste IA répond à tes questions sur la séance (onglet « Débrief IA »), uniquement à partir des chiffres calculés par Apex :
+            seule la synthèse chiffrée est envoyée, jamais la télémétrie brute, et elle est visible avant envoi.
+          </p>
           <div className="form-row">
-            <div>
-              Clé API Claude
-              <div className="hint">
-                Facultatif. Active l'onglet « Débrief IA » de l'Analyse : un ingénieur de piste IA répond à tes questions sur la séance, uniquement à partir des chiffres calculés par Apex.
-                Crée une clé sur console.anthropic.com (facturé à l'usage par Anthropic, de l'ordre de quelques centimes par question). Elle reste sur ce PC.
-                Seule la synthèse chiffrée de la séance est envoyée, jamais la télémétrie brute ; elle est visible avant envoi dans l'onglet.
-              </div>
-            </div>
-            <div className="row" style={{ justifyContent: "flex-end" }}>
+            <div>Fournisseur<div className="hint">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.hint}</div></div>
+            <select value={s.ai_provider || "anthropic"} onChange={(e) => { const p = PROVIDERS.find((x) => x.id === e.target.value)!; setS((x) => (x ? { ...x, ai_provider: p.id, ai_model: p.models[0]!, ai_api_key: x.ai_provider === p.id ? x.ai_api_key : null } : x)); setAiMsg(null); }}>
+              {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          </div>
+          {(s.ai_provider || "anthropic") !== "ollama" && (
+            <div className="form-row">
+              <div>Clé API<div className="hint">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.keyHint} Elle reste sur ce PC.</div></div>
               <input type="password" style={{ minWidth: 280 }} value={s.ai_api_key ?? ""} placeholder="non configurée" onChange={(e) => { upd("ai_api_key", e.target.value || null); setAiMsg(null); }} />
-              <button className="btn" disabled={!s.ai_api_key?.trim() || aiMsg?.kind === "wait"} onClick={() => {
+            </div>
+          )}
+          <div className="form-row">
+            <div>Modèle<div className="hint">Le premier de la liste est conseillé. Tu peux en saisir un autre.</div></div>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <input type="text" list="ai-models" style={{ minWidth: 240 }} value={s.ai_model} onChange={(e) => { upd("ai_model", e.target.value); setAiMsg(null); }} />
+              <datalist id="ai-models">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.models.map((m) => <option key={m} value={m} />)}</datalist>
+              <button className="btn" disabled={((s.ai_provider || "anthropic") !== "ollama" && !s.ai_api_key?.trim()) || aiMsg?.kind === "wait"} onClick={() => {
                 setAiMsg({ kind: "wait", text: "Test en cours…" });
-                api.aiCheck(s.ai_api_key ?? "", s.ai_model).then(
+                api.aiCheck(s.ai_provider || "anthropic", s.ai_api_key ?? "", s.ai_model).then(
                   (t) => setAiMsg({ kind: "ok", text: t }),
                   (e: unknown) => setAiMsg({ kind: "err", text: e instanceof Error ? e.message : String(e) }),
                 );
-              }}>Tester la clé</button>
+              }}>Tester</button>
             </div>
           </div>
           {aiMsg && <div className={aiMsg.kind === "ok" ? "ok-msg" : aiMsg.kind === "err" ? "error" : "muted"} style={{ marginTop: 8 }}>{aiMsg.kind === "ok" ? "✓ " : ""}{aiMsg.text}</div>}
-          <div className="form-row">
-            <div>Modèle<div className="hint">Sonnet : le meilleur équilibre qualité/prix. Haiku : moins cher, réponses plus simples. Opus : plus fin, plus cher.</div></div>
-            <select value={s.ai_model} onChange={(e) => upd("ai_model", e.target.value)}>
-              <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (conseillé)</option>
-              <option value="claude-haiku-5-5">Claude Haiku 5.5</option>
-              <option value="claude-opus-5-5">Claude Opus 5.5</option>
-            </select>
-          </div>
         </div>
       )}
 
@@ -355,7 +366,7 @@ export function SettingsPage() {
       <div className="card">
         <h2>Confidentialité et données</h2>
         <p className="muted">
-          Toutes les données restent sur cet ordinateur (base SQLite locale). Connexions sortantes, seulement si tu les actives : vérification des mises à jour, Garage 61 (avec ton jeton), voix Azure (texte des messages du coach), débrief IA (synthèse chiffrée de la séance, quand tu poses une question).
+          Toutes les données restent sur cet ordinateur (base SQLite locale). Connexions sortantes, seulement si tu les actives : vérification des mises à jour, Garage 61 (avec ton jeton), voix Azure (texte des messages du coach), débrief IA (synthèse chiffrée de la séance, vers le fournisseur choisi, quand tu poses une question ; rien ne sort avec Ollama).
           Les repères LED restent sur ce PC (envoi local à SimHub). Les journaux sont locaux et ne contiennent pas de télémétrie.
         </p>
         <div className="row">
