@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RecordingAlert } from "./components/RecordingAlert";
 import { StatusBadge } from "./components/StatusBadge";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { NewSessionBanner } from "./components/NewSessionBanner";
 import { isTauri } from "./lib/api";
 import { useCoachVoice, useStatus } from "./lib/hooks";
 import { HistoryPage } from "./pages/HistoryPage";
@@ -56,6 +57,7 @@ export function App() {
       <main className="main">
         <UpdateBanner />
         <RecordingAlert status={status} />
+        <NewSessionBanner onOpen={(id) => setRoute({ page: "analysis", sessionId: id })} />
         {!isTauri() && <div className="error">Mode navigateur : lance l'application avec « npm run tauri dev » pour accéder aux données.</div>}
         {route.page === "dashboard" && <DashboardPage navigate={setRoute} status={status} />}
         {route.page === "sessions" && <SessionsPage navigate={setRoute} />}

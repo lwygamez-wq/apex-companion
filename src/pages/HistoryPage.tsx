@@ -6,6 +6,8 @@ import { useAsync } from "../lib/hooks";
 import type { CircuitOverview, HistoryLap } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
 import { StrategyCard } from "../components/StrategyCard";
+import { SessionTrend } from "../components/SessionTrend";
+import { sessionTrend } from "../lib/trend";
 
 const NAMES_FR: Record<CircuitOverview["corner_names"], string> = {
   bank: "virages numérotés d\'après le tracé réel (banque OpenStreetMap)",
@@ -104,6 +106,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
     return r;
   }, [history.data, onlyClean, sort]);
 
+  const trend = useMemo(() => sessionTrend(history.data ?? []), [history.data]);
   const firstClean = (history.data ?? []).find((l) => l.clean && l.kind === "flying" && l.lap_time_s != null)?.lap_time_s ?? null;
 
   return (
@@ -136,6 +139,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                 <div className="kpi-sub">{current.external_reference ? current.external_reference[0] : "aucune : exporte un tour depuis Garage 61"}</div>
               </div>
             </div>
+            <SessionTrend points={trend} />
             <div className="card" style={{ marginBottom: 12 }}>
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <h2>Tous tes tours, du plus ancien au plus récent</h2>

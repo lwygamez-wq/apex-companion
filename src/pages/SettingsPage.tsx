@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { findUpdate, installUpdate } from "../components/UpdateBanner";
 import { api, isTauri } from "../lib/api";
 import { setCoachVoice, setCoachVolume } from "../lib/voice";
@@ -86,25 +86,94 @@ export function SettingsPage() {
     }
   };
   const upd = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => setS((x) => (x ? { ...x, [k]: v } : x));
-  const saveAll = async () => {
+  // Enregistrement automatique, 0,7 s après la dernière modification (plus de bouton à ne pas oublier).
+  const [saveState, setSaveState] = useState<"" | "saving" | "saved" | "error">("");
+  const lastSaved = useRef<string | null>(null);
+  useEffect(() => {
     if (!s) return;
-    try {
-      const saved = await api.saveSettings(s);
-      setS(saved);
-      setCoachVoice(saved.coach_voice);
-      setCoachVolume(saved.coach_volume);
-      setMsg("Réglages enregistrés.");
-      connectors.reload();
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e));
+    const json = JSON.stringify(s);
+    if (lastSaved.current == null) {
+      lastSaved.current = json; // premier chargement : rien à enregistrer
+      return;
     }
-  };
+    if (json === lastSaved.current) return;
+    const t = setTimeout(() => {
+      setSaveState("saving");
+      api.saveSettings(s).then(
+        (saved) => {
+          lastSaved.current = JSON.stringify(saved);
+          // Modifié pendant l'enregistrement : on garde la saisie, elle repartira au prochain tour.
+          setS((cur) => (cur && JSON.stringify(cur) === json ? saved : cur));
+          setCoachVoice(saved.coach_voice);
+          setCoachVolume(saved.coach_volume);
+          setSaveState("saved");
+          setMsg(null);
+          connectors.reload();
+        },
+        (e: unknown) => {
+          setSaveState("error");
+          setMsg(e instanceof Error ? e.message : String(e));
+        },
+      );
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s]);
 
   return (
     <>
-      <div className="page-title"><h1>Réglages</h1><button className="btn primary" onClick={() => void saveAll()} disabled={!s}>Enregistrer</button></div>
+      <div className="page-title">
+        <h1>Réglages</h1>
+        <span className={`save-state ${saveState}`}>{saveState === "saving" ? "Enregistrement…" : saveState === "saved" ? "✓ Enregistré" : saveState === "error" ? "Non enregistré" : ""}</span>
+      </div>
       {msg && <div className="warning">{msg}</div>}
+      <nav className="settings-nav">
+        <a href="#reg-volant">Au volant</a>
+        <a href="#reg-donnees">Données</a>
+        <a href="#reg-comptes">Comptes & clés</a>
+        <a href="#reg-avance">Avancé</a>
+      </nav>
 
+      <h3 className="section-title settings-sec" id="reg-volant">Au volant<span className="muted"> · coach vocal et LEDs ; voix et bouton radio : page Au volant</span></h3>
+      {s && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h2>Coach vocal</h2>
+          <div className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></div>
+          <div className="form-row"><div>Voix activée</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></div>
+          <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
+        </div>
+      )}
+
+      {s && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h2>LEDs du volant (SimHub)</h2>
+          <div className="form-row">
+            <div>
+              Repères de freinage
+              <div className="hint">
+                Pendant que tu roules, Apex envoie à SimHub l'approche du prochain point de freinage de ta référence : une barre de LEDs qui se remplit dans la dernière seconde et demie, puis un flash au point de freinage. Nécessite le coach live actif et le plugin ci-dessous.
+              </div>
+            </div>
+            <input type="checkbox" checked={s.led_cues} onChange={(e) => upd("led_cues", e.target.checked)} />
+          </div>
+          <div className="form-row">
+            <div>
+              Plugin SimHub d'Apex
+              <div className="hint">
+                Compilé sur ton PC et copié dans le dossier de SimHub (Windows demande l'autorisation une fois). Ferme SimHub avant, puis rouvre-le et accepte le plugin « Apex Companion ».
+                Il ajoute les propriétés ApexCompanion.BrakeProgress (0 à 1), ApexCompanion.BrakeNow, ApexCompanion.BrakeSeconds, ApexCompanion.SpeedGapKmh et ApexCompanion.Connected, à utiliser dans ton profil LED.
+              </div>
+            </div>
+            <div className="row">
+              <button className="btn" onClick={() => void installSimhub(null)}>Installer le plugin</button>
+              <button className="btn ghost" onClick={() => void open({ directory: true }).then((d) => { if (typeof d === "string") void installSimhub(d); }, (e: unknown) => setMsg(String(e)))} title="Si SimHub n'est pas dans Program Files (x86)">Choisir le dossier de SimHub…</button>
+            </div>
+          </div>
+          {simhubMsg && <div className="muted" style={{ padding: "4px 0 8px", whiteSpace: "pre-line" }}>{simhubMsg}</div>}
+        </div>
+      )}
+
+      <h3 className="section-title settings-sec" id="reg-donnees">Données<span className="muted"> · où Apex trouve et enregistre tes séances</span></h3>
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Télémétrie</h2>
@@ -225,6 +294,7 @@ export function SettingsPage() {
         </div>
       )}
 
+      <h3 className="section-title settings-sec" id="reg-comptes">Comptes & clés<span className="muted"> · services en ligne facultatifs</span></h3>
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Débrief IA</h2>
@@ -250,44 +320,7 @@ export function SettingsPage() {
         </div>
       )}
 
-      {s && (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <h2>LEDs du volant (SimHub)</h2>
-          <div className="form-row">
-            <div>
-              Repères de freinage
-              <div className="hint">
-                Pendant que tu roules, Apex envoie à SimHub l'approche du prochain point de freinage de ta référence : une barre de LEDs qui se remplit dans la dernière seconde et demie, puis un flash au point de freinage. Nécessite le coach live actif et le plugin ci-dessous.
-              </div>
-            </div>
-            <input type="checkbox" checked={s.led_cues} onChange={(e) => upd("led_cues", e.target.checked)} />
-          </div>
-          <div className="form-row">
-            <div>
-              Plugin SimHub d'Apex
-              <div className="hint">
-                Compilé sur ton PC et copié dans le dossier de SimHub (Windows demande l'autorisation une fois). Ferme SimHub avant, puis rouvre-le et accepte le plugin « Apex Companion ».
-                Il ajoute les propriétés ApexCompanion.BrakeProgress (0 à 1), ApexCompanion.BrakeNow, ApexCompanion.BrakeSeconds, ApexCompanion.SpeedGapKmh et ApexCompanion.Connected, à utiliser dans ton profil LED.
-              </div>
-            </div>
-            <div className="row">
-              <button className="btn" onClick={() => void installSimhub(null)}>Installer le plugin</button>
-              <button className="btn ghost" onClick={() => void open({ directory: true }).then((d) => { if (typeof d === "string") void installSimhub(d); }, (e: unknown) => setMsg(String(e)))} title="Si SimHub n'est pas dans Program Files (x86)">Choisir le dossier de SimHub…</button>
-            </div>
-          </div>
-          {simhubMsg && <div className="muted" style={{ padding: "4px 0 8px", whiteSpace: "pre-line" }}>{simhubMsg}</div>}
-        </div>
-      )}
-
-      {s && (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <h2>Coach live</h2>
-          <div className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></div>
-          <div className="form-row"><div>Audio</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></div>
-          <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
-        </div>
-      )}
-
+      <h3 className="section-title settings-sec" id="reg-avance">Avancé<span className="muted"> · mises à jour, confidentialité, simulateurs</span></h3>
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Mises à jour</h2>
