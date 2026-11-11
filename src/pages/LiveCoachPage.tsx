@@ -3,6 +3,8 @@ import { api } from "../lib/api";
 import { delta, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { RadioControlCard } from "../components/RadioControlCard";
+import { FuelCalculator } from "../components/FuelCalculator";
+import { LiveFuelCard } from "../components/LiveFuelCard";
 import type { StatusPayload } from "../lib/types";
 import { coachVoice, coachVolume, setCoachVoice, setCoachVolume, speak, voiceAvailable, voiceName } from "../lib/voice";
 
@@ -17,6 +19,9 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
   const msgs = [...(status?.coach ?? [])].reverse();
   const [winVoice, setWinVoice] = useState<string | null>(voiceName());
   const voices = useAsync(() => api.ttsVoices(), []);
+  // Calculateur de relais pour le dernier circuit roulé (celui qu'on prépare en général).
+  const sessions = useAsync(() => api.sessions(), []);
+  const last = sessions.data?.find((x) => x.lap_count > 0) ?? null;
   const [sel, setSel] = useState(coachVoice());
   const [busy, setBusy] = useState<string | null>(null);
   const [vol, setVol] = useState(coachVolume());
@@ -104,6 +109,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
         <h1>Au volant</h1>
         <span className={`chip ${live?.on_track ? "good" : ""}`}>{status?.label ?? "—"}</span>
       </div>
+      <LiveFuelCard f={status?.fuel_live} />
       <div className="grid cols-2" style={{ alignItems: "start" }}>
         <div className="card radio-card">
           <h2>Radio</h2>
@@ -195,6 +201,11 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
           <RadioControlCard status={status} />
         </div>
       </div>
+      {last && (
+        <div style={{ marginTop: 14 }}>
+          <FuelCalculator combo={last} title={`Préparer la course : ${last.track} · ${last.car}`} />
+        </div>
+      )}
     </>
   );
 }

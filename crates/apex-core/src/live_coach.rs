@@ -290,6 +290,36 @@ pub struct LiveCoach {
     time_remain: f64,
     laps_remain: f64,
     lap_pct: f64,
+    /// Énergie virtuelle (Le Mans Ultimate) : niveau (%) et consommation des derniers tours (%).
+    ve_now: f64,
+    ve_laps: VecDeque<f64>,
+    /// Limites de piste (Le Mans Ultimate) : avertissements en cours et nombre par pénalité.
+    tl_steps: f64,
+    tl_per_penalty: f64,
+}
+
+/// Relais en cours, pour l'écran « Au volant » et la commande « carburant ».
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct LiveFuel {
+    /// Ce qui limite le relais : l'énergie virtuelle si la voiture en a, sinon le carburant.
+    pub unit: crate::analysis::strategy::Unit,
+    /// Niveau actuel (% d'énergie, ou litres).
+    pub level: f32,
+    /// Contenance (100 % d'énergie, ou plein utilisable en litres).
+    pub capacity: Option<f32>,
+    /// Carburant à bord (l), affiché en plus quand l'énergie limite.
+    pub fuel_l: Option<f32>,
+    /// Consommation moyenne des 3 derniers tours lancés.
+    pub per_lap: Option<f32>,
+    /// Tours possibles avec le niveau actuel.
+    pub laps_in_tank: Option<f32>,
+    /// Course : tours restant à couvrir (tour en cours compris).
+    pub laps_left: Option<f32>,
+    /// Course : niveau qu'il faudrait pour finir, et arrêts nécessaires.
+    pub need_to_finish: Option<f32>,
+    pub stops_needed: Option<u32>,
+    /// Course : économie par tour qui éviterait l'arrêt, si elle est raisonnable.
+    pub save_per_lap: Option<f32>,
 }
 
 /// Tours propres pris en compte dans la synthèse.
@@ -336,7 +366,7 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]) },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0 },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -362,6 +392,7 @@ impl LiveCoach {
             self.callout = None;
             self.beeps = None;
             self.best_lap = None;
+            self.tl_steps = row[23];
         }
         // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
         let dist = row[1];
@@ -397,6 +428,23 @@ impl LiveCoach {
         if row[12] > 0.0 {
             self.fuel_now = row[12];
         }
+        if row[22] > 0.0 {
+            self.ve_now = row[22];
+        }
+        // Limites de piste : annonce à chaque nouvel avertissement, avec le compte avant pénalité.
+        if row[23] > self.tl_steps && row[24] > 0.0 && callout.is_none() {
+            let (n, per) = (row[23] as i64, row[24] as i64);
+            let left = (per - n.rem_euclid(per.max(1))).rem_euclid(per.max(1));
+            let text = if left == 0 {
+                format!("Limites de piste : {n} avertissement{}, pénalité.", if n > 1 { "s" } else { "" })
+            } else {
+                format!("Limites de piste : avertissement {} sur {per}. Encore {left} avant pénalité.", n.rem_euclid(per.max(1)))
+            };
+            // Message d'information (pas un rappel de virage) : jamais coupé par l'option « rappels ».
+            callout = Some(CoachMessage { kind: CoachMessageKind::Info, lap: row[6] as i32, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
+        }
+        self.tl_steps = row[23];
+        self.tl_per_penalty = row[24];
         self.time_remain = row[20];
         self.laps_remain = row[21];
         self.lap_pct = row[2].clamp(0.0, 1.0);
@@ -408,6 +456,12 @@ impl LiveCoach {
                     self.fuel_laps.push_back(u as f64);
                     while self.fuel_laps.len() > 3 {
                         self.fuel_laps.pop_front();
+                    }
+                }
+                if let Some(u) = lap.meta.energy_used_pct.filter(|u| *u > 0.1 && lap.meta.kind == LapKind::Flying) {
+                    self.ve_laps.push_back(u as f64);
+                    while self.ve_laps.len() > 3 {
+                        self.ve_laps.pop_front();
                     }
                 }
                 Some(self.on_lap(lap))
@@ -435,38 +489,95 @@ impl LiveCoach {
         self.plan_text.clone().unwrap_or_else(|| "Pas de plan pour cette séance.".into())
     }
 
-    /// Carburant restant (commande « carburant ») : niveau, consommation moyenne, tours possibles.
+    /// Tours restant à couvrir en course (tour en cours compris) : donnés par le jeu, sinon estimés sur le chrono.
+    fn race_laps_left(&self) -> Option<f64> {
+        if self.current_kind() != SessionKind::Race {
+            return None;
+        }
+        if self.laps_remain > 0.0 && self.laps_remain < 30_000.0 {
+            Some(self.laps_remain + (1.0 - self.lap_pct))
+        } else if self.time_remain > 0.0 {
+            self.best_lap.map(|b| (self.time_remain / (b * 1.01)).ceil() + 1.0 + (1.0 - self.lap_pct))
+        } else {
+            None
+        }
+    }
+
+    /// Relais en cours : énergie virtuelle si la voiture en a (Le Mans Ultimate, Hypercar et LMGT3),
+    /// sinon carburant. `None` sans mesure.
+    pub fn fuel_snapshot(&self) -> Option<LiveFuel> {
+        use crate::analysis::strategy::Unit;
+        let energy = self.ve_now > 0.0;
+        let (unit, level, laps, capacity) = if energy {
+            (Unit::Energy, self.ve_now, &self.ve_laps, Some(100.0))
+        } else if self.fuel_now > 0.0 {
+            (Unit::Litres, self.fuel_now, &self.fuel_laps, self.tank_l)
+        } else {
+            return None;
+        };
+        let per = (!laps.is_empty()).then(|| laps.iter().sum::<f64>() / laps.len() as f64);
+        let left = self.race_laps_left();
+        let need = per.zip(left).map(|(p, l)| p * l);
+        let stops = need.map(|n| match capacity.filter(|c| *c > 0.0) {
+            Some(c) if n > level => ((n - level) / c).ceil() as u32,
+            _ => 0,
+        });
+        let save = per.zip(need).zip(left).and_then(|((p, n), l)| {
+            let s = (n - level) / l;
+            (s > 0.0 && s <= p * 0.08).then_some(s as f32)
+        });
+        Some(LiveFuel {
+            unit,
+            level: level as f32,
+            capacity: capacity.map(|c| c as f32),
+            fuel_l: (energy && self.fuel_now > 0.0).then_some(self.fuel_now as f32),
+            per_lap: per.map(|p| p as f32),
+            laps_in_tank: per.filter(|p| *p > 0.0).map(|p| (level / p) as f32),
+            laps_left: left.map(|l| l as f32),
+            need_to_finish: need.map(|n| n as f32),
+            stops_needed: stops,
+            save_per_lap: save,
+        })
+    }
+
+    /// Carburant ou énergie restante (commande « carburant ») : niveau, consommation moyenne, tours possibles.
     pub fn fuel_text(&self) -> String {
-        if self.fuel_now <= 0.0 {
+        use crate::analysis::strategy::{finish_check, Unit};
+        let Some(f) = self.fuel_snapshot() else {
             return "Pas de mesure de carburant.".into();
-        }
-        let litres = format!("{:.1}", self.fuel_now).replace('.', ",");
-        if self.fuel_laps.is_empty() {
-            return format!("Carburant : {litres} litres. Consommation au prochain tour complet.");
-        }
-        let per = self.fuel_laps.iter().sum::<f64>() / self.fuel_laps.len() as f64;
-        let laps = (self.fuel_now / per).floor() as i64;
-        let mut t = format!("Carburant : {litres} litres, environ {laps} tour{}. {} litre par tour.", if laps > 1 { "s" } else { "" }, format!("{per:.1}").replace('.', ","));
-        // En course : de quoi finir ? Tours restants donnés par iRacing, sinon estimés sur le chrono.
-        if self.current_kind() == SessionKind::Race {
-            let left = if self.laps_remain > 0.0 && self.laps_remain < 30_000.0 {
-                Some(self.laps_remain + (1.0 - self.lap_pct))
-            } else if self.time_remain > 0.0 {
-                self.best_lap.map(|b| (self.time_remain / (b * 1.01)).ceil() + 1.0 + (1.0 - self.lap_pct))
-            } else {
-                None
-            };
-            if let Some(left) = left {
-                let check = crate::analysis::strategy::finish_check(self.fuel_now as f32, per as f32, left as f32);
-                if !check.is_empty() {
-                    t = format!("{t} {check}");
-                }
-                return t;
+        };
+        let n1 = |v: f32| format!("{v:.1}").replace('.', ",");
+        let level = match f.unit {
+            Unit::Energy => format!("Énergie : {} %", n1(f.level)),
+            Unit::Litres => format!("Carburant : {} litres", n1(f.level)),
+        };
+        let Some(per) = f.per_lap else {
+            return format!("{level}. Consommation au prochain tour complet.");
+        };
+        let laps = f.laps_in_tank.unwrap_or(0.0).floor() as i64;
+        let per_txt = match f.unit {
+            Unit::Energy => format!("{} % par tour", n1(per)),
+            Unit::Litres => format!("{} litre par tour", n1(per)),
+        };
+        let mut t = format!("{level}, environ {laps} tour{}. {per_txt}.", if laps > 1 { "s" } else { "" });
+        if let Some(left) = f.laps_left {
+            let check = finish_check(f.unit, f.level, per, left);
+            if !check.is_empty() {
+                t = format!("{t} {check}");
             }
+            if let Some(n) = f.stops_needed.filter(|n| *n > 1) {
+                t += &format!(" {n} arrêts encore.");
+            }
+            return t;
         }
-        // Fiche voiture : autonomie d'un plein, pour préparer l'arrêt ou le départ.
-        if let Some(tank) = self.tank_l.filter(|t| *t > 0.0 && per > 0.0) {
-            t += &format!(" Un plein, {} litres, fait environ {} tours.", tank.round() as i64, (tank / per).floor() as i64);
+        // Hors course : autonomie d'un plein, pour préparer l'arrêt ou le départ.
+        match f.unit {
+            Unit::Energy => t += &format!(" 100 % d'énergie font environ {} tours.", (100.0 / per).floor() as i64),
+            Unit::Litres => {
+                if let Some(tank) = f.capacity.filter(|t| *t > 0.0 && per > 0.0) {
+                    t += &format!(" Un plein, {} litres, fait environ {} tours.", tank.round() as i64, (tank / per).floor() as i64);
+                }
+            }
         }
         t
     }
@@ -751,5 +862,37 @@ mod tests {
         let msgs: Vec<CoachMessage> = rows.into_iter().filter_map(|r| coach.push(r)).collect();
         assert_eq!(msgs.len(), file.laps.iter().filter(|l| l.meta.lap_time_s.is_some()).count());
         assert!(msgs.iter().all(|m| !m.text.is_empty()));
+    }
+
+    #[test]
+    fn lmu_energy_and_track_limits_in_the_coach() {
+        use crate::analysis::strategy::Unit;
+        use crate::ingest::lmu::{live_yaml, testkit::*, LiveState};
+        // Course LMU (séance 10) : 5 % d'énergie par tour, un avertissement de limites de piste au tour 2.
+        let y = live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap();
+        let (mut coach, _) = LiveCoach::new(&y, None, vec![], None);
+        let mut live = LiveState::default();
+        let mut warnings = vec![];
+        let mut et = 0.0f64;
+        while et < 200.0 {
+            let d = 1500.0 + et * 50.0;
+            let sc_et = (et * 5.0).floor() / 5.0;
+            let mut f = frame(100.0 + et, d, 100.0 + sc_et, 1500.0 + sc_et * 50.0, 10);
+            f.info.mEndET = 100.0 + 40.0 * 12.0;
+            if let Some(m) = coach.push(live.row(&f).unwrap()) {
+                if m.text.starts_with("Limites de piste") {
+                    warnings.push(m.text);
+                }
+            }
+            et += 0.02;
+        }
+        assert_eq!(warnings, vec!["Limites de piste : avertissement 1 sur 4. Encore 3 avant pénalité.".to_string()]);
+        let f = coach.fuel_snapshot().unwrap();
+        assert_eq!(f.unit, Unit::Energy);
+        assert!((f.per_lap.unwrap() - 5.0).abs() < 0.05, "{f:?}");
+        assert!(f.fuel_l.is_some());
+        let t = coach.fuel_text();
+        assert!(t.starts_with("Énergie : "), "{t}");
+        assert!(t.contains("5,0 % par tour"), "{t}");
     }
 }

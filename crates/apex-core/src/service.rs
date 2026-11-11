@@ -259,6 +259,8 @@ fn recovered_session(meta0: &SessionMeta, length: f32, setup: Option<SetupType>,
                         validity_source: ValiditySource::Derived,
                         fuel_start_l: None,
                         fuel_used_l: None,
+                        energy_used_pct: None,
+                        tyre_wear_pct: None,
                     },
                     trace: p.trace,
                 });
@@ -329,15 +331,34 @@ pub struct ExternalImport {
 #[derive(Debug, Clone, Serialize)]
 pub struct RaceStrategyView {
     pub strategy: crate::analysis::strategy::Strategy,
-    pub fuel_per_lap_l: f32,
-    /// Tour le plus gourmand parmi ceux retenus (l).
-    pub fuel_per_lap_max_l: f32,
+    /// Unité du calcul (énergie virtuelle ou litres), et celle que la mesure propose.
+    pub unit: crate::analysis::strategy::Unit,
+    pub measured_unit: crate::analysis::strategy::Unit,
+    /// Consommation utilisée, et celle mesurée (moyenne) ; tour le plus gourmand mesuré.
+    pub per_lap: f32,
+    pub per_lap_measured: Option<f32>,
+    pub per_lap_max: Option<f32>,
+    /// Carburant par tour mesuré (l), pour information quand l'énergie limite.
+    pub fuel_per_lap_l: Option<f32>,
     pub lap_time_s: f32,
-    pub tank_l: Option<f32>,
+    pub lap_time_measured: Option<f32>,
+    pub tank: Option<f32>,
+    pub tank_measured: Option<f32>,
     /// Tours chronométrés propres ayant servi au calcul.
     pub laps_used: usize,
+    /// Usure moyenne des pneus par tour (points de %), AvG, AvD, ArG, ArD (LMU).
+    pub tyre_wear_per_lap: Option<[f32; 4]>,
     /// Format proposé par défaut (dernière course sur ce circuit), pour pré-remplir l'écran.
     pub default_length: crate::analysis::strategy::RaceLength,
+}
+
+/// Valeurs saisies à la main dans le calculateur (remplacent la mesure).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct StrategyOverrides {
+    pub unit: Option<crate::analysis::strategy::Unit>,
+    pub per_lap: Option<f32>,
+    pub lap_time_s: Option<f32>,
+    pub tank: Option<f32>,
 }
 
 /// Référence externe à classer (fixed / open).
@@ -909,6 +930,8 @@ impl AppService {
             validity_source: ValiditySource::Derived,
             fuel_start_l: None,
             fuel_used_l: None,
+            energy_used_pct: None,
+            tyre_wear_pct: None,
         };
         let s = ImportedSession { meta, laps: vec![ImportedLap { meta: lm, trace: lap.trace }], sample_rate_hz: Some(60.0), race: None, profile: None };
         let sid = match self.db().insert_session(&s)? {
@@ -2021,9 +2044,10 @@ impl AppService {
         crate::tracks::merge_names(numbered, user)
     }
 
-    /// Stratégie carburant pour une course sur ce circuit avec cette voiture (et ce type de série) :
-    /// consommation et rythme mesurés sur tes tours propres récents, réservoir d'après la fiche voiture.
-    /// `length` : `None` = format de ta dernière course ici (sinon 30 minutes).
+    /// Calculateur de relais pour ce circuit et cette voiture : consommation mesurée sur tes tours propres
+    /// récents (énergie virtuelle si la voiture en a, sinon carburant), rythme médian, contenance.
+    /// Chaque valeur mesurée peut être remplacée à la main (`per_lap`, `lap_time_s`, `tank`), ce qui
+    /// permet aussi de calculer sans aucun tour roulé ici.
     #[allow(clippy::too_many_arguments)]
     pub fn race_strategy(
         &self,
@@ -2035,17 +2059,17 @@ impl AppService {
         length: Option<crate::analysis::strategy::RaceLength>,
         margin_laps: f32,
         formation_laps: f32,
+        o: &StrategyOverrides,
     ) -> Result<RaceStrategyView> {
-        use crate::analysis::strategy::{plan, RaceLength, StrategyInput};
+        use crate::analysis::strategy::{plan, RaceLength, StrategyInput, Unit};
         let db = self.db();
         let sessions: Vec<SessionSummary> = db
             .list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), car: Some(car.to_string()), ..Default::default() })?
             .into_iter()
             .filter(|s| s.track_config.as_deref() == track_config && SetupType::compatible(s.setup, setup))
             .collect();
-        // Tours propres récents (du plus récent au plus ancien), consommation mesurée.
-        let mut fuel = vec![];
-        let mut times = vec![];
+        // Tours propres récents (du plus récent au plus ancien) : consommation, énergie, usure, rythme.
+        let (mut fuel, mut energy, mut wear, mut times) = (vec![], vec![], vec![], vec![]);
         for s in &sessions {
             for l in db.laps(s.id)?.into_iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying) {
                 if let Some(t) = l.meta.lap_time_s {
@@ -2054,24 +2078,43 @@ impl AppService {
                 if let Some(f) = l.meta.fuel_used_l.filter(|f| *f > 0.05) {
                     fuel.push(f);
                 }
+                if let Some(e) = l.meta.energy_used_pct.filter(|e| *e > 0.1) {
+                    energy.push(e);
+                }
+                if let Some(w) = l.meta.tyre_wear_pct {
+                    wear.push(w);
+                }
             }
-            if fuel.len() >= 15 && times.len() >= 15 {
+            if fuel.len() >= 15 && times.len() >= 15 && (energy.is_empty() || energy.len() >= 15) {
                 break;
             }
         }
-        if fuel.is_empty() || times.is_empty() {
-            return Err(ServiceError::User("pas encore de tour propre avec mesure du carburant sur ce circuit avec cette voiture : roule quelques tours (fichier .ibt iRacing)".into()));
+        for v in [&mut fuel, &mut energy, &mut times] {
+            v.truncate(15);
         }
-        fuel.truncate(15);
-        times.truncate(15);
-        let per = fuel.iter().sum::<f32>() / fuel.len() as f32;
-        let max = fuel.iter().copied().fold(0.0, f32::max);
+        wear.truncate(15);
+        let avg = |v: &[f32]| (!v.is_empty()).then(|| v.iter().sum::<f32>() / v.len() as f32);
+        let max = |v: &[f32]| (!v.is_empty()).then(|| v.iter().copied().fold(0.0, f32::max));
+        // Énergie virtuelle mesurée (≥ 3 tours) : c'est elle qui limite le relais (Hypercar, LMGT3).
+        let measured_unit = if energy.len() >= 3 { Unit::Energy } else { Unit::Litres };
+        let unit = o.unit.unwrap_or(measured_unit);
+        let (measured, measured_max) = match unit {
+            Unit::Energy => (avg(&energy), max(&energy)),
+            Unit::Litres => (avg(&fuel), max(&fuel)),
+        };
+        let per = o.per_lap.filter(|v| *v > 0.0).or(measured);
         times.sort_by(|a, b| a.total_cmp(b));
-        let lap_time = times[times.len() / 2];
-        let tank = db
-            .latest_profile(track, car)?
-            .or(db.latest_car_profile(car)?)
-            .and_then(|p| p.usable_tank_l());
+        let lap_time = o.lap_time_s.filter(|v| *v > 1.0).or_else(|| times.get(times.len() / 2).copied());
+        let (Some(per), Some(lap_time)) = (per, lap_time) else {
+            return Err(ServiceError::User(
+                "pas encore de tour propre mesuré ici avec cette voiture : roule quelques tours, ou saisis la consommation et le temps au tour".into(),
+            ));
+        };
+        let measured_tank = match unit {
+            Unit::Energy => Some(100.0),
+            Unit::Litres => db.latest_profile(track, car)?.or(db.latest_car_profile(car)?).and_then(|p| p.usable_tank_l()),
+        };
+        let tank = o.tank.filter(|v| *v > 0.0).or(measured_tank);
         let default_length = sessions
             .iter()
             .filter(|s| s.kind == SessionKind::Race)
@@ -2080,15 +2123,30 @@ impl AppService {
             .filter(|n| *n >= 3)
             .map(RaceLength::Laps)
             .unwrap_or(RaceLength::Minutes(30.0));
-        let strategy = plan(&StrategyInput {
-            length: length.unwrap_or(default_length),
-            fuel_per_lap_l: per,
-            lap_time_s: lap_time,
-            tank_l: tank,
-            margin_laps,
-            formation_laps,
+        let strategy = plan(&StrategyInput { length: length.unwrap_or(default_length), unit, per_lap: per, lap_time_s: lap_time, tank, margin_laps, formation_laps });
+        let tyre_wear_per_lap = (!wear.is_empty()).then(|| {
+            let n = wear.len() as f32;
+            [0, 1, 2, 3].map(|k| wear.iter().map(|w| w[k]).sum::<f32>() / n)
         });
-        Ok(RaceStrategyView { strategy, fuel_per_lap_l: per, fuel_per_lap_max_l: max, lap_time_s: lap_time, tank_l: tank, laps_used: fuel.len(), default_length })
+        Ok(RaceStrategyView {
+            strategy,
+            unit,
+            measured_unit,
+            per_lap: per,
+            per_lap_measured: measured,
+            per_lap_max: measured_max,
+            fuel_per_lap_l: avg(&fuel),
+            lap_time_s: lap_time,
+            lap_time_measured: times.get(times.len() / 2).copied(),
+            tank,
+            tank_measured: measured_tank,
+            laps_used: match unit {
+                Unit::Energy => energy.len(),
+                Unit::Litres => fuel.len(),
+            },
+            tyre_wear_per_lap,
+            default_length,
+        })
     }
 
     /// Relevé de la piste pour la carte : vibreurs, lignes, hors-piste et bords, à partir de tous tes

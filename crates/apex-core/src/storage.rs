@@ -120,7 +120,12 @@ ALTER TABLE sessions ADD COLUMN setup TEXT;
 "#, r#"
 -- v10 : fiche voiture et circuit fournie par le simulateur (JSON).
 ALTER TABLE sessions ADD COLUMN profile_json TEXT;
-"#];
+"#,
+    r#"
+ALTER TABLE laps ADD COLUMN energy_used_pct REAL;
+ALTER TABLE laps ADD COLUMN tyre_wear_json TEXT;
+"#,
+];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
 /// change les tours produits : les sessions plus anciennes sont recalculées depuis leur fichier.
@@ -279,12 +284,13 @@ impl Store {
         for l in &s.laps {
             let lm = &l.meta;
             tx.execute(
-                "INSERT INTO laps (session_id, number, kind, lap_time_s, validity, validity_source, flags_json, sectors_json, fuel_start_l, fuel_used_l)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                "INSERT INTO laps (session_id, number, kind, lap_time_s, validity, validity_source, flags_json, sectors_json, fuel_start_l, fuel_used_l, energy_used_pct, tyre_wear_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     sid, lm.number, lm.kind.as_str(), lm.lap_time_s, lm.validity.as_str(),
                     serde_json::to_string(&lm.validity_source)?, serde_json::to_string(&lm.flags)?,
-                    serde_json::to_string(&lm.sector_times_s)?, lm.fuel_start_l, lm.fuel_used_l
+                    serde_json::to_string(&lm.sector_times_s)?, lm.fuel_start_l, lm.fuel_used_l,
+                    lm.energy_used_pct, lm.tyre_wear_pct.map(|w| serde_json::to_string(&w)).transpose()?
                 ],
             )?;
             let lid = tx.last_insert_rowid();
@@ -457,6 +463,8 @@ impl Store {
             validity_source: serde_json::from_str(&vs).unwrap_or(ValiditySource::Derived),
             fuel_start_l: r.get("fuel_start_l")?,
             fuel_used_l: r.get("fuel_used_l")?,
+            energy_used_pct: r.get("energy_used_pct")?,
+            tyre_wear_pct: r.get::<_, Option<String>>("tyre_wear_json")?.and_then(|j| serde_json::from_str(&j).ok()),
         };
         Ok(LapRow {
             id: r.get("id")?,

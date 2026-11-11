@@ -15,6 +15,7 @@ import { useAsync } from "../lib/hooks";
 import { ReplayStore, replayBounds } from "../lib/replay";
 import type { LapRow, SessionDetail, SessionProfile } from "../lib/types";
 import { NoCleanLaps } from "../components/NoCleanLaps";
+import { ConsumptionCard } from "../components/ConsumptionCard";
 import { SetupChip } from "../components/SetupChip";
 import { CornerList } from "../components/CornerList";
 import { finalGap, fmtGap, type Axis, type GapUnit } from "../lib/compareView";
@@ -180,6 +181,8 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   const lapLabel = (l: LapRow) =>
     `Tour ${l.number}, ${lapTime(l.lap_time_s)}${l.id === d?.best_lap_id ? ", meilleur" : ""}${l.is_reference ? ", réf. perso" : ""}${l.clean ? "" : " (perturbé)"}`;
   const timed = d ? d.laps.filter((l) => l.lap_time_s != null) : [];
+  const hasEnergy = !!d?.laps.some((l) => l.energy_used_pct != null);
+  const hasWear = !!d?.laps.some((l) => l.tyre_wear_pct != null);
   const tabs: [Tab, string][] = [["summary", "Résumé"], ["data", "Données"], ["debrief", "Débrief IA"]];
   const current: Tab = tabs.some((t) => t[0] === tab) ? tab : "summary";
   const best = d ? d.laps.find((l) => l.id === (d.best_lap_id ?? d.fastest_lap_id))?.lap_time_s : null;
@@ -326,6 +329,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                       <OffTrackCard zones={d.off_tracks} />
                     </div>
                   )}
+                  <ConsumptionCard laps={d.laps} combo={{ ...d.meta, setup: d.meta.setup ?? null }} />
                   {d.race && (
                     <div style={{ marginTop: 14 }}>
                       <RaceCard r={d.race} laps={d.laps} onLap={(id) => (setCmpId(id), setTab("data"))} />
@@ -378,7 +382,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
             <details className="card laps-card" style={{ padding: 0, marginTop: 14 }}>
               <summary>Tous les tours ({d.laps.length}) : temps, état, carburant, tour de référence</summary>
               <table>
-                <thead><tr><th>Tour</th><th className="num">Temps</th><th>État</th><th>Détail</th><th className="num">Carburant</th><th /></tr></thead>
+                <thead><tr><th>Tour</th><th className="num">Temps</th><th>État</th><th>Détail</th><th className="num">Carburant</th>{hasEnergy && <th className="num">Énergie</th>}{hasWear && <th className="num" title="Usure du tour, pneu le plus sollicité (AvG, AvD, ArG, ArD au survol)">Pneus</th>}<th /></tr></thead>
                 <tbody>
                   {d.laps.map((l) => (
                     <tr key={l.id} className={`${l.lap_time_s == null ? "dim" : ""} lap-row`}>
@@ -389,6 +393,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                       </td>
                       <td className="muted">{lapFlags(l)}</td>
                       <td className="num">{l.fuel_used_l != null ? `${l.fuel_used_l.toFixed(2)} L` : "—"}</td>
+                      {hasEnergy && <td className="num">{l.energy_used_pct != null ? `${l.energy_used_pct.toFixed(2).replace(".", ",")} %` : "—"}</td>}
+                      {hasWear && (
+                        <td className="num" title={l.tyre_wear_pct ? l.tyre_wear_pct.map((w, k) => `${["AvG", "AvD", "ArG", "ArD"][k]} ${w.toFixed(2).replace(".", ",")} %`).join(" · ") : ""}>
+                          {l.tyre_wear_pct ? `−${Math.max(...l.tyre_wear_pct).toFixed(2).replace(".", ",")} %` : "—"}
+                        </td>
+                      )}
                       <td>
                         {l.is_reference ? <span className="chip warn">référence perso</span> : l.lap_time_s != null && l.kind === "flying" && (
                           <button className="btn ghost small reveal" onClick={() => void markReference(l.id)} title={l.clean ? "" : "Tour perturbé : référence déconseillée"}>Prendre comme référence</button>

@@ -77,6 +77,10 @@ export interface LapRow {
   validity_source: "sim_reported" | "derived";
   fuel_start_l: number | null;
   fuel_used_l: number | null;
+  /** Énergie virtuelle consommée sur le tour (%, LMU Hypercar / LMGT3). */
+  energy_used_pct?: number | null;
+  /** Usure des pneus sur le tour (points de %), AvG, AvD, ArG, ArD (LMU). */
+  tyre_wear_pct?: [number, number, number, number] | null;
 }
 
 export interface Consistency {
@@ -88,30 +92,65 @@ export interface Consistency {
 
 export type RaceLength = { kind: "laps"; value: number } | { kind: "minutes"; value: number };
 
+/** Ce qui limite le relais : le carburant (litres) ou l'énergie virtuelle (% du réservoir d'énergie, LMU). */
+export type FuelUnit = "litres" | "energy";
+
 export interface Stint {
   from_lap: number;
   to_lap: number;
-  fuel_l: number;
+  /** Niveau avec lequel partir pour ce relais (l, ou % d'énergie). */
+  amount: number;
+  duration_s: number;
 }
 
 export interface Strategy {
   laps: number;
-  total_fuel_l: number;
+  unit: FuelUnit;
+  total: number;
   stops: number;
   stints: Stint[];
   window: [number, number] | null;
-  save_per_lap_to_skip_stop_l: number | null;
+  save_per_lap: number | null;
+  laps_per_tank: number | null;
   summary: string;
 }
 
 export interface RaceStrategyView {
   strategy: Strategy;
-  fuel_per_lap_l: number;
-  fuel_per_lap_max_l: number;
+  unit: FuelUnit;
+  measured_unit: FuelUnit;
+  per_lap: number;
+  per_lap_measured: number | null;
+  per_lap_max: number | null;
+  fuel_per_lap_l: number | null;
   lap_time_s: number;
-  tank_l: number | null;
+  lap_time_measured: number | null;
+  tank: number | null;
+  tank_measured: number | null;
   laps_used: number;
+  tyre_wear_per_lap: [number, number, number, number] | null;
   default_length: RaceLength;
+}
+
+export interface StrategyOverrides {
+  unit?: FuelUnit | null;
+  per_lap?: number | null;
+  lap_time_s?: number | null;
+  tank?: number | null;
+}
+
+/** Relais en cours (coach en direct). */
+export interface LiveFuel {
+  unit: FuelUnit;
+  level: number;
+  capacity: number | null;
+  fuel_l: number | null;
+  per_lap: number | null;
+  laps_in_tank: number | null;
+  laps_left: number | null;
+  need_to_finish: number | null;
+  stops_needed: number | null;
+  save_per_lap: number | null;
 }
 
 export interface TrackEdges {
@@ -441,6 +480,7 @@ export interface StatusPayload {
   coach_point: string | null;
   coach_plan: string | null;
   coach_fuel: string | null;
+  fuel_live?: LiveFuel | null;
 }
 
 export type PttBinding =

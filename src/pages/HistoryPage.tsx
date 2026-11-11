@@ -5,7 +5,7 @@ import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { CircuitOverview, HistoryLap } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
-import { StrategyCard } from "../components/StrategyCard";
+import { FuelCalculator } from "../components/FuelCalculator";
 import { SessionTrend } from "../components/SessionTrend";
 import { sessionTrend } from "../lib/trend";
 
@@ -154,7 +154,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                 {current.sessions} session{current.sessions > 1 ? "s" : ""} du {dateTime(current.first_unix)} au {dateTime(current.last_unix)} · {NAMES_FR[current.corner_names]}
               </div>
             </div>
-            <StrategyCard circuit={current} />
+            <FuelCalculator combo={current} />
             <div className="card" style={{ padding: 0 }}>
               <div className="row" style={{ justifyContent: "space-between", padding: "10px 12px" }}>
                 <div className="seg">

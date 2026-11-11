@@ -29,6 +29,8 @@ pub struct StatusPayload {
     pub coach_point: Option<String>,
     pub coach_plan: Option<String>,
     pub coach_fuel: Option<String>,
+    /// Relais en cours (énergie virtuelle ou carburant), pour l'écran « Au volant ».
+    pub fuel_live: Option<apex_core::live_coach::LiveFuel>,
 }
 
 /// Message radio envoyé à l'interface, qui le prononce si `speak`.
@@ -53,6 +55,7 @@ impl Default for StatusPayload {
             coach_point: None,
             coach_plan: None,
             coach_fuel: None,
+            fuel_live: None,
         }
     }
 }
@@ -103,6 +106,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         let mut yaml_fresh = false;
         // Envoi local vers le plugin SimHub (LEDs du volant), créé à la demande.
         let mut led: Option<apex_core::led::LedSender> = None;
+        let mut fuel_tick = std::time::Instant::now();
         // Coach en direct : (circuit|configuration|voiture, coach).
         let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
@@ -241,6 +245,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                         s.coach_repeat = None;
                                         s.coach_point = None;
                                         s.coach_fuel = None;
+                                        s.fuel_live = None;
                                     }
                                     coach = Some((key, c));
                                     radio(&app, &status, hello, settings.coach_audio);
@@ -269,6 +274,16 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                 },
                                 _ => None,
                             };
+                            // Relais en cours : mis à jour une fois par seconde environ.
+                            if let Some((_, c)) = coach.as_ref() {
+                                if fuel_tick.elapsed() >= std::time::Duration::from_millis(900) {
+                                    fuel_tick = std::time::Instant::now();
+                                    let f = c.fuel_snapshot();
+                                    if let Ok(mut s) = status.lock() {
+                                        s.fuel_live = f;
+                                    }
+                                }
+                            }
                             if let (Some(m), Some((_, c))) = (pushed, coach.as_mut()) {
                                 {
                                     let kind = c.current_kind();
@@ -325,6 +340,12 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                 None => {}
             }
 
+            // Plus de coach (jeu fermé, source perdue) : plus de relais affiché.
+            if coach.is_none() {
+                if let Ok(mut s) = status.lock() {
+                    s.fuel_live = None;
+                }
+            }
             let importing = status.lock().ok().and_then(|s| s.importing.clone());
 
             let state = monitor.step(&Observation { running: running.clone(), live: live_obs, importing }).clone();

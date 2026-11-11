@@ -16,7 +16,7 @@ const MODEL_URL: &str = "https://alphacephei.com/vosk/models/vosk-model-small-fr
 const MODEL_DIR: &str = "vosk-model-small-fr-0.22";
 
 /// Mots reconnus (tout le reste est rejeté comme « [unk] »).
-pub const GRAMMAR: &[&str] = &["répète", "répéter", "redis", "silence", "tais-toi", "stop", "reprends", "reprise", "radio", "point", "écart", "plan", "objectif", "objectifs", "carburant", "essence"];
+pub const GRAMMAR: &[&str] = &["répète", "répéter", "redis", "silence", "tais-toi", "stop", "reprends", "reprise", "radio", "point", "écart", "plan", "objectif", "objectifs", "carburant", "essence", "énergie"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -49,7 +49,7 @@ pub fn parse_command(text: &str) -> Option<VoiceCommand> {
         Some(VoiceCommand::Status)
     } else if has(&["plan", "objectif", "objectifs"]) {
         Some(VoiceCommand::Plan)
-    } else if has(&["carburant", "essence"]) {
+    } else if has(&["carburant", "essence", "énergie"]) {
         Some(VoiceCommand::Fuel)
     } else {
         None
@@ -266,6 +266,7 @@ mod tests {
         assert_eq!(parse_command("point"), Some(VoiceCommand::Status));
         assert_eq!(parse_command("plan"), Some(VoiceCommand::Plan));
         assert_eq!(parse_command("carburant"), Some(VoiceCommand::Fuel));
+        assert_eq!(parse_command("énergie"), Some(VoiceCommand::Fuel));
         assert_eq!(parse_command(""), None);
         assert_eq!(parse_command("bonjour"), None);
         assert!(grammar_json().starts_with("[\"répète\"") && grammar_json().ends_with("\"[unk]\"]"));

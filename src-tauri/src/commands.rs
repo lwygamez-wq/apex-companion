@@ -163,8 +163,9 @@ pub async fn race_strategy(
     length: Option<apex_core::analysis::strategy::RaceLength>,
     margin_laps: f32,
     formation_laps: f32,
+    overrides: Option<apex_core::service::StrategyOverrides>,
 ) -> R<apex_core::service::RaceStrategyView> {
-    blocking(state.svc.clone(), move |s| s.race_strategy(sim, &track, track_config.as_deref(), &car, setup, length, margin_laps, formation_laps)).await
+    blocking(state.svc.clone(), move |s| s.race_strategy(sim, &track, track_config.as_deref(), &car, setup, length, margin_laps, formation_laps, &overrides.unwrap_or_default())).await
 }
 
 #[tauri::command]

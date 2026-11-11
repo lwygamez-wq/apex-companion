@@ -12,7 +12,7 @@
 //! - temps au tour et secteurs officiels repris du classement, invalidation de tour (limites de
 //!   piste) reprise du jeu.
 
-use super::ibt::{split_laps, Channels, SessionInfo, LIVE_N};
+use super::ibt::{split_laps, Channels, SessionInfo, ENERGY_CH, LIVE_N, WEAR_CH};
 use crate::connectors::lmu_shm::{cstr, Frame, VehicleScoring, VehicleTelemetry};
 use crate::model::*;
 use serde::{Deserialize, Serialize};
@@ -101,6 +101,12 @@ pub struct Tick {
     pub invalid: bool,
     pub material: u8,
     pub place: u8,
+    /// Énergie virtuelle restante (%, Hypercar et LMGT3) ; 0 si la voiture n'en a pas ou fichier ancien.
+    pub energy: f32,
+    /// Pneus restants (%), AvG, AvD, ArG, ArD ; 0 si inconnu (fichier ancien).
+    pub wear: [f32; 4],
+    /// Avertissements de limites de piste en cours (0 si inconnu).
+    pub tl_steps: u8,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -227,7 +233,30 @@ fn tick_from(f: &Frame, t: &VehicleTelemetry, s: Option<&VehicleScoring>, impact
         invalid: t.mLapInvalidated != 0,
         material,
         place: s.map(|s| s.mPlace).unwrap_or(0),
+        energy: virtual_energy_pct(t).unwrap_or(0.0),
+        wear: tyre_left_pct(t),
+        tl_steps: t.mTrackLimitsSteps,
     }
+}
+
+/// Énergie virtuelle restante en % (le jeu la donne en fraction 0..1 ; certaines versions en %).
+/// `None` pour une voiture sans énergie virtuelle.
+pub fn virtual_energy_pct(t: &VehicleTelemetry) -> Option<f32> {
+    let v = t.mVirtualEnergy;
+    if !v.is_finite() || v <= 0.0 {
+        return None;
+    }
+    Some(if v <= 1.5 { v * 100.0 } else { v.min(100.0) })
+}
+
+/// Pneus restants (%), dans l'ordre AvG, AvD, ArG, ArD. `mWear` est la fraction restante (1 = neuf).
+pub fn tyre_left_pct(t: &VehicleTelemetry) -> [f32; 4] {
+    let w = t.mWheels;
+    let f = |i: usize| {
+        let v = w[i].mWear;
+        if v.is_finite() && v > 0.0 { (v.min(1.0) * 100.0) as f32 } else { 0.0 }
+    };
+    [f(0), f(1), f(2), f(3)]
 }
 
 // --- Enregistreur ---------------------------------------------------------------------------------
@@ -353,10 +382,23 @@ pub fn encode(r: &Recording) -> Vec<u8> {
     for t in &r.ticks {
         raw.push(t.material);
     }
+    // Extension 1 (Apex 0.31) : énergie virtuelle, usure des pneus, limites de piste.
+    // Les fichiers plus anciens s'arrêtent avant : ces colonnes valent alors 0 (inconnu).
+    raw.extend_from_slice(EXT1);
+    put_f32(&mut raw, r.ticks.iter().map(|t| t.energy));
+    for k in 0..4 {
+        put_f32(&mut raw, r.ticks.iter().map(|t| t.wear[k]));
+    }
+    for t in &r.ticks {
+        raw.push(t.tl_steps);
+    }
     let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     let _ = gz.write_all(&raw);
     gz.finish().unwrap_or_default()
 }
+
+/// Marqueur de l'extension 1 du fichier (énergie, pneus, limites de piste).
+const EXT1: &[u8; 4] = b"EXT1";
 
 /// Taille décompressée maximale d'un enregistrement (une séance de 24 h à 60 Hz en fait ≈ 400 Mo).
 const MAX_RAW_BYTES: u64 = 512 * 1024 * 1024;
@@ -425,6 +467,20 @@ pub fn decode(bytes: &[u8]) -> Result<Recording, String> {
     }
     for (i, b) in take(&mut o, n)?.iter().enumerate() {
         ticks[i].material = *b;
+    }
+    if raw.get(o..o + 4) == Some(EXT1.as_slice()) {
+        o += 4;
+        for (i, c) in take(&mut o, n * 4)?.chunks_exact(4).enumerate() {
+            ticks[i].energy = f32::from_le_bytes(c.try_into().unwrap());
+        }
+        for k in 0..4 {
+            for (i, c) in take(&mut o, n * 4)?.chunks_exact(4).enumerate() {
+                ticks[i].wear[k] = f32::from_le_bytes(c.try_into().unwrap());
+            }
+        }
+        for (i, b) in take(&mut o, n)?.iter().enumerate() {
+            ticks[i].tl_steps = *b;
+        }
     }
     Ok(Recording { header: meta.header, ticks, anchors: meta.anchors, laps: meta.laps })
 }
@@ -545,7 +601,19 @@ pub fn import_recording(r: &Recording) -> Result<ImportedSession, String> {
         position: Some(col(&|t| t.place as f64)),
         surface_material: Some(col(&|t| t.material as f64)),
         xy: Some((col(&|t| t.x as f64), col(&|t| t.z as f64))),
-        extra: vec![("lap_invalid".into(), col(&|t| t.invalid as u8 as f64))],
+        extra: {
+            let mut x = vec![("lap_invalid".into(), col(&|t| t.invalid as u8 as f64))];
+            // Énergie virtuelle et pneus : seulement s'ils ont été relevés (voiture concernée, fichier récent).
+            if r.ticks.iter().any(|t| t.energy > 0.0) {
+                x.push((ENERGY_CH.into(), col(&|t| t.energy as f64)));
+            }
+            if r.ticks.iter().any(|t| t.wear[0] > 0.0) {
+                for (k, name) in WEAR_CH.iter().enumerate() {
+                    x.push(((*name).into(), col(&|t| t.wear[k] as f64)));
+                }
+            }
+            x
+        },
         ..Default::default()
     };
     let si = SessionInfo { track_length_m: Some(h.track_length_m).filter(|l| *l > 100.0), sim: Some(SimId::Lmu), ..Default::default() };
@@ -732,6 +800,9 @@ impl LiveState {
             mat as f64,
             time_remain,
             laps_remain,
+            virtual_energy_pct(t).unwrap_or(0.0) as f64,
+            t.mTrackLimitsSteps as f64,
+            i.mTrackLimitsStepsPerPenalty as f64,
         ])
     }
 }
@@ -785,6 +856,7 @@ pub(crate) mod testkit {
         info.mNumVehicles = 12;
         info.mCurrentET = scoring_et;
         info.mIsFixedSetup = 1;
+        info.mTrackLimitsStepsPerPenalty = 4;
         let mut s: VehicleScoring = zeroed();
         s.mIsPlayer = 1;
         s.mPlace = 3;
@@ -810,6 +882,13 @@ pub(crate) mod testkit {
         t.mPos.z = r * a.sin();
         t.mFuel = 60.0 - d_abs / 1000.0;
         t.mFuelCapacity = 75.0;
+        // Énergie virtuelle (fraction) : 5 % par tour ; pneus : 1, 2, 3 et 4 points par tour.
+        t.mVirtualEnergy = (0.95 - d_abs / LEN * 0.05) as f32;
+        for k in 0..4 {
+            t.mWheels[k].mWear = 1.0 - d_abs / LEN * 0.01 * (k + 1) as f64;
+        }
+        // Un avertissement de limites de piste à partir du tour 2 (4 par pénalité).
+        t.mTrackLimitsSteps = (t.mLapNumber >= 2 && ld > 1500.0 || t.mLapNumber >= 3) as u8;
         t.mVehicleModel[..13].copy_from_slice(b"Oreca 07 LMP2");
         t.mMaxGears = 6;
         // Tour 2 : limites de piste dépassées vers 1500 m.
@@ -872,6 +951,25 @@ mod tests {
         assert_eq!(back.ticks[1234], r.ticks[1234]);
         assert_eq!(back.anchors, r.anchors);
         assert_eq!(back.laps, r.laps);
+        assert!(back.ticks[1234].energy > 0.0 && back.ticks[1234].wear[3] > 0.0);
+    }
+
+    #[test]
+    fn files_without_the_extension_still_open() {
+        use std::io::{Read, Write};
+        let r = record(1);
+        let mut raw = vec![];
+        flate2::read::GzDecoder::new(encode(&r).as_slice()).read_to_end(&mut raw).unwrap();
+        // Fichier d'avant Apex 0.31 : tout ce qui suit le marqueur EXT1 disparaît.
+        let cut = raw.windows(4).rposition(|w| w == EXT1).unwrap();
+        raw.truncate(cut);
+        let mut e = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        e.write_all(&raw).unwrap();
+        let back = decode(&e.finish().unwrap()).unwrap();
+        assert_eq!(back.ticks.len(), r.ticks.len());
+        assert!(back.ticks.iter().all(|t| t.energy == 0.0 && t.wear == [0.0; 4] && t.tl_steps == 0));
+        let s = import_recording(&back).unwrap();
+        assert!(s.laps.iter().all(|l| l.meta.energy_used_pct.is_none() && l.meta.tyre_wear_pct.is_none()));
     }
 
     #[test]
@@ -905,6 +1003,15 @@ mod tests {
         assert_eq!(lap2.meta.validity, Validity::Invalid);
         assert_eq!(lap2.meta.validity_source, ValiditySource::SimReported);
         assert!(s.laps.iter().filter(|l| l.meta.number == 3).all(|l| l.meta.validity != Validity::Invalid));
+        // Énergie virtuelle et usure des pneus par tour.
+        for l in &flying {
+            let e = l.meta.energy_used_pct.unwrap();
+            assert!((e - 5.0).abs() < 0.05, "énergie {e}");
+            let w = l.meta.tyre_wear_pct.unwrap();
+            for (k, v) in w.iter().enumerate() {
+                assert!((v - (k + 1) as f32).abs() < 0.02, "pneu {k} : {v}");
+            }
+        }
         let p = s.profile.unwrap();
         assert_eq!(p.car.fuel_max_l, Some(75.0));
         assert_eq!(p.car.class.as_deref(), Some("LMP2"));
@@ -953,6 +1060,9 @@ mod tests {
             et += 0.02;
         }
         assert_eq!(crossed, 2);
+        let row = live.row(&frame(200.0, 2.0 * LEN + 1600.0, 200.0, 2.0 * LEN + 1600.0, 1)).unwrap();
+        assert!((row[22] - (95.0 - 2.8 * 5.0)).abs() < 0.1, "énergie {}", row[22]);
+        assert_eq!((row[23], row[24]), (1.0, 4.0));
         let y = live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap();
         let meta = crate::live_coach::session_meta_from_yaml(&y);
         assert_eq!(meta.sim, SimId::Lmu);

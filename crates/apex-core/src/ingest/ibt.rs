@@ -483,6 +483,19 @@ pub(crate) struct Channels {
     pub(crate) extra: Vec<(String, Vec<f64>)>,
 }
 
+/// Canal d'énergie virtuelle restante (%) dans `LapTrace::extra` (Le Mans Ultimate).
+pub const ENERGY_CH: &str = "energy_pct";
+/// Canaux de pneu restant (%) dans `LapTrace::extra` : AvG, AvD, ArG, ArD (Le Mans Ultimate).
+pub const WEAR_CH: [&str; 4] = ["tyre_fl_pct", "tyre_fr_pct", "tyre_rl_pct", "tyre_rr_pct"];
+
+/// Quantité consommée sur un tour (début − fin) d'un canal « restant » ; `None` si le canal manque,
+/// démarre à 0 (inconnu) ou remonte (ravitaillement, changement de pneus pendant le tour).
+fn used(v: Option<&Vec<f32>>) -> Option<f32> {
+    let v = v?;
+    let (a, b) = (*v.iter().find(|x| **x > 0.0)?, *v.iter().rev().find(|x| **x > 0.0)?);
+    (a >= b && v.windows(2).all(|w| w[1] <= w[0] + 0.5 || w[1] <= 0.0)).then_some(a - b)
+}
+
 /// Drapeaux iRacing signalant une neutralisation locale ou globale.
 const YELLOW_MASK: u32 = 0x0008 | 0x0100 | 0x4000 | 0x8000;
 /// `irsdk_TrkLoc::irsdk_OffTrack`
@@ -610,9 +623,12 @@ pub const LIVE_CHANNELS: [&str; LIVE_N] = [
     "SessionTime", "LapDist", "LapDistPct", "Speed", "Throttle", "Brake", "Lap", "Gear", "RPM", "SteeringWheelAngle",
     "Lat", "Lon", "FuelLevel", "OnPitRoad", "PlayerTrackSurface", "PlayerCarMyIncidentCount", "SessionFlags", "SessionNum", "YawRate",
     "PlayerTrackSurfaceMaterial", "SessionTimeRemain", "SessionLapsRemainEx",
+    // Le Mans Ultimate seulement (absents d'iRacing : 0) : énergie virtuelle restante (%),
+    // avertissements de limites de piste et nombre d'avertissements par pénalité.
+    "ApexVirtualEnergy", "ApexTrackLimitSteps", "ApexTrackLimitStepsPerPenalty",
 ];
 /// Nombre de canaux lus en direct.
-pub const LIVE_N: usize = 22;
+pub const LIVE_N: usize = 25;
 
 /// Reconstitution des tours en direct : on empile les échantillons et, à chaque passage de la
 /// ligne, le tour qui vient de se terminer est découpé par le même code que les fichiers .ibt.
@@ -669,6 +685,7 @@ impl LiveLapBuilder {
             session_num: Some(col(17)),
             yaw_rate: Some(col(18)),
             surface_material: Some(col(19)),
+            extra: if self.rows.iter().any(|r| r[22] > 0.0) { vec![(ENERGY_CH.to_string(), col(22))] } else { vec![] },
             ..Default::default()
         };
         let lap = split_laps(&ch, &self.si).into_iter().rev().find(|l| l.meta.lap_time_s.is_some());
@@ -871,6 +888,11 @@ pub(crate) fn split_laps(ch: &Channels, si: &SessionInfo) -> Vec<ImportedLap> {
                 validity_source: ValiditySource::Derived,
                 fuel_start_l: fuel.as_ref().and_then(|v| v.first().copied()),
                 fuel_used_l: fuel.as_ref().and_then(|v| Some(v.first()? - v.last()?)).filter(|u| *u >= 0.0),
+                energy_used_pct: used(trace.extra.get(ENERGY_CH)).filter(|u| *u <= 100.0),
+                tyre_wear_pct: {
+                    let w: Vec<Option<f32>> = WEAR_CH.iter().map(|k| used(trace.extra.get(*k))).collect();
+                    w.iter().all(Option::is_some).then(|| [w[0].unwrap(), w[1].unwrap(), w[2].unwrap(), w[3].unwrap()])
+                },
             },
             trace,
         });

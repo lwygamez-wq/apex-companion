@@ -6,6 +6,7 @@ import type {
   ChatReply,
   RaceLength,
   RaceStrategyView,
+  StrategyOverrides,
   SetupType,
   TrackOverlay,
   AppSettings,
@@ -64,8 +65,8 @@ export const api = {
   aiContext: (sessionId: number) => call<string>("ai_context", { sessionId }),
   aiCheck: (provider: string, apiKey: string, model: string) => call<{ message: string; model: string; models: string[] }>("ai_check", { provider, apiKey, model }),
   simhubInstall: (dir: string | null) => call<string>("simhub_install", { dir }),
-  raceStrategy: (c: CircuitOverview, length: RaceLength | null, marginLaps: number, formationLaps: number) =>
-    call<RaceStrategyView>("race_strategy", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, setup: c.setup, length, marginLaps, formationLaps }),
+  raceStrategy: (c: Pick<CircuitOverview, "sim" | "track" | "track_config" | "car" | "setup">, length: RaceLength | null, marginLaps: number, formationLaps: number, overrides: StrategyOverrides | null = null) =>
+    call<RaceStrategyView>("race_strategy", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, setup: c.setup, length, marginLaps, formationLaps, overrides }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),
   deleteAll: () => call<void>("delete_all_data"),
   exportData: (path: string) => call<number>("export_data", { path }),

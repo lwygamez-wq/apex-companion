@@ -263,6 +263,12 @@ pub struct LapMeta {
     pub validity_source: ValiditySource,
     pub fuel_start_l: Option<f32>,
     pub fuel_used_l: Option<f32>,
+    /// Énergie virtuelle consommée sur le tour (% du réservoir d'énergie ; Hypercar, LMGT3 dans LMU).
+    #[serde(default)]
+    pub energy_used_pct: Option<f32>,
+    /// Usure des pneus sur le tour (points de %), AvG, AvD, ArG, ArD (LMU).
+    #[serde(default)]
+    pub tyre_wear_pct: Option<[f32; 4]>,
 }
 
 impl LapMeta {

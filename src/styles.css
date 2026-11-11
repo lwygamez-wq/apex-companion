@@ -609,3 +609,45 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .status { font-size: 14px; }
 .ok-msg { background: rgba(61,217,179,0.12); color: #7fe8cc; border-radius: 12px; padding: 9px 13px; }
 .debrief-input input { border-radius: 12px; padding: 11px 14px; background: var(--panel-2); border: 1px solid var(--line); }
+
+/* ---- Calculateur carburant / énergie (v0.31) ---- */
+.fuelcalc { margin-bottom: 14px; }
+.fc-inputs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 16px 0 6px; }
+.fc-inputs label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fc-inputs label > span { font-size: 14px; font-weight: 700; color: var(--muted); }
+.fc-inputs input[type="text"], .fc-inputs input[type="number"], .fc-inputs select { width: 100%; box-sizing: border-box; font-size: 16px; }
+.fc-inputs .row input[type="number"] { width: 90px; }
+.fc-inputs small { font-size: 13px; min-height: 18px; display: flex; gap: 6px; align-items: center; }
+.fc-head { display: flex; gap: 18px; align-items: center; margin: 14px 0 12px; }
+.fc-stops { display: flex; flex-direction: column; align-items: center; background: var(--panel-2); border-radius: 16px; padding: 8px 18px; min-width: 76px; }
+.fc-stops b { font-family: var(--big); font-stretch: 112%; font-weight: 900; font-size: 40px; line-height: 1; }
+.fc-stops span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.fc-head p { margin: 0; font-size: 18px; font-weight: 650; line-height: 1.4; }
+.fc-stints { margin-top: 12px; }
+.fc-stints td, .fc-stints th { padding: 8px 10px; }
+.fc-note { font-size: 14px; margin-top: 10px; }
+.fc-save { margin-top: 10px; background: rgba(61, 217, 179, 0.12); color: #7fe8cc; border-radius: 12px; padding: 9px 13px; font-weight: 600; }
+.fc-tyres { margin-top: 14px; }
+.fc-tyre-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.fc-tyre-grid div { background: var(--panel-2); border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; }
+.fc-tyre-grid div.worst { box-shadow: inset 0 0 0 2px rgba(255, 154, 92, 0.6); }
+.fc-tyre-grid span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.fc-tyre-grid b { font-size: 20px; font-weight: 800; }
+@media (max-width: 1250px) { .fc-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- Relais en direct ---- */
+.livefuel { margin-bottom: 14px; }
+.lf-main { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.lf-main div { background: var(--panel-2); border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.lf-main span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.lf-main b { font-family: var(--big); font-stretch: 110%; font-size: 30px; font-weight: 900; line-height: 1.1; }
+.lf-verdict { margin-top: 12px; font-size: 18px; font-weight: 700; }
+.lf-verdict.ok { color: #7fe8cc; }
+.lf-verdict.warn { color: var(--yellow); }
+.lf-bar { height: 10px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 12px; }
+.lf-bar i { display: block; height: 100%; background: var(--cmp); border-radius: 999px; }
+.consumption .strategy-facts { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.consumption .strategy-facts div.worst { box-shadow: inset 0 0 0 2px rgba(255, 154, 92, 0.6); }
+.consumption-calc { margin-top: 12px; }
+.consumption-calc > summary { cursor: pointer; font-weight: 700; color: var(--cmp); padding: 6px 0; }
+.consumption-calc .fuelcalc { padding: 14px 0 0; background: transparent; }

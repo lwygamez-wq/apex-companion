@@ -273,6 +273,8 @@ pub fn demo_session(seed: u64, started_at_unix: i64) -> ImportedSession {
                     validity_source: ValiditySource::SimReported,
                     fuel_start_l: None,
                     fuel_used_l: None,
+                    energy_used_pct: None,
+                    tyre_wear_pct: None,
                 },
                 trace,
             }

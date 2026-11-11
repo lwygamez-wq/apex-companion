@@ -19,6 +19,8 @@ fn meta(n: i32) -> LapMeta {
         validity_source: ValiditySource::SimReported,
         fuel_start_l: None,
         fuel_used_l: None,
+        energy_used_pct: None,
+        tyre_wear_pct: None,
     }
 }
 

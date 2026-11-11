@@ -8,7 +8,7 @@ const COMMANDS: [string, string][] = [
   ["silence", "coupe les messages automatiques"],
   ["reprends", "remet la radio"],
   ["plan", "rappelle les objectifs de la séance"],
-  ["carburant", "litres restants et tours possibles"],
+  ["carburant » ou « énergie", "énergie ou carburant restant, tours possibles, de quoi finir"],
 ];
 
 function bindingLabel(s: AppSettings | null): string {
