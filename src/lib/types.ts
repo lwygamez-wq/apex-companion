@@ -100,7 +100,22 @@ export interface Stint {
   to_lap: number;
   /** Niveau avec lequel partir pour ce relais (l, ou % d'énergie). */
   amount: number;
+  /** Énergie virtuelle : carburant que le ratio met avec ce niveau (l). */
+  fuel_l: number | null;
   duration_s: number;
+}
+
+export type PlanKind = "attack" | "save";
+
+export interface PlanOption {
+  kind: PlanKind;
+  stops: number;
+  /** Consommation par tour à ne pas dépasser pour tenir ce plan. */
+  target_per_lap: number;
+  /** Économie demandée (part : 0,05 = 5 %), plan économie seulement. */
+  saving: number | null;
+  stints: Stint[];
+  window: [number, number] | null;
 }
 
 export interface Strategy {
@@ -112,7 +127,39 @@ export interface Strategy {
   window: [number, number] | null;
   save_per_lap: number | null;
   laps_per_tank: number | null;
+  options: PlanOption[];
+  fuel_ratio: number | null;
+  fuel_limited: boolean;
+  capacity: number | null;
   summary: string;
+}
+
+export type EngineerMode = "auto" | "attack" | "save";
+
+export interface EngineerPlan {
+  mode: EngineerMode;
+  margin_laps: number;
+}
+
+export type Verdict = "lift" | "on_target" | "push";
+
+/** Dernière consigne de l'ingénieur de course (en course). */
+export interface EngineerCall {
+  mode: EngineerMode;
+  stops_left: number;
+  stint: number;
+  stints: number;
+  target_per_lap: number;
+  per_lap: number;
+  verdict: Verdict;
+  box_lap: number | null;
+  laps_to_box: number | null;
+  fill: number | null;
+  fill_fuel_l: number | null;
+  fuel_ratio: number | null;
+  fuel_limits: boolean;
+  finish_spare_laps: number | null;
+  laps_left: number;
 }
 
 export interface RaceStrategyView {
@@ -130,6 +177,11 @@ export interface RaceStrategyView {
   laps_used: number;
   tyre_wear_per_lap: [number, number, number, number] | null;
   default_length: RaceLength;
+  fuel_ratio_measured: number | null;
+  fuel_ratio_suggested: number | null;
+  fuel_ratio: number | null;
+  fuel_tank_l: number | null;
+  engineer: EngineerPlan;
 }
 
 export interface StrategyOverrides {
@@ -137,6 +189,7 @@ export interface StrategyOverrides {
   per_lap?: number | null;
   lap_time_s?: number | null;
   tank?: number | null;
+  fuel_ratio?: number | null;
 }
 
 /** Relais en cours (coach en direct). */
@@ -151,6 +204,9 @@ export interface LiveFuel {
   need_to_finish: number | null;
   stops_needed: number | null;
   save_per_lap: number | null;
+  fuel_ratio: number | null;
+  fuel_laps: number | null;
+  engineer: EngineerCall | null;
 }
 
 export interface TrackEdges {
@@ -480,6 +536,7 @@ export interface StatusPayload {
   coach_point: string | null;
   coach_plan: string | null;
   coach_fuel: string | null;
+  coach_strategy?: string | null;
   fuel_live?: LiveFuel | null;
 }
 
@@ -491,12 +548,12 @@ export type PttBinding =
 export interface PttEvent {
   state: "listening" | "done" | "error";
   heard: string | null;
-  command: "repeat" | "mute" | "resume" | "status" | "plan" | "fuel" | null;
+  command: "repeat" | "mute" | "resume" | "status" | "plan" | "fuel" | "strategy" | null;
   error: string | null;
 }
 
 export interface CoachMessage {
-  kind: "info" | "focus" | "invalid" | "callout" | "reply" | "beep";
+  kind: "info" | "focus" | "invalid" | "callout" | "reply" | "beep" | "strategy";
   lap: number;
   text: string;
   focus: string | null;
@@ -508,6 +565,8 @@ export interface CoachMessage {
 export interface CoachEvent {
   message: CoachMessage;
   speak: boolean;
+  /** Texte prononcé s'il diffère du message (ingénieur et coach au même passage de ligne). */
+  say?: string;
 }
 
 export interface Capabilities {
@@ -594,6 +653,7 @@ export interface AppSettings {
   /** Repères de freinage vers les LEDs du volant (plugin SimHub). */
   led_cues: boolean;
   led_port: number;
+  engineer_calls: boolean;
 }
 
 export interface ChatMessage {

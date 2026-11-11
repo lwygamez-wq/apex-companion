@@ -41,6 +41,8 @@ pub enum CoachMessageKind {
     Reply,
     /// Bip de freinage (texte : « bip » ou « long » pour le dernier, au point de freinage de la référence).
     Beep,
+    /// Ingénieur de course : stratégie carburant / énergie, appel aux stands (en course).
+    Strategy,
 }
 
 /// Message radio, prononcé au début du tour suivant.
@@ -296,6 +298,16 @@ pub struct LiveCoach {
     /// Limites de piste (Le Mans Ultimate) : avertissements en cours et nombre par pénalité.
     tl_steps: f64,
     tl_per_penalty: f64,
+    /// Ingénieur de course (stratégie en course) et son message en attente.
+    engineer: crate::race_engineer::Engineer,
+    pending: Option<CoachMessage>,
+    /// Temps des derniers tours lancés (s), pour estimer les tours restants d'une course au temps.
+    lap_times: VecDeque<f64>,
+    /// Carburant (l) et énergie (%) d'un même tour : ratio carburant mesuré en piste.
+    pairs: VecDeque<(f32, f32)>,
+    /// Avant le premier tour mesuré : consommation et ratio mesurés sur tes séances précédentes.
+    hint_per: Option<(crate::analysis::strategy::Unit, f32)>,
+    hint_ratio: Option<f32>,
 }
 
 /// Relais en cours, pour l'écran « Au volant » et la commande « carburant ».
@@ -320,6 +332,11 @@ pub struct LiveFuel {
     pub stops_needed: Option<u32>,
     /// Course : économie par tour qui éviterait l'arrêt, si elle est raisonnable.
     pub save_per_lap: Option<f32>,
+    /// Énergie virtuelle : ratio carburant conseillé (l par 1 %), et tours possibles avec le carburant à bord.
+    pub fuel_ratio: Option<f32>,
+    pub fuel_laps: Option<f32>,
+    /// Course : dernière consigne de l'ingénieur (cible, lift ou attaque, arrêt, réglages au stand).
+    pub engineer: Option<crate::race_engineer::EngineerCall>,
 }
 
 /// Tours propres pris en compte dans la synthèse.
@@ -366,13 +383,31 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0 },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
 
     pub fn session(&self) -> &SessionMeta {
         &self.meta
+    }
+
+    /// Plan de l'ingénieur (choisi dans le calculateur) et mesures de tes séances précédentes, pour
+    /// annoncer la stratégie dès le premier tour de course.
+    pub fn set_engineer(&mut self, plan: crate::race_engineer::EngineerPlan, per_lap: Option<(crate::analysis::strategy::Unit, f32)>, fuel_ratio: Option<f32>) {
+        self.engineer.set_plan(plan);
+        self.hint_per = per_lap.filter(|(_, p)| *p > 0.0);
+        self.hint_ratio = fuel_ratio.filter(|r| *r > 0.0);
+    }
+
+    /// Nouveau plan choisi pendant la séance.
+    pub fn set_engineer_plan(&mut self, plan: crate::race_engineer::EngineerPlan) {
+        self.engineer.set_plan(plan);
+    }
+
+    /// Message de l'ingénieur en attente (émis au passage de la ligne, en course).
+    pub fn take_engineer(&mut self) -> Option<CoachMessage> {
+        self.pending.take()
     }
 
     /// Type de la séance en cours (essais, qualif, course), d'après le numéro de session.
@@ -393,6 +428,9 @@ impl LiveCoach {
             self.beeps = None;
             self.best_lap = None;
             self.tl_steps = row[23];
+            self.engineer.reset();
+            self.pending = None;
+            self.lap_times.clear();
         }
         // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
         let dist = row[1];
@@ -431,6 +469,8 @@ impl LiveCoach {
         if row[22] > 0.0 {
             self.ve_now = row[22];
         }
+        // Ravitaillement : le niveau qui limite le relais remonte.
+        self.engineer.observe(if self.ve_now > 0.0 { self.ve_now } else { self.fuel_now });
         // Limites de piste : annonce à chaque nouvel avertissement, avec le compte avant pénalité.
         if row[23] > self.tl_steps && row[24] > 0.0 && callout.is_none() {
             let (n, per) = (row[23] as i64, row[24] as i64);
@@ -452,19 +492,36 @@ impl LiveCoach {
             Some(lap) => {
                 self.callout_done = false;
                 self.beep_stage = 0;
-                if let Some(u) = lap.meta.fuel_used_l.filter(|u| *u > 0.05 && lap.meta.kind == LapKind::Flying) {
-                    self.fuel_laps.push_back(u as f64);
-                    while self.fuel_laps.len() > 3 {
-                        self.fuel_laps.pop_front();
+                let flying = lap.meta.kind == LapKind::Flying;
+                let fuel = lap.meta.fuel_used_l.filter(|u| *u > 0.05 && flying);
+                let energy = lap.meta.energy_used_pct.filter(|u| *u > 0.1 && flying);
+                if let Some(u) = fuel {
+                    push_consumption(&mut self.fuel_laps, u as f64);
+                }
+                if let Some(u) = energy {
+                    push_consumption(&mut self.ve_laps, u as f64);
+                }
+                if let (Some(f), Some(e)) = (fuel, energy) {
+                    self.pairs.push_back((f, e));
+                    while self.pairs.len() > 5 {
+                        self.pairs.pop_front();
                     }
                 }
-                if let Some(u) = lap.meta.energy_used_pct.filter(|u| *u > 0.1 && lap.meta.kind == LapKind::Flying) {
-                    self.ve_laps.push_back(u as f64);
-                    while self.ve_laps.len() > 3 {
-                        self.ve_laps.pop_front();
+                if let Some(t) = lap.meta.lap_time_s.filter(|_| flying) {
+                    self.lap_times.push_back(t);
+                    while self.lap_times.len() > 3 {
+                        self.lap_times.pop_front();
                     }
                 }
-                Some(self.on_lap(lap))
+                let number = lap.meta.number;
+                let msg = self.on_lap(lap);
+                // Ingénieur de course : consigne recalculée à chaque passage de la ligne, en course.
+                if let Some(st) = self.race_state(number) {
+                    if let Some(text) = self.engineer.on_lap(&st) {
+                        self.pending = Some(CoachMessage { kind: CoachMessageKind::Strategy, lap: number, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
+                    }
+                }
+                Some(msg)
             }
             None => callout,
         }
@@ -490,17 +547,97 @@ impl LiveCoach {
     }
 
     /// Tours restant à couvrir en course (tour en cours compris) : donnés par le jeu, sinon estimés sur le chrono.
+    /// Course au temps : fin du tour en cours, tours commencés avant la fin du chrono, plus un tour
+    /// (en multiclasse, le drapeau tombe quand le leader de la catégorie la plus rapide passe la ligne :
+    /// une catégorie plus lente peut boucler un tour de plus ; même règle que le calculateur).
     fn race_laps_left(&self) -> Option<f64> {
         if self.current_kind() != SessionKind::Race {
             return None;
         }
+        let rem = 1.0 - self.lap_pct;
         if self.laps_remain > 0.0 && self.laps_remain < 30_000.0 {
-            Some(self.laps_remain + (1.0 - self.lap_pct))
+            Some(self.laps_remain + rem)
         } else if self.time_remain > 0.0 {
-            self.best_lap.map(|b| (self.time_remain / (b * 1.01)).ceil() + 1.0 + (1.0 - self.lap_pct))
+            let mut t: Vec<f64> = self.lap_times.iter().copied().collect();
+            t.sort_by(|a, b| a.total_cmp(b));
+            let lt = t.get(t.len() / 2).copied().or(self.best_lap.map(|b| b * 1.01)).filter(|l| *l > 1.0)?;
+            let after = ((self.time_remain - rem * lt) / lt).ceil().max(0.0);
+            Some(rem + after + 1.0)
         } else {
             None
         }
+    }
+
+    /// La course vue par l'ingénieur au passage de la ligne : `None` hors course ou sans mesure.
+    fn race_state(&self, lap: i32) -> Option<crate::race_engineer::RaceState> {
+        use crate::analysis::strategy::Unit;
+        if self.current_kind() != SessionKind::Race {
+            return None;
+        }
+        let mean = |q: &VecDeque<f64>| (!q.is_empty()).then(|| (q.iter().sum::<f64>() / q.len() as f64) as f32);
+        let pairs: Vec<(f32, f32)> = self.pairs.iter().copied().collect();
+        let ratio = crate::analysis::strategy::fuel_ratio(&pairs);
+        let fuel_per = mean(&self.fuel_laps);
+        let hint = |u: Unit| self.hint_per.filter(|(hu, _)| *hu == u).map(|(_, p)| p);
+        let laps_left = (self.race_laps_left()? - 0.05).ceil().max(0.0) as u32;
+        if self.ve_now > 0.0 {
+            let per = mean(&self.ve_laps).or(hint(Unit::Energy))?;
+            let ratio_set = ratio.map(|r| r.1).or(self.hint_ratio);
+            // Le carburant à bord, ramené en énergie : s'il lâche avant, c'est lui qui limite.
+            let mut level = self.ve_now as f32;
+            if let Some((m, _)) = ratio.filter(|_| self.fuel_now > 0.0) {
+                level = level.min(self.fuel_now as f32 / m);
+            }
+            let cap = match (self.tank_l, ratio_set) {
+                (Some(t), Some(r)) if r > 0.0 => (t as f32 / r).min(100.0),
+                _ => 100.0,
+            };
+            Some(crate::race_engineer::RaceState {
+                unit: Unit::Energy,
+                level,
+                cap,
+                per_lap: per,
+                laps_left,
+                lap,
+                fuel_ratio: ratio_set,
+                fuel_laps: fuel_per.filter(|f| *f > 0.0 && self.fuel_now > 0.0).map(|f| self.fuel_now as f32 / f),
+                energy_laps: Some(self.ve_now as f32 / per),
+            })
+        } else if self.fuel_now > 0.0 {
+            let per = fuel_per.or(hint(Unit::Litres))?;
+            Some(crate::race_engineer::RaceState {
+                unit: Unit::Litres,
+                level: self.fuel_now as f32,
+                cap: self.tank_l? as f32,
+                per_lap: per,
+                laps_left,
+                lap,
+                fuel_ratio: None,
+                fuel_laps: None,
+                energy_laps: None,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Rappel de la stratégie (commande « stratégie »).
+    pub fn strategy_text(&self) -> String {
+        use crate::analysis::strategy::Unit;
+        if self.current_kind() != SessionKind::Race {
+            let mut t = "Pas en course : l'ingénieur annonce la stratégie au premier passage de la ligne.".to_string();
+            if let Some(f) = self.fuel_snapshot() {
+                if let (Unit::Energy, Some(p)) = (f.unit, f.per_lap) {
+                    t += &format!(" 100 % d'énergie font {} tours", ((100.0 / p) + 1e-3).floor() as i64);
+                    if let Some(r) = f.fuel_ratio {
+                        t += &format!(", ratio carburant conseillé {}", format!("{r:.2}").replace('.', ","));
+                    }
+                    t += ".";
+                }
+            }
+            return t;
+        }
+        self.engineer.summary(if self.ve_now > 0.0 { Unit::Energy } else { Unit::Litres })
     }
 
     /// Relais en cours : énergie virtuelle si la voiture en a (Le Mans Ultimate, Hypercar et LMGT3),
@@ -526,6 +663,8 @@ impl LiveCoach {
             let s = (n - level) / l;
             (s > 0.0 && s <= p * 0.08).then_some(s as f32)
         });
+        let pairs: Vec<(f32, f32)> = self.pairs.iter().copied().collect();
+        let fuel_per = (!self.fuel_laps.is_empty()).then(|| self.fuel_laps.iter().sum::<f64>() / self.fuel_laps.len() as f64);
         Some(LiveFuel {
             unit,
             level: level as f32,
@@ -537,6 +676,9 @@ impl LiveCoach {
             need_to_finish: need.map(|n| n as f32),
             stops_needed: stops,
             save_per_lap: save,
+            fuel_ratio: if energy { crate::analysis::strategy::fuel_ratio(&pairs).map(|r| r.1).or(self.hint_ratio) } else { None },
+            fuel_laps: fuel_per.filter(|f| energy && *f > 0.0 && self.fuel_now > 0.0).map(|f| (self.fuel_now / f) as f32),
+            engineer: (self.current_kind() == SessionKind::Race).then(|| self.engineer.last().cloned()).flatten(),
         })
     }
 
@@ -758,6 +900,22 @@ impl LiveCoach {
     }
 }
 
+/// Consommation d'un tour lancé, gardée sur les 3 derniers tours. Un tour très en dessous des
+/// précédents (neutralisation, drapeau jaune) ne compte pas : il fausserait la cible de l'ingénieur.
+fn push_consumption(q: &mut VecDeque<f64>, v: f64) {
+    if q.len() >= 2 {
+        let mut m: Vec<f64> = q.iter().copied().collect();
+        m.sort_by(|a, b| a.total_cmp(b));
+        if v < 0.7 * m[m.len() / 2] {
+            return;
+        }
+    }
+    q.push_back(v);
+    while q.len() > 3 {
+        q.pop_front();
+    }
+}
+
 /// « au virage 7 », « à Descida do Lago ».
 fn at_corner(name: &str) -> String {
     if name.starts_with("virage") {
@@ -894,5 +1052,42 @@ mod tests {
         let t = coach.fuel_text();
         assert!(t.starts_with("Énergie : "), "{t}");
         assert!(t.contains("5,0 % par tour"), "{t}");
+    }
+
+    /// Course LMU au temps (20 min, tours de 40 s, 5 % d'énergie et 2 l par tour) : l'ingénieur annonce
+    /// le relais au premier passage de la ligne, avec la cible et le tour de l'arrêt.
+    #[test]
+    fn race_engineer_talks_in_an_lmu_race() {
+        use crate::ingest::lmu::{live_yaml, testkit::*, LiveState};
+        let y = live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap();
+        let (mut coach, _) = LiveCoach::new(&y, None, vec![], None);
+        let mut live = LiveState::default();
+        let mut said = vec![];
+        let mut et = 0.0f64;
+        while et < 330.0 {
+            let d = 1500.0 + et * 50.0;
+            let sc_et = (et * 5.0).floor() / 5.0;
+            let mut f = frame(100.0 + et, d, 100.0 + sc_et, 1500.0 + sc_et * 50.0, 10);
+            f.info.mEndET = 100.0 + 40.0 * 30.0;
+            if let Some(r) = live.row(&f) {
+                coach.push(r);
+            }
+            if let Some(m) = coach.take_engineer() {
+                assert_eq!(m.kind, CoachMessageKind::Strategy);
+                said.push(m.text);
+            }
+            et += 0.02;
+        }
+        assert!(said.first().is_some_and(|m| m.starts_with("Relais 1 sur 2. Box à la fin du tour")), "{said:?}");
+        let f = coach.fuel_snapshot().unwrap();
+        let e = f.engineer.clone().unwrap();
+        assert_eq!(e.stops_left, 1);
+        assert!(e.target_per_lap >= 5.0, "{e:?}");
+        // Ratio carburant mesuré en piste : 2 l pour 5 % = 0,40, conseillé 0,41 (+2 %).
+        assert!((f.fuel_ratio.unwrap() - 0.41).abs() < 1e-3, "{f:?}");
+        assert!(!e.fuel_limits);
+        let t = coach.strategy_text();
+        assert!(t.starts_with("Plan auto"), "{t}");
+        assert!(t.contains("ratio 0,41"), "{t}");
     }
 }

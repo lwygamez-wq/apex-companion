@@ -168,6 +168,19 @@ pub async fn race_strategy(
     blocking(state.svc.clone(), move |s| s.race_strategy(sim, &track, track_config.as_deref(), &car, setup, length, margin_laps, formation_laps, &overrides.unwrap_or_default())).await
 }
 
+/// Plan suivi par l'ingénieur de course sur ce circuit avec cette voiture (calculateur, « Suivre en course »).
+#[tauri::command]
+pub async fn set_engineer_plan(
+    state: State<'_, AppState>,
+    sim: apex_core::model::SimId,
+    track: String,
+    track_config: Option<String>,
+    car: String,
+    plan: apex_core::race_engineer::EngineerPlan,
+) -> R<()> {
+    blocking(state.svc.clone(), move |s| s.set_engineer_plan(sim, &track, track_config.as_deref(), &car, plan)).await
+}
+
 #[tauri::command]
 pub async fn track_overlay(state: State<'_, AppState>, session_id: i64, spine_lap_id: Option<i64>) -> R<apex_core::analysis::surface::TrackOverlay> {
     blocking(state.svc.clone(), move |s| s.track_overlay(session_id, spine_lap_id)).await

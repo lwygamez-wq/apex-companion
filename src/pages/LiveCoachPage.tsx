@@ -128,7 +128,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
           {msgs.map((m, i) => (
             <div key={`${m.lap}-${i}`} className={`radio-msg ${m.kind} ${i === 0 ? "latest" : ""}`}>
               <div className="row" style={{ justifyContent: "space-between" }}>
-                <span className="muted">{m.kind === "reply" ? "Réponse" : m.kind === "callout" ? `Annonce · tour ${m.lap}` : m.lap > 0 ? `Tour ${m.lap}${m.lap_time_s ? ` · ${lapTime(m.lap_time_s)}` : ""}` : "Mise en route"}</span>
+                <span className="muted">{m.kind === "reply" ? "Réponse" : m.kind === "strategy" ? `Ingénieur · tour ${m.lap}` : m.kind === "callout" ? `Annonce · tour ${m.lap}` : m.lap > 0 ? `Tour ${m.lap}${m.lap_time_s ? ` · ${lapTime(m.lap_time_s)}` : ""}` : "Mise en route"}</span>
                 {m.lap_delta_s != null && <span className={`mono ${m.lap_delta_s > 0 ? "pos" : "neg"}`}>{delta(m.lap_delta_s)} s</span>}
               </div>
               <div className="radio-text">{m.text}</div>

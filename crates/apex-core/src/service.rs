@@ -89,6 +89,10 @@ pub struct AppSettings {
     pub led_cues: bool,
     /// Port local (UDP) vers le plugin SimHub.
     pub led_port: u16,
+    /// Ingénieur de course : stratégie carburant / énergie et appels aux stands à la radio en course,
+    /// même quand le coaching est coupé en course.
+    #[serde(default = "default_true")]
+    pub engineer_calls: bool,
 }
 
 fn default_true() -> bool {
@@ -137,6 +141,7 @@ impl Default for AppSettings {
             ai_provider: "anthropic".into(),
             led_cues: false,
             led_port: crate::led::DEFAULT_PORT,
+            engineer_calls: true,
         }
     }
 }
@@ -350,6 +355,25 @@ pub struct RaceStrategyView {
     pub tyre_wear_per_lap: Option<[f32; 4]>,
     /// Format proposé par défaut (dernière course sur ce circuit), pour pré-remplir l'écran.
     pub default_length: crate::analysis::strategy::RaceLength,
+    /// Énergie virtuelle : ratio carburant (l par 1 %) mesuré (médiane), conseillé, et utilisé.
+    pub fuel_ratio_measured: Option<f32>,
+    pub fuel_ratio_suggested: Option<f32>,
+    pub fuel_ratio: Option<f32>,
+    /// Réservoir de carburant de la voiture (l), d'après la fiche de la session.
+    pub fuel_tank_l: Option<f32>,
+    /// Plan suivi par l'ingénieur de course sur ce circuit avec cette voiture.
+    pub engineer: crate::race_engineer::EngineerPlan,
+}
+
+/// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
+#[derive(Debug, Clone, Default)]
+pub struct EngineerHint {
+    pub plan: crate::race_engineer::EngineerPlan,
+    /// Consommation mesurée sur tes tours propres (même unité que ce qui limite le relais).
+    pub per_lap: Option<f32>,
+    pub unit: Option<crate::analysis::strategy::Unit>,
+    /// Ratio carburant conseillé (énergie virtuelle).
+    pub fuel_ratio: Option<f32>,
 }
 
 /// Valeurs saisies à la main dans le calculateur (remplacent la mesure).
@@ -359,6 +383,14 @@ pub struct StrategyOverrides {
     pub per_lap: Option<f32>,
     pub lap_time_s: Option<f32>,
     pub tank: Option<f32>,
+    /// Ratio carburant (l par 1 % d'énergie virtuelle).
+    #[serde(default)]
+    pub fuel_ratio: Option<f32>,
+}
+
+/// Clé du plan de l'ingénieur pour un circuit et une voiture (réglages).
+fn engineer_key(sim: SimId, track: &str, track_config: Option<&str>, car: &str) -> String {
+    format!("engineer_plan:{}|{track}|{}|{car}", sim.as_str(), track_config.unwrap_or(""))
 }
 
 /// Référence externe à classer (fixed / open).
@@ -2068,18 +2100,24 @@ impl AppService {
             .into_iter()
             .filter(|s| s.track_config.as_deref() == track_config && SetupType::compatible(s.setup, setup))
             .collect();
-        // Tours propres récents (du plus récent au plus ancien) : consommation, énergie, usure, rythme.
-        let (mut fuel, mut energy, mut wear, mut times) = (vec![], vec![], vec![], vec![]);
+        // Tours propres récents (du plus récent au plus ancien) : consommation, énergie, usure, rythme,
+        // et paires carburant / énergie d'un même tour pour le ratio carburant.
+        let (mut fuel, mut energy, mut wear, mut times, mut pairs) = (vec![], vec![], vec![], vec![], vec![]);
         for s in &sessions {
             for l in db.laps(s.id)?.into_iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying) {
                 if let Some(t) = l.meta.lap_time_s {
                     times.push(t as f32);
                 }
-                if let Some(f) = l.meta.fuel_used_l.filter(|f| *f > 0.05) {
+                let f = l.meta.fuel_used_l.filter(|f| *f > 0.05);
+                let e = l.meta.energy_used_pct.filter(|e| *e > 0.1);
+                if let Some(f) = f {
                     fuel.push(f);
                 }
-                if let Some(e) = l.meta.energy_used_pct.filter(|e| *e > 0.1) {
+                if let Some(e) = e {
                     energy.push(e);
+                }
+                if let (Some(f), Some(e)) = (f, e) {
+                    pairs.push((f, e));
                 }
                 if let Some(w) = l.meta.tyre_wear_pct {
                     wear.push(w);
@@ -2093,6 +2131,7 @@ impl AppService {
             v.truncate(15);
         }
         wear.truncate(15);
+        pairs.truncate(15);
         let avg = |v: &[f32]| (!v.is_empty()).then(|| v.iter().sum::<f32>() / v.len() as f32);
         let max = |v: &[f32]| (!v.is_empty()).then(|| v.iter().copied().fold(0.0, f32::max));
         // Énergie virtuelle mesurée (≥ 3 tours) : c'est elle qui limite le relais (Hypercar, LMGT3).
@@ -2110,11 +2149,17 @@ impl AppService {
                 "pas encore de tour propre mesuré ici avec cette voiture : roule quelques tours, ou saisis la consommation et le temps au tour".into(),
             ));
         };
+        let fuel_tank = db.latest_profile(track, car)?.or(db.latest_car_profile(car)?).and_then(|p| p.usable_tank_l());
         let measured_tank = match unit {
             Unit::Energy => Some(100.0),
-            Unit::Litres => db.latest_profile(track, car)?.or(db.latest_car_profile(car)?).and_then(|p| p.usable_tank_l()),
+            Unit::Litres => fuel_tank,
         };
         let tank = o.tank.filter(|v| *v > 0.0).or(measured_tank);
+        let ratio = crate::analysis::strategy::fuel_ratio(&pairs);
+        let fuel_ratio = match unit {
+            Unit::Energy => o.fuel_ratio.filter(|r| *r > 0.0).or(ratio.map(|r| r.1)),
+            Unit::Litres => None,
+        };
         let default_length = sessions
             .iter()
             .filter(|s| s.kind == SessionKind::Race)
@@ -2123,7 +2168,17 @@ impl AppService {
             .filter(|n| *n >= 3)
             .map(RaceLength::Laps)
             .unwrap_or(RaceLength::Minutes(30.0));
-        let strategy = plan(&StrategyInput { length: length.unwrap_or(default_length), unit, per_lap: per, lap_time_s: lap_time, tank, margin_laps, formation_laps });
+        let strategy = plan(&StrategyInput {
+            length: length.unwrap_or(default_length),
+            unit,
+            per_lap: per,
+            lap_time_s: lap_time,
+            tank,
+            margin_laps,
+            formation_laps,
+            fuel_ratio,
+            fuel_tank: fuel_tank.filter(|_| unit == Unit::Energy),
+        });
         let tyre_wear_per_lap = (!wear.is_empty()).then(|| {
             let n = wear.len() as f32;
             [0, 1, 2, 3].map(|k| wear.iter().map(|w| w[k]).sum::<f32>() / n)
@@ -2146,7 +2201,44 @@ impl AppService {
             },
             tyre_wear_per_lap,
             default_length,
+            fuel_ratio_measured: ratio.map(|r| r.0),
+            fuel_ratio_suggested: ratio.map(|r| r.1),
+            fuel_ratio,
+            fuel_tank_l: fuel_tank,
+            // Même verrou que ci-dessus : `engineer_plan_for` le reprendrait (blocage).
+            engineer: db.get_setting(&engineer_key(sim, track, track_config, car)).ok().flatten().and_then(|j| serde_json::from_str(&j).ok()).unwrap_or_default(),
         })
+    }
+
+    /// Plan suivi par l'ingénieur de course pour ce circuit et cette voiture (auto par défaut).
+    pub fn engineer_plan_for(&self, sim: SimId, track: &str, track_config: Option<&str>, car: &str) -> crate::race_engineer::EngineerPlan {
+        self.db()
+            .get_setting(&engineer_key(sim, track, track_config, car))
+            .ok()
+            .flatten()
+            .and_then(|j| serde_json::from_str(&j).ok())
+            .unwrap_or_default()
+    }
+
+    /// Choisit le plan suivi en course (calculateur, bouton « Suivre en course »).
+    pub fn set_engineer_plan(&self, sim: SimId, track: &str, track_config: Option<&str>, car: &str, plan: crate::race_engineer::EngineerPlan) -> Result<()> {
+        let json = serde_json::to_string(&plan).map_err(|e| ServiceError::User(e.to_string()))?;
+        self.db().set_setting(&engineer_key(sim, track, track_config, car), &json)?;
+        Ok(())
+    }
+
+    /// Plan de l'ingénieur pour une séance en direct.
+    pub fn engineer_plan(&self, meta: &SessionMeta) -> crate::race_engineer::EngineerPlan {
+        self.engineer_plan_for(meta.sim, &meta.track, meta.track_config.as_deref(), &meta.car)
+    }
+
+    /// Données de départ de l'ingénieur : plan choisi, consommation et ratio mesurés sur tes tours.
+    pub fn engineer_hint(&self, meta: &SessionMeta) -> EngineerHint {
+        let plan = self.engineer_plan(meta);
+        match self.race_strategy(meta.sim, &meta.track, meta.track_config.as_deref(), &meta.car, meta.setup, None, plan.margin_laps, 0.0, &StrategyOverrides::default()) {
+            Ok(v) => EngineerHint { plan, per_lap: v.per_lap_measured, unit: Some(v.unit), fuel_ratio: v.fuel_ratio_suggested },
+            Err(_) => EngineerHint { plan, ..Default::default() },
+        }
     }
 
     /// Relevé de la piste pour la carte : vibreurs, lignes, hors-piste et bords, à partir de tous tes

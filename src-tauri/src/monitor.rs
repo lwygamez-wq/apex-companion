@@ -29,6 +29,7 @@ pub struct StatusPayload {
     pub coach_point: Option<String>,
     pub coach_plan: Option<String>,
     pub coach_fuel: Option<String>,
+    pub coach_strategy: Option<String>,
     /// Relais en cours (énergie virtuelle ou carburant), pour l'écran « Au volant ».
     pub fuel_live: Option<apex_core::live_coach::LiveFuel>,
 }
@@ -38,6 +39,10 @@ pub struct StatusPayload {
 pub struct CoachEvent {
     pub message: CoachMessage,
     pub speak: bool,
+    /// Texte prononcé s'il diffère du message (ingénieur et coach au même passage de ligne : un seul
+    /// message vocal, sinon le second couperait le premier).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub say: Option<String>,
 }
 
 impl Default for StatusPayload {
@@ -55,6 +60,7 @@ impl Default for StatusPayload {
             coach_point: None,
             coach_plan: None,
             coach_fuel: None,
+            coach_strategy: None,
             fuel_live: None,
         }
     }
@@ -63,6 +69,10 @@ impl Default for StatusPayload {
 /// Diffuse un message du coach (journal, état, voix). Radio coupée : seuls les messages
 /// demandés (réponses aux commandes vocales) sont prononcés.
 pub(crate) fn radio(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message: CoachMessage, speak: bool) {
+    radio_say(app, status, message, speak, None);
+}
+
+pub(crate) fn radio_say(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message: CoachMessage, speak: bool, say: Option<String>) {
     log::info!("coach : {}", message.text);
     let muted = status.lock().map(|s| s.muted).unwrap_or(false);
     let speak = speak && (!muted || message.kind == apex_core::live_coach::CoachMessageKind::Reply);
@@ -73,7 +83,7 @@ pub(crate) fn radio(app: &AppHandle, status: &Arc<Mutex<StatusPayload>>, message
             s.coach.drain(..n - 12);
         }
     }
-    let _ = app.emit("apex://coach", CoachEvent { message, speak });
+    let _ = app.emit("apex://coach", CoachEvent { message, speak, say });
 }
 
 /// Remet un drapeau à `false` à la fin du fil, y compris en cas de panique.
@@ -107,6 +117,8 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         // Envoi local vers le plugin SimHub (LEDs du volant), créé à la demande.
         let mut led: Option<apex_core::led::LedSender> = None;
         let mut fuel_tick = std::time::Instant::now();
+        // Plan de l'ingénieur relu toutes les 3 s : un plan choisi dans le calculateur pendant la séance est suivi.
+        let mut plan_tick = std::time::Instant::now();
         // Coach en direct : (circuit|configuration|voiture, coach).
         let mut coach: Option<(String, LiveCoach)> = None;
         // Synchro du dossier : immédiate au démarrage (rattrapage), puis toutes les 15 s.
@@ -239,12 +251,15 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                         None
                                     });
                                     let plan = svc.live_plan(&meta);
-                                    let (c, hello) = LiveCoach::new(yaml, reference, svc.user_corner_names(&meta), plan);
+                                    let (mut c, hello) = LiveCoach::new(yaml, reference, svc.user_corner_names(&meta), plan);
+                                    let hint = svc.engineer_hint(&meta);
+                                    c.set_engineer(hint.plan, hint.unit.zip(hint.per_lap), hint.fuel_ratio);
                                     if let Ok(mut s) = status.lock() {
                                         s.coach_plan = Some(c.plan_text());
                                         s.coach_repeat = None;
                                         s.coach_point = None;
                                         s.coach_fuel = None;
+                                        s.coach_strategy = None;
                                         s.fuel_live = None;
                                     }
                                     coach = Some((key, c));
@@ -275,13 +290,20 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                 _ => None,
                             };
                             // Relais en cours : mis à jour une fois par seconde environ.
-                            if let Some((_, c)) = coach.as_ref() {
+                            if let Some((_, c)) = coach.as_mut() {
                                 if fuel_tick.elapsed() >= std::time::Duration::from_millis(900) {
                                     fuel_tick = std::time::Instant::now();
                                     let f = c.fuel_snapshot();
+                                    let st = c.strategy_text();
                                     if let Ok(mut s) = status.lock() {
                                         s.fuel_live = f;
+                                        s.coach_strategy = Some(st);
                                     }
+                                }
+                                if plan_tick.elapsed() >= std::time::Duration::from_secs(3) {
+                                    plan_tick = std::time::Instant::now();
+                                    let plan = svc.engineer_plan(c.session());
+                                    c.set_engineer_plan(plan);
                                 }
                             }
                             if let (Some(m), Some((_, c))) = (pushed, coach.as_mut()) {
@@ -305,8 +327,21 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                         s.coach_point = Some(c.status_text());
                                         s.coach_fuel = Some(c.fuel_text());
                                     }
-                                    if !callout_off {
-                                        radio(&app, &status, m, settings.coach_audio && !mute);
+                                    // Ingénieur de course : au même passage de ligne, prononcé avant le coaching
+                                    // (un seul message vocal), même quand le coaching est coupé en course.
+                                    let eng = c.take_engineer();
+                                    let eng_speak = settings.coach_audio && settings.engineer_calls && kind == SessionKind::Race;
+                                    let lap_speak = settings.coach_audio && !mute && !callout_off;
+                                    match eng {
+                                        Some(e) => {
+                                            if !callout_off {
+                                                radio(&app, &status, m.clone(), lap_speak && !eng_speak);
+                                            }
+                                            let say = (eng_speak && lap_speak).then(|| format!("{} {}", e.text, m.text));
+                                            radio_say(&app, &status, e, eng_speak, say);
+                                        }
+                                        None if !callout_off => radio(&app, &status, m, lap_speak),
+                                        None => {}
                                     }
                                 }
                             }

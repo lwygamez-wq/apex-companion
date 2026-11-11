@@ -152,6 +152,7 @@ export function SettingsPage() {
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Coach vocal</h2>
           <div className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></div>
+          <div className="form-row"><div>Ingénieur de course<div className="hint">En course : relais, cible par tour (lift ou attaque), appel aux stands avec l'énergie et le ratio à régler. Parle même si le coaching est coupé en course.</div></div><input type="checkbox" checked={s.engineer_calls} onChange={(e) => upd("engineer_calls", e.target.checked)} /></div>
           <div className="form-row"><div>Voix activée</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></div>
           <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
         </div>

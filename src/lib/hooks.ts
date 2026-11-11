@@ -37,7 +37,7 @@ export function useCoachVoice(): void {
   useEffect(() => {
     api.settings().then((s) => { setCoachVoice(s.coach_voice); setCoachVolume(s.coach_volume); }).catch(() => undefined);
     const un = onCoach((e) => {
-      if (e.speak) void speak(e.message.text);
+      if (e.speak) void speak(e.say ?? e.message.text);
     });
     const un2 = onCoachStop(() => stopVoice());
     const un3 = onBeep((long) => beep(long));

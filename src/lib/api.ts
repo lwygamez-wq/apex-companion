@@ -4,6 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   ChatMessage,
   ChatReply,
+  EngineerPlan,
   RaceLength,
   RaceStrategyView,
   StrategyOverrides,
@@ -67,6 +68,8 @@ export const api = {
   simhubInstall: (dir: string | null) => call<string>("simhub_install", { dir }),
   raceStrategy: (c: Pick<CircuitOverview, "sim" | "track" | "track_config" | "car" | "setup">, length: RaceLength | null, marginLaps: number, formationLaps: number, overrides: StrategyOverrides | null = null) =>
     call<RaceStrategyView>("race_strategy", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, setup: c.setup, length, marginLaps, formationLaps, overrides }),
+  setEngineerPlan: (c: Pick<CircuitOverview, "sim" | "track" | "track_config" | "car">, plan: EngineerPlan) =>
+    call<void>("set_engineer_plan", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, plan }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),
   deleteAll: () => call<void>("delete_all_data"),
   exportData: (path: string) => call<number>("export_data", { path }),

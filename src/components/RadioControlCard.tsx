@@ -9,6 +9,7 @@ const COMMANDS: [string, string][] = [
   ["reprends", "remet la radio"],
   ["plan", "rappelle les objectifs de la séance"],
   ["carburant » ou « énergie", "énergie ou carburant restant, tours possibles, de quoi finir"],
+  ["stratégie", "l'ingénieur : relais, tour de l'arrêt, cible par tour, énergie et ratio à régler au stand"],
 ];
 
 function bindingLabel(s: AppSettings | null): string {
