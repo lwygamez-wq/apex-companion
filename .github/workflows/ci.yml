@@ -1,0 +1,108 @@
+name: Vérifications
+
+# À chaque PR vers main et à chaque push sur main : mêmes commandes que CLAUDE.md.
+# - linux : tests et clippy Rust (cœur + coque Tauri), TypeScript, Vitest (dont le contrat IPC),
+#   builds desktop et mobile.
+# - windows : clippy et tests du cœur sur la cible réelle, pour le code propre à Windows (voix,
+#   micro, bouton radio, mémoire partagée LMU) qui n'est pas compilé sous Linux.
+# Aucun secret, lecture seule. La publication reste dans build-windows.yml (manuel).
+# Actions tierces épinglées par empreinte de commit, comme dans les autres workflows.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Dépendances système de Tauri
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: ". -> target"
+          key: linux
+
+      - name: Dépendances front
+        run: npm ci
+
+      - name: TypeScript et Vitest
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Builds desktop et mobile
+        run: |
+          npm run build
+          npm run build:mobile
+
+      - name: Clippy
+        run: |
+          cargo clippy -p apex-core --all-targets -- -D warnings
+          cargo clippy -p apex-companion --all-targets -- -D warnings
+
+      - name: Tests Rust
+        run: |
+          cargo test -p apex-core
+          cargo test -p apex-companion
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: ". -> target"
+          key: windows
+
+      # La coque Tauri embarque le front construit : dist/ doit exister pour la compiler.
+      - name: Front
+        run: |
+          npm ci
+          npm run build
+
+      - name: Clippy (Windows)
+        run: |
+          cargo clippy -p apex-core --all-targets -- -D warnings
+          cargo clippy -p apex-companion --all-targets -- -D warnings
+
+      - name: Tests du cœur (Windows)
+        run: cargo test -p apex-core
