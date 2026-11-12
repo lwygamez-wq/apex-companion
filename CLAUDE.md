@@ -56,7 +56,8 @@ L'installeur Windows se construit par le workflow `build-windows.yml`, pas en lo
 - Calculateur et ingénieur de course partagent `analysis::strategy` (`target`, `pit_fill`) ; le test `live_calls_match_the_calculator` garantit les mêmes chiffres : ne pas le contourner.
 - Modèles IA (Gemini surtout) renommés ou retirés sans préavis : passer par `ai::list_models` / `pick_model`, jamais un nom figé seul.
 - Vibreurs : distance point-segment au bord (points relevés jusqu'à 7–9 m du bord).
-- Hypothèses LMU non encore vérifiées en jeu : échelle de `mVirtualEnergy`, sens de `mWear`, remise à zéro des limites de piste, détection d'arrêt (énergie +2 %).
+- LMU vérifié en jeu (essais Imola 9X8, 12 nov.) : `mVirtualEnergy` en % (≈ 3 %/tour), `mWear` = % restant (100 = neuf). Encore à vérifier : remise à zéro des limites de piste (restée à 0 alors que le jeu a invalidé 7 tours sur 9), détection d'arrêt (énergie +2 %).
+- Tours invalidés par le jeu (limites de piste) : `clean` est faux, mais la consommation reste valable. La stratégie filtre sur les drapeaux (stand, sortie, incident, jaune, coupure), pas sur `clean`.
 
 ## Sécurité et données
 

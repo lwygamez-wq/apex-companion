@@ -2104,7 +2104,11 @@ impl AppService {
         // et paires carburant / énergie d'un même tour pour le ratio carburant.
         let (mut fuel, mut energy, mut wear, mut times, mut pairs) = (vec![], vec![], vec![], vec![], vec![]);
         for s in &sessions {
-            for l in db.laps(s.id)?.into_iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying) {
+            // Tours représentatifs de la consommation : lancés, sans arrêt, sortie, incident ni drapeau
+            // jaune. Un tour invalidé par le jeu pour les limites de piste consomme comme les autres :
+            // il compte (à Imola, le jeu en invalidait 7 sur 9 et l'énergie n'était plus mesurée).
+            let f = |l: &crate::model::LapMeta| l.kind == LapKind::Flying && !l.flags.pit && !l.flags.off_track && !l.flags.incident && !l.flags.yellow_flag && !l.flags.discontinuity;
+            for l in db.laps(s.id)?.into_iter().filter(|l| f(&l.meta)) {
                 if let Some(t) = l.meta.lap_time_s {
                     times.push(t as f32);
                 }
@@ -2135,7 +2139,8 @@ impl AppService {
         let avg = |v: &[f32]| (!v.is_empty()).then(|| v.iter().sum::<f32>() / v.len() as f32);
         let max = |v: &[f32]| (!v.is_empty()).then(|| v.iter().copied().fold(0.0, f32::max));
         // Énergie virtuelle mesurée (≥ 3 tours) : c'est elle qui limite le relais (Hypercar, LMGT3).
-        let measured_unit = if energy.len() >= 3 { Unit::Energy } else { Unit::Litres };
+        // Énergie virtuelle mesurée, même sur un seul tour : c'est elle qui limite le relais (Hypercar, LMGT3).
+        let measured_unit = if energy.is_empty() { Unit::Litres } else { Unit::Energy };
         let unit = o.unit.unwrap_or(measured_unit);
         let (measured, measured_max) = match unit {
             Unit::Energy => (avg(&energy), max(&energy)),
@@ -2862,6 +2867,31 @@ impl AppService {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Séance LMU réelle (Imola, 12 nov.) : le jeu invalide la plupart des tours (limites de piste)
+    /// sans sortie de piste. Ces tours consomment comme les autres : ils comptent pour la stratégie,
+    /// qui doit se calculer en énergie dès qu'elle est mesurée (sinon : plan en litres, faux en Hypercar).
+    #[test]
+    fn strategy_uses_track_limit_invalid_laps_and_energy() {
+        let svc = AppService::in_memory().unwrap();
+        let mut s = demo_session(5, 1_800_000_000);
+        for l in s.laps.iter_mut().filter(|l| l.meta.kind == LapKind::Flying) {
+            l.meta.validity = Validity::Invalid;
+            l.meta.flags.off_track = false;
+            l.meta.energy_used_pct = Some(3.0);
+            l.meta.fuel_used_l = Some(2.45);
+        }
+        svc.insert_imported(&s).unwrap();
+        let m = &s.meta;
+        use crate::analysis::strategy::{RaceLength, Unit};
+        let v = svc.race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, Some(RaceLength::Laps(39)), 0.5, 0.5, &StrategyOverrides::default()).unwrap();
+        assert_eq!(v.unit, Unit::Energy);
+        assert_eq!(v.laps_used, 5);
+        assert!((v.per_lap - 3.0).abs() < 1e-4);
+        // 39 tours à 3 % = 117 % : un arrêt, alors qu'en litres (95,5 L) on aurait dit « sans arrêt ».
+        assert_eq!(v.strategy.stops, 1);
+        assert!((v.fuel_ratio_measured.unwrap() - 2.45 / 3.0).abs() < 1e-3);
+    }
 
     #[test]
     fn garage61_reference_is_kept_apart_and_used_as_reference() {

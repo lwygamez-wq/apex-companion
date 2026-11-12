@@ -192,6 +192,12 @@ fn real_sessions_do_not_regress() {
         let name = f.file_name().unwrap().to_string_lossy().trim_end_matches(".gz").to_string();
         let got = snapshot(&svc, *id, raw, &mut rule);
         let path = snaps.join(format!("{name}.json"));
+        // En CI, un fichier du corpus sans instantané est une erreur : il ne serait jamais vérifié.
+        if !path.exists() && !update && std::env::var_os("CI").is_some() {
+            println!("{name} : instantané manquant (APEX_UPDATE_SNAPSHOTS=1 en local, puis le joindre à la PR)");
+            failures.push(name);
+            continue;
+        }
         if update || !path.exists() {
             std::fs::write(&path, serde_json::to_string_pretty(&got).unwrap() + "\n").unwrap();
             println!("{name} : instantané écrit");
