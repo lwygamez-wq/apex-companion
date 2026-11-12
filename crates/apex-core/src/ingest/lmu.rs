@@ -77,6 +77,11 @@ pub struct LapEvent {
     pub s1: f64,
     pub s2: f64,
     pub place: u8,
+    /// Retard sur le leader au passage de la ligne (tours, secondes) ; 0 dans les anciens fichiers.
+    #[serde(default)]
+    pub laps_behind_leader: i32,
+    #[serde(default)]
+    pub time_behind_leader: f64,
 }
 
 /// Un échantillon de la voiture du pilote.
@@ -322,7 +327,7 @@ impl Recorder {
             let total = s.mTotalLaps as i32;
             if self.last_total_laps != Some(total) {
                 if self.last_total_laps.is_some_and(|p| total > p) {
-                    rec.laps.push(LapEvent { et: f.info.mCurrentET, total_laps: total, lap_time: s.mLastLapTime, s1: s.mLastSector1, s2: s.mLastSector2, place: s.mPlace });
+                    rec.laps.push(LapEvent { et: f.info.mCurrentET, total_laps: total, lap_time: s.mLastLapTime, s1: s.mLastSector1, s2: s.mLastSector2, place: s.mPlace, laps_behind_leader: s.mLapsBehindLeader.max(0), time_behind_leader: s.mTimeBehindLeader.max(0.0) });
                 }
                 self.last_total_laps = Some(total);
             }
@@ -803,6 +808,8 @@ impl LiveState {
             virtual_energy_pct(t).unwrap_or(0.0) as f64,
             t.mTrackLimitsSteps as f64,
             i.mTrackLimitsStepsPerPenalty as f64,
+            s.map_or(0.0, |s| s.mLapsBehindLeader.max(0) as f64),
+            s.map_or(0.0, |s| s.mTimeBehindLeader.max(0.0)),
         ])
     }
 }
