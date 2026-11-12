@@ -76,6 +76,6 @@ L'installeur Windows se construit par le workflow `build-windows.yml`, pas en lo
 
 ## Version et feuille de route
 
-- Version publiée : **v0.32.0** (11 nov. 2026) : ingénieur de course LMU, ratio carburant.
+- Version publiée : **v0.33.0** (12 nov. 2026) : onglet Stratégie (convertisseur du stand énergie / ratio / litres, consigne de course). Avant : v0.32.0, ingénieur de course LMU et ratio carburant.
 - Suivant, par priorité : trafic multiclasse (tours gênés exclus des références) ; temps perdu aux stands mesuré ; lift and coast localisé ; séparation piste humide / nuit ; températures et pressions pneus ; hybride ; coach de course.
 - À valider sur le PC d'Alex : lectures LMU (énergie, pneus, limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.
