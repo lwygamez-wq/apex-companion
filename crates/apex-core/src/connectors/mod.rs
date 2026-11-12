@@ -9,6 +9,7 @@ pub mod iracing;
 #[cfg(windows)]
 pub mod iracing_live;
 pub mod lmu;
+pub mod lmu_probe;
 pub mod lmu_shm;
 #[cfg(windows)]
 pub mod lmu_live;

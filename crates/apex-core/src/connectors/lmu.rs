@@ -155,11 +155,24 @@ pub struct LmuDriver {
     /// Écritures sérialisées (provisoire en arrière-plan, définitive à la fin de séance).
     write_lock: Arc<std::sync::Mutex<()>>,
     part_busy: Arc<AtomicBool>,
+    /// Sonde setup (lecture seule) : rapport par séance dans ce dossier ; `None` = désactivée.
+    pub probe_dir: Option<PathBuf>,
+    /// Adresse de l'API du jeu interrogée par la sonde.
+    pub probe_api: String,
+    probe: Option<Probe>,
+}
+
+/// Sonde de la séance en cours : statistiques de la mémoire partagée et lecture de l'API du jeu.
+struct Probe {
+    stem: String,
+    stats: super::lmu_probe::ShmStats,
+    last: Option<Frame>,
+    api: Option<std::thread::JoinHandle<(Vec<super::lmu_probe::ApiRead>, super::lmu_probe::GarageSummary)>>,
 }
 
 impl LmuDriver {
     pub fn new(dir: PathBuf, hz: f32) -> Self {
-        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default() }
+        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default(), probe_dir: None, probe_api: super::lmu_probe::API_BASE.into(), probe: None }
     }
 
     fn save(&mut self, r: &Recording, done: bool) {
@@ -181,8 +194,46 @@ impl LmuDriver {
         let _ = std::fs::remove_file(self.dir.join(format!("{stem}.{}", rec::PART_EXT)));
     }
 
+    /// Écrit le rapport de la sonde (dans un autre fil : la lecture de l'API peut durer quelques secondes).
+    fn flush_probe(&mut self) {
+        let (Some(p), Some(dir)) = (self.probe.take(), self.probe_dir.clone()) else { return };
+        let Some(last) = p.last else { return };
+        std::thread::spawn(move || {
+            let mut r = super::lmu_probe::ProbeReport::new(&p.stem, &last, &p.stats);
+            if let Some(h) = p.api {
+                if let Ok((api, garage)) = h.join() {
+                    r.api = api;
+                    r.garage = garage;
+                }
+            }
+            match super::lmu_probe::write_report(&dir, &r) {
+                Ok(f) => log::info!("sonde setup LMU : {}", f.display()),
+                Err(e) => log::warn!("sonde setup LMU : {e}"),
+            }
+        });
+    }
+
+    /// Alimente la sonde : une par séance, l'API du jeu lue une fois par séance, voiture en piste.
+    fn feed_probe(&mut self, f: &Frame, on_track: bool) {
+        let Some(dir) = self.probe_dir.clone() else { return };
+        let stem = self.recorder.current().map(file_stem);
+        if self.probe.as_ref().map(|p| &p.stem) != stem.as_ref() {
+            self.flush_probe();
+            self.probe = stem.map(|stem| Probe { stem, stats: Default::default(), last: None, api: None });
+        }
+        let Some(p) = self.probe.as_mut() else { return };
+        let Some(t) = f.telem.as_ref().filter(|_| on_track) else { return };
+        p.stats.add(t);
+        p.last = Some(*f);
+        if p.api.is_none() {
+            let (base, stem) = (self.probe_api.clone(), p.stem.clone());
+            p.api = Some(std::thread::spawn(move || super::lmu_probe::read_api(&base, &dir, &stem)));
+        }
+    }
+
     /// Termine la séance en cours : écrite si elle vaut la peine, sinon provisoire supprimé.
     fn close(&mut self) {
+        self.flush_probe();
         let stem = self.recorder.current().map(file_stem);
         match self.recorder.finish() {
             Some(r) => self.save(&r, true),
@@ -235,6 +286,7 @@ impl LmuDriver {
         }
         self.tick += 1;
         let row = self.live.row(f);
+        self.feed_probe(f, row.is_some());
         let session_info = row.and_then(|_| {
             let y = rec::live_yaml(f)?;
             let key = format!("{}|{}|{}", rec::track_name(f), f.info.mSession, f.telem.as_ref().map(rec::car_name).unwrap_or_default());
@@ -288,7 +340,9 @@ impl ThreadedLive {
         let handle = std::thread::Builder::new()
             .name("apex-lmu".into())
             .spawn(move || {
+                let probe_dir = dir.parent().map(|p| p.join("sonde-lmu"));
                 let mut driver = LmuDriver::new(dir, hz);
+                driver.probe_dir = probe_dir;
                 while !stop2.load(Ordering::Relaxed) {
                     let t0 = Instant::now();
                     if let Some(f) = read() {
@@ -444,5 +498,43 @@ mod tests {
         drop(src);
         let files: Vec<_> = std::fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == rec::EXT)).collect();
         assert_eq!(files.len(), 1, "{files:?}");
+    }
+
+    #[test]
+    fn setup_probe_writes_one_report_per_session_without_the_game_api() {
+        let dir = tempfile::tempdir().unwrap();
+        let probe = dir.path().join("sonde-lmu");
+        let mut d = LmuDriver::new(dir.path().join("enregistrements-lmu"), 50.0);
+        d.probe_dir = Some(probe.clone());
+        // API fermée : la sonde le note sans bloquer l'enregistrement.
+        d.probe_api = "http://127.0.0.1:9".into();
+        let mut et = 0.0f64;
+        while et < 40.0 {
+            let mut f = frame(et, 1);
+            if let Some(t) = f.telem.as_mut() {
+                t.mWheels[0].mTemperature = [363.15, 358.15, 353.15];
+                t.mFrontDownforce = 4000.0;
+            }
+            d.step(&f, 1_790_000_000);
+            et += 0.02;
+        }
+        d.finish();
+        let mut report = None;
+        for _ in 0..100 {
+            if let Some(e) = std::fs::read_dir(&probe).ok().and_then(|mut r| r.find_map(|e| e.ok().filter(|e| e.path().extension().is_some_and(|x| x == "json")))) {
+                report = Some(e.path());
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(report.expect("rapport de sonde")).unwrap()).unwrap();
+        assert!(v["frames"].as_u64().unwrap() > 1000);
+        let field = |n: &str| v["fields"].as_array().unwrap().iter().find(|x| x["name"] == n).unwrap()["filled_pct"].as_f64().unwrap();
+        // Une roue sur quatre renseignée ; appui toujours fourni ; température optimale jamais.
+        assert_eq!(field("pneu_surface_c"), 25.0);
+        assert_eq!(field("appui_av_n"), 100.0);
+        assert_eq!(field("pneu_temperature_optimale"), 0.0);
+        assert_eq!(v["api"].as_array().unwrap().len(), 4);
+        assert!(v["api"].as_array().unwrap().iter().all(|r| r["ok"] == false));
     }
 }

@@ -6,7 +6,7 @@ Instructions pour les sessions de développement. Ce que fait l'app : `README.md
 
 | Dossier | Rôle |
 |---|---|
-| `crates/apex-core` | Toute la logique, testable sans WebView : ingestion (`ingest/` : .ibt, .apexlmu, Garage 61), connecteurs live (`connectors/`), analyse (`analysis/`), coach en direct (`live_coach.rs`), ingénieur de course (`race_engineer.rs`), stockage SQLite (`storage.rs`), commandes UI (`service.rs`). Outils de vérification dans `examples/` (ex. `strategy_check`, `dump_all` sur une copie de base) |
+| `crates/apex-core` | Toute la logique, testable sans WebView : ingestion (`ingest/` : .ibt, .apexlmu, Garage 61), connecteurs live (`connectors/`), analyse (`analysis/`), coach en direct (`live_coach.rs`), ingénieur de course (`race_engineer.rs`), setups LMU `.svm` (`setup.rs`), sonde setup LMU (`connectors/lmu_probe.rs`), stockage SQLite (`storage.rs`), commandes UI (`service.rs`). Outils de vérification dans `examples/` (ex. `strategy_check`, `dump_all` sur une copie de base) |
 | `src-tauri` | Coque Tauri 2 : commandes IPC (`commands.rs`), fil de surveillance et radio (`monitor.rs`), bouton radio (`ptt_loop.rs`), mise à jour signée (`updater.rs`) |
 | `src` | UI React/TS. `lib/types.ts` = contrat IPC (miroir des structs Rust sérialisées) ; `src/mobile/` = app iPhone |
 | `mobile` | Point d'entrée de l'app mobile (page installable, GitHub Pages), construite par `vite.mobile.config.ts` à partir de `src/mobile/` |
@@ -32,6 +32,7 @@ cargo run -p apex-core --example strategy_check -- copie/apex.db   # stratégie 
 APEX_CORPUS_DIR=corpus cargo test -p apex-core --test real_corpus -- --nocapture   # séances réelles
 APEX_UPDATE_SNAPSHOTS=1 APEX_CORPUS_DIR=corpus cargo test -p apex-core --test real_corpus   # changement voulu
 cargo run --release -p apex-core --example corpus_prepare -- sortie/ fichier.ibt   # anonymise + compresse
+cargo run -p apex-core --example setup_compare -- a.svm b.svm               # comparateur de setups LMU
 ```
 
 Corpus de séances réelles : dépôt privé `lwygamez-wq/apex-corpus` (fichiers `.ibt.gz` / `.apexlmu.gz` passés par `corpus_prepare` : noms et identifiants de pilotes remplacés, tours vérifiés identiques). La CI le récupère avec le secret `APEX_CORPUS_TOKEN` (lecture seule). Les instantanés (`crates/apex-core/tests/corpus/*.json`, chiffres seulement, sans iRating ni nom) sont versionnés ici : tout écart fait échouer la CI. Un écart voulu se met à jour avec `APEX_UPDATE_SNAPSHOTS=1` et s'explique dans la PR. Le test vérifie aussi qu'aucun conseil n'est donné sans chiffre mesuré.
@@ -64,6 +65,8 @@ L'installeur Windows se construit par le workflow `build-windows.yml`, pas en lo
 - Local-first : aucune télémétrie ne quitte le PC sans action explicite ; le débrief IA n'envoie que des chiffres calculés, visibles avant envoi.
 - Clé de signature des mises à jour : uniquement dans le secret GitHub `TAURI_SIGNING_PRIVATE_KEY`, jamais dans le dépôt.
 - Jeton Garage 61, clés Azure et IA : jamais dans les journaux ni les exports (`dump_all` les masque). Ne pas contourner les conditions de Garage 61.
+- Setups LMU vendus (GOFast, Coach Dave…) : lus sur le PC d'Alex seulement, jamais copiés dans le dépôt, le corpus ni les tests (fixtures synthétiques). Ne pas ouvrir les `.VEH` / `.mas` du jeu.
+- API locale de LMU (`127.0.0.1:6397`) : GET seulement ; les écritures font planter le jeu.
 - Ne pas versionner les DLL SimHub. `preview.html`, `src/preview.tsx`, `src/preview-data.json` (aperçu local avec une vraie base) sont exclus via `.git/info/exclude` : ne jamais les ajouter.
 
 ## Règles produit (Alex)
@@ -77,6 +80,7 @@ L'installeur Windows se construit par le workflow `build-windows.yml`, pas en lo
 
 ## Version et feuille de route
 
-- Version publiée : **v0.33.0** (12 nov. 2026) : onglet Stratégie (convertisseur du stand énergie / ratio / litres, consigne de course). Avant : v0.32.0, ingénieur de course LMU et ratio carburant.
+- Version publiée : **v0.34.0** (12 nov. 2026) : onglet Setups (comparateur `.svm`, sonde setup LMU en lecture seule), stratégie avec tours invalidés par les limites de piste. Avant : v0.33.0, onglet Stratégie.
 - Suivant, par priorité : trafic multiclasse (tours gênés exclus des références) ; temps perdu aux stands mesuré ; lift and coast localisé ; séparation piste humide / nuit ; températures et pressions pneus ; hybride ; coach de course.
-- À valider sur le PC d'Alex : lectures LMU (énergie, pneus, limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.
+- Setup Builder : décision go / analyseur seul / abandon après le premier rapport de la sonde (`sonde-lmu/` dans le dossier de données) ; étude dans le projet claude.ai (`claude/faisabilite-setup-builder.md`).
+- À valider sur le PC d'Alex : lectures LMU (limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.

@@ -377,6 +377,15 @@ pub struct EngineerHint {
 }
 
 /// Valeurs saisies à la main dans le calculateur (remplacent la mesure).
+#[derive(Debug, Clone, Serialize)]
+pub struct SetupLibraryView {
+    /// Dossiers `Settings` de LMU trouvés dans Steam.
+    pub found: Vec<String>,
+    /// Dossier lu.
+    pub dir: Option<String>,
+    pub files: Vec<crate::setup::SetupEntry>,
+}
+
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct StrategyOverrides {
     pub unit: Option<crate::analysis::strategy::Unit>,
@@ -1493,6 +1502,36 @@ impl AppService {
             .filter(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok().and_then(|m| m.elapsed().ok()).is_none_or(|a| a >= std::time::Duration::from_secs(20)))
             .collect();
         Ok(self.import_paths(&files))
+    }
+
+    /// Bibliothèque des setups LMU (`.svm`) : dossier choisi par le pilote, sinon trouvé dans Steam.
+    pub fn setup_library(&self, dir: Option<&str>) -> SetupLibraryView {
+        let found: Vec<String> = crate::setup::find_settings_dirs().into_iter().map(|p| p.display().to_string()).collect();
+        let dir = dir.map(str::to_string).filter(|d| !d.trim().is_empty()).or_else(|| found.first().cloned());
+        let files = dir.as_deref().map(|d| crate::setup::library(Path::new(d))).unwrap_or_default();
+        SetupLibraryView { found, dir, files }
+    }
+
+    /// Compare deux setups LMU, réglage par réglage (lecture seule, aucune valeur déduite).
+    pub fn setup_compare(&self, a: &str, b: &str) -> Result<crate::setup::SetupComparison> {
+        let read = |p: &str| {
+            let p = Path::new(p);
+            if !p.extension().is_some_and(|e| e.eq_ignore_ascii_case("svm")) {
+                return Err(ServiceError::User("seuls les setups LMU (.svm) se comparent".into()));
+            }
+            crate::setup::read_svm(p).map_err(|e| ServiceError::User(format!("setup illisible ({}) : {e}", p.display())))
+        };
+        Ok(crate::setup::compare(&read(a)?, &read(b)?))
+    }
+
+    /// Rapports de la sonde setup LMU, du plus récent au plus ancien.
+    pub fn setup_probe_reports(&self) -> Vec<crate::connectors::lmu_probe::ProbeReport> {
+        let Some(dir) = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("sonde-lmu")) else { return vec![] };
+        let mut files: Vec<(std::time::SystemTime, PathBuf)> = std::fs::read_dir(dir)
+            .map(|r| r.flatten().filter(|e| e.path().extension().is_some_and(|x| x == "json")).map(|e| (e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH), e.path())).collect())
+            .unwrap_or_default();
+        files.sort_by_key(|f| std::cmp::Reverse(f.0));
+        files.into_iter().take(10).filter_map(|(_, p)| serde_json::from_str(&std::fs::read_to_string(p).ok()?).ok()).collect()
     }
 
     /// Séances Le Mans Ultimate enregistrées par Apex : importe chaque `.apexlmu` nouveau, une fois
@@ -3565,5 +3604,27 @@ mod zone_tests {
         assert!(super::zone_origin(cdn).unwrap().contains("garage61.net"), "export servi par un stockage tiers");
         assert_eq!(super::zone_origin("[ZoneTransfer]\r\nZoneId=3\r\nHostUrl=about:internet\r\n"), None);
         assert!(super::download_origin(std::path::Path::new("/n/existe/pas.csv")).is_none());
+    }
+
+    #[test]
+    fn setup_compare_reads_only_svm_files_and_probe_reports_are_listed() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = crate::service::AppService::open(&dir.path().join("apex.db")).unwrap();
+        let a = dir.path().join("a.svm");
+        let b = dir.path().join("b.svm");
+        std::fs::write(&a, "VehicleClassSetting=\"Hypercar X\"\n[REARWING]\nRWSetting=18//P19\n").unwrap();
+        std::fs::write(&b, "VehicleClassSetting=\"Hypercar X\"\n[REARWING]\nRWSetting=16//P17\n").unwrap();
+        let c = svc.setup_compare(a.to_str().unwrap(), b.to_str().unwrap()).unwrap();
+        assert_eq!(c.changes.len(), 1);
+        assert_eq!(c.changes[0].steps, -2);
+        assert!(svc.setup_compare(dir.path().join("apex.db").to_str().unwrap(), b.to_str().unwrap()).is_err());
+        let lib = svc.setup_library(Some(dir.path().to_str().unwrap()));
+        assert!(lib.files.is_empty(), "les .svm sont rangés par dossier de circuit");
+
+        assert!(svc.setup_probe_reports().is_empty());
+        let r = crate::connectors::lmu_probe::ProbeReport { stem: "lmu_x".into(), frames: 10, ..Default::default() };
+        crate::connectors::lmu_probe::write_report(&dir.path().join("sonde-lmu"), &r).unwrap();
+        let got = svc.setup_probe_reports();
+        assert_eq!((got.len(), got[0].stem.as_str(), got[0].frames), (1, "lmu_x", 10));
     }
 }
