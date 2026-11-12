@@ -2145,9 +2145,13 @@ impl AppService {
         times.sort_by(|a, b| a.total_cmp(b));
         let lap_time = o.lap_time_s.filter(|v| *v > 1.0).or_else(|| times.get(times.len() / 2).copied());
         let (Some(per), Some(lap_time)) = (per, lap_time) else {
-            return Err(ServiceError::User(
-                "pas encore de tour propre mesuré ici avec cette voiture : roule quelques tours, ou saisis la consommation et le temps au tour".into(),
-            ));
+            // Énergie demandée mais seulement des tours sans énergie mesurée (avant la v0.31) : le dire.
+            let msg = if unit == Unit::Energy && per.is_none() && !times.is_empty() {
+                "pas encore de consommation d'énergie mesurée ici (séances roulées avant la mesure de l'énergie) : saisis ta conso par tour en %, ou roule quelques tours"
+            } else {
+                "pas encore de tour propre mesuré ici avec cette voiture : roule quelques tours, ou saisis la consommation et le temps au tour"
+            };
+            return Err(ServiceError::User(msg.into()));
         };
         let fuel_tank = db.latest_profile(track, car)?.or(db.latest_car_profile(car)?).and_then(|p| p.usable_tank_l());
         let measured_tank = match unit {

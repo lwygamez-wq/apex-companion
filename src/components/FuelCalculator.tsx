@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
+import { consigne } from "../lib/strategy";
 import type { CircuitOverview, EngineerMode, FuelUnit, PlanOption, RaceLength, RaceStrategyView } from "../lib/types";
 
 type Combo = Pick<CircuitOverview, "sim" | "track" | "track_config" | "car" | "setup">;
@@ -77,13 +78,14 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
     const v = Number(t.replace(",", "."));
     return t.trim() && Number.isFinite(v) && v > 0 ? v : null;
   };
-  const overrides = { unit, per_lap: num(perLapTxt), lap_time_s: parseLapTime(lapTxt), tank: num(tank), fuel_ratio: num(ratioTxt) };
+  const overrides = { unit: unit ?? (combo.sim === "lmu" ? ("energy" as FuelUnit) : null), per_lap: num(perLapTxt), lap_time_s: parseLapTime(lapTxt), tank: num(tank), fuel_ratio: num(ratioTxt) };
   const view = useAsync(
     () => api.raceStrategy(combo, length, margin, formation ? 0.5 : 0, overrides),
     [key, length?.kind, length?.value, margin, formation, unit, perLapTxt, lapTxt, tank, ratioTxt],
   );
   const v: RaceStrategyView | null = view.data ?? null;
-  const u: FuelUnit = unit ?? v?.unit ?? "litres";
+  // LMU : Hypercar et LMGT3 sont limitées par l'énergie virtuelle ; on part en % par défaut.
+  const u: FuelUnit = unit ?? v?.unit ?? (combo.sim === "lmu" ? "energy" : "litres");
   const len = length ?? v?.default_length ?? { kind: "minutes", value: 30 };
   const s = v?.strategy;
   const energyPossible = combo.sim === "lmu" || v?.measured_unit === "energy";
@@ -103,11 +105,7 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
     api.setEngineerPlan(combo, { mode: next, margin_laps: marginLaps }).catch((e: unknown) => setSaveErr(e instanceof Error ? e.message : String(e)));
   };
 
-  let headline = s?.summary.split(" Ou économise")[0] ?? "";
-  if (s && chosen?.kind === "save") {
-    const w = chosen.window;
-    headline = `${chosen.stops} arrêt${chosen.stops > 1 ? "s" : ""} si tu tiens ${perLap(u, chosen.target_per_lap)} par tour (lift and coast, ${Math.round((chosen.saving ?? 0) * 100)} % de moins)${w ? ` ; premier arrêt entre les tours ${w[0]} et ${w[1]}` : ""}.`;
-  }
+  const order = s && v && chosen ? consigne(u, chosen, s.options, v.per_lap, ratio) : null;
 
   return (
     <div className="card fuelcalc">
@@ -192,6 +190,40 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
 
       {s && v && chosen && (
         <>
+          {order && (
+            <div className={`fc-order ${order.mustSave ? "save" : "free"}`}>
+              <div className="fc-order-row">
+                <span className="fc-order-k">Au départ</span>
+                <b className="mono">{u === "energy" ? `${order.start.set} %` : `${order.start.set} L`}</b>
+                {u === "energy" && ratio != null && <span className="fc-order-v">ratio <b className="mono">{n2(ratio)}</b> · {order.start.litres} L</span>}
+              </div>
+              <div className="fc-order-row">
+                <span className="fc-order-k">Reste sous</span>
+                <b className="mono">{perLap(u, order.bar)}</b>
+                <span className="fc-order-v">
+                  par tour ·{" "}
+                  {order.mustSave ? <em>économise {Math.round((order.saving ?? 0) * 100)} % (tu fais {perLap(u, v.per_lap)})</em> : <>pas besoin d'économiser (tu fais {perLap(u, v.per_lap)})</>}
+                </span>
+              </div>
+              <div className="fc-order-row">
+                <span className="fc-order-k">{order.stops.length ? `${order.stops.length} arrêt${order.stops.length > 1 ? "s" : ""}` : "Arrêts"}</span>
+                {order.stops.length ? (
+                  <div className="fc-order-stops">
+                    {order.stops.map((p, k) => (
+                      <span key={k} className="fc-pit">
+                        Box fin T{p.boxLap} → <b className="mono">{u === "energy" ? `${p.set} %` : `${p.set} L`}</b>
+                        {p.litres != null && <small> · {p.litres} L</small>}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="fc-order-v">aucun, de quoi finir</span>
+                )}
+              </div>
+              <p className="fc-order-why">{order.why}</p>
+            </div>
+          )}
+
           <div className="fc-plan" role="group" aria-label="Plan suivi en course">
             <span className="muted">Plan suivi en course</span>
             <div className="seg">
@@ -203,13 +235,13 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
           </div>
           {saveErr && <div className="error" style={{ marginTop: 6 }}>{saveErr}</div>}
 
-          <div className="fc-head">
-            <div className="fc-stops">
-              <b>{stops}</b>
-              <span>arrêt{stops > 1 ? "s" : ""}</span>
+          {s.fuel_limited && v.fuel_tank_l != null && ratio != null && (
+            <div className="fc-warn">
+              Avec un ratio de {n2(ratio)}, le réservoir de {Math.round(v.fuel_tank_l)} L ne contient que {Math.floor(v.fuel_tank_l / ratio)} % d'énergie : c'est le carburant qui limite les relais.
             </div>
-            <p>{headline}</p>
-          </div>
+          )}
+          <details className="fc-details">
+          <summary>Détail : relais tour par tour, pneus, autre plan</summary>
           {s.options.length > 1 && (
             <div className="fc-options">
               {s.options.map((o) => (
@@ -226,11 +258,6 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
             <div><span>Tours par plein</span><b className="mono">{perTank ?? "—"}</b></div>
             <div><span>Relais le plus long</span><b className="mono">{duration(longest * v.lap_time_s)}</b></div>
           </div>
-          {s.fuel_limited && v.fuel_tank_l != null && ratio != null && (
-            <div className="fc-warn">
-              Avec un ratio de {n2(ratio)}, le réservoir de {Math.round(v.fuel_tank_l)} L ne contient que {Math.floor(v.fuel_tank_l / ratio)} % d'énergie : c'est le carburant qui limite les relais.
-            </div>
-          )}
           <table className="fc-stints">
             <thead>
               <tr><th>Relais</th><th>Tours</th><th className="num">Durée</th><th className="num">{u === "energy" ? "Régler au stand" : "Partir avec"}</th></tr>
@@ -277,6 +304,7 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
               : ""}
             En course, l'ingénieur annonce le relais, la cible par tour, quand lever le pied ou attaquer, et t'appelle au stand. Dis « stratégie » pour l'entendre.
           </div>
+          </details>
         </>
       )}
     </div>
