@@ -157,7 +157,7 @@ pub struct LmuDriver {
     part_busy: Arc<AtomicBool>,
     /// Sonde setup (lecture seule) : rapport par séance dans ce dossier ; `None` = désactivée.
     pub probe_dir: Option<PathBuf>,
-    /// Adresse de l'API du jeu interrogée par la sonde.
+    /// Adresse de l'API du jeu interrogée par la sonde (vide = API non lue).
     pub probe_api: String,
     probe: Option<Probe>,
 }
@@ -225,7 +225,7 @@ impl LmuDriver {
         let Some(t) = f.telem.as_ref().filter(|_| on_track) else { return };
         p.stats.add(t);
         p.last = Some(*f);
-        if p.api.is_none() {
+        if p.api.is_none() && !self.probe_api.is_empty() {
             let (base, stem) = (self.probe_api.clone(), p.stem.clone());
             p.api = Some(std::thread::spawn(move || super::lmu_probe::read_api(&base, &dir, &stem)));
         }
@@ -506,8 +506,8 @@ mod tests {
         let probe = dir.path().join("sonde-lmu");
         let mut d = LmuDriver::new(dir.path().join("enregistrements-lmu"), 50.0);
         d.probe_dir = Some(probe.clone());
-        // API fermée : la sonde le note sans bloquer l'enregistrement.
-        d.probe_api = "http://127.0.0.1:9".into();
+        // API non lue ici (sous Windows, un port fermé met plusieurs secondes à répondre) : testée à part.
+        d.probe_api = String::new();
         let mut et = 0.0f64;
         while et < 40.0 {
             let mut f = frame(et, 1);
@@ -534,7 +534,6 @@ mod tests {
         assert_eq!(field("pneu_surface_c"), 25.0);
         assert_eq!(field("appui_av_n"), 100.0);
         assert_eq!(field("pneu_temperature_optimale"), 0.0);
-        assert_eq!(v["api"].as_array().unwrap().len(), 4);
-        assert!(v["api"].as_array().unwrap().iter().all(|r| r["ok"] == false));
+        assert!(v["api"].as_array().unwrap().is_empty());
     }
 }
