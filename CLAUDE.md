@@ -48,6 +48,24 @@ L'installeur Windows se construit par le workflow `build-windows.yml`, pas en lo
 - Canaux live : lus par nom dans `LIVE_CHANNELS` (absent = 0), garder `LIVE_N` et l'ordre de `LiveState::row` (LMU) alignés.
 - Fichiers `.apexlmu` : le décodage doit accepter les anciens fichiers sans les extensions récentes.
 
+## Méthode
+
+Chaque changement, même petit :
+
+1. Branche depuis `main` (`main` est protégée : pas de push direct).
+2. Logique dans `apex-core` : écrire d'abord le test qui fixe les chiffres attendus.
+3. Coder, puis toutes les vérifications de la section Commandes (TypeScript, Vitest, clippy, tests Rust).
+4. Séances réelles : `real_corpus` doit rester « identique ». Un écart voulu se met à jour exprès et s'explique écart par écart dans la PR.
+5. Interface modifiée : captures dans l'aperçu local et contrôle visuel.
+6. PR avec le modèle (`.github/pull_request_template.md`) : résumé, tests, séances réelles, captures, limites. La CI (`linux`, `windows`) doit être verte.
+
+## Autonomie de Claude
+
+- **Décide et fusionne seul** quand la CI est verte : corrections, améliorations internes, tests, outillage, découpage du code, montée de dépendances sans effet visible.
+- **Ouvre la PR et attend la fusion d'Alex** : nouvelle fonctionnalité ou changement visible, migration qui modifie ou supprime des données, toute publication de version (la fusion de la PR de version vaut validation, voir la skill `apex-release`).
+- **Demande avant d'agir** : direction visuelle, périmètre d'une fonction, clés, comptes ou secrets, tout ce qui coûte de l'argent.
+- Ne jamais désactiver une vérification, un test ou une règle de `main` pour faire passer une PR.
+
 ## Pièges déjà rencontrés
 
 - `AppService::db()` prend un `Mutex` non réentrant : ne jamais appeler une méthode qui reprend `self.db()` pendant qu'un garde est tenu (blocage de l'écran, v0.32.0).
