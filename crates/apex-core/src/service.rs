@@ -2208,11 +2208,19 @@ impl AppService {
         let profile = db.latest_profile(track, car)?.or(db.latest_car_profile(car)?);
         let fuel_tank = profile.as_ref().and_then(|p| p.usable_tank_l());
         // Catégorie la plus rapide (Hypercar en LMU) : pas de tour en plus à la fin d'une course au temps.
-        let top_class = sim == SimId::Lmu && profile.as_ref().and_then(|p| p.car.class.as_deref()).is_some_and(|c| c.to_ascii_lowercase().contains("hyper"));
+        let top_class = crate::analysis::strategy::is_top_class(sim, profile.as_ref().and_then(|p| p.car.class.as_deref()));
         // Temps perdu par arrêt, mesuré sur tes courses ici : tour de rentrée + tour de sortie, moins
         // deux tours normaux de la même course. Médiane des arrêts.
+        // Sans course avec cette voiture ici, les courses d'autres voitures sur le même circuit : la voie
+        // des stands est la même (Alpine à Imola le 12 nov., 0 arrêt mesuré : un tour de trop compté).
         let mut losses: Vec<f32> = vec![];
-        for s in sessions.iter().filter(|s| s.kind == SessionKind::Race) {
+        let same_car_races = sessions.iter().any(|s| s.kind == SessionKind::Race);
+        let other_cars: Vec<SessionSummary> = if same_car_races {
+            vec![]
+        } else {
+            db.list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), ..Default::default() })?.into_iter().filter(|s| s.track_config.as_deref() == track_config).collect()
+        };
+        for s in sessions.iter().chain(other_cars.iter()).filter(|s| s.kind == SessionKind::Race) {
             let laps = db.laps(s.id)?;
             let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
             normal.sort_by(|a, b| a.total_cmp(b));

@@ -384,8 +384,10 @@ impl LiveCoach {
             None => (None, vec![]),
         };
         let self_reference = reference.is_none();
+        // Catégorie lue dans la séance elle-même : valable même sans historique sur ce circuit.
+        let top_class = crate::analysis::strategy::is_top_class(meta.sim, builder.session_info().profile.car.class.as_deref());
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class: false, pit_loss_s: None },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -405,7 +407,8 @@ impl LiveCoach {
     /// Fin de course au temps : catégorie la plus rapide (pas de tour en plus) et temps perdu par
     /// arrêt mesuré sur tes courses (les arrêts restants mangent du chrono, donc des tours).
     pub fn set_race_context(&mut self, top_class: bool, pit_loss_s: Option<f32>) {
-        self.top_class = top_class;
+        // La catégorie de la séance prime : l'historique peut manquer (nouvelle voiture).
+        self.top_class |= top_class;
         self.pit_loss_s = pit_loss_s.filter(|p| *p > 0.0).map(f64::from);
     }
 
@@ -1130,5 +1133,26 @@ mod tests {
         let base = run(None);
         assert!((base - run(Some((true, Some(80.0)))) - 3.0).abs() < 1e-3);
         assert!((base - run(Some((true, None))) - 1.0).abs() < 1e-3);
+    }
+
+    /// Hypercar sans historique sur le circuit (nouvelle voiture, Alpine à Imola le 12 nov.) : la
+    /// catégorie vient de la séance elle-même, pas du calculateur. Sans ça, un tour en trop et un faux
+    /// « 1 arrêt au lieu de 0 » à 8 tours de la fin.
+    #[test]
+    fn hypercar_class_comes_from_the_live_session() {
+        use crate::ingest::lmu::{live_yaml, testkit::*};
+        let mut f = frame(0.0, 0.0, 0.0, 0.0, 10);
+        if let Some(s) = f.scoring.as_mut() {
+            s.mVehicleClass = [0; 32];
+            s.mVehicleClass[..5].copy_from_slice(b"Hyper");
+        }
+        let (coach, _) = LiveCoach::new(&live_yaml(&f).unwrap(), None, vec![], None);
+        assert!(coach.top_class);
+        // Le calculateur sans historique ne la retire pas.
+        let mut coach = coach;
+        coach.set_race_context(false, None);
+        assert!(coach.top_class);
+        let (lmp2, _) = LiveCoach::new(&live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap(), None, vec![], None);
+        assert!(!lmp2.top_class);
     }
 }

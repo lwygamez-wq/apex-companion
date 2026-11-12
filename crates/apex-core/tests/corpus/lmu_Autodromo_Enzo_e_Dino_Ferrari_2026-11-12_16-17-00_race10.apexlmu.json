@@ -1,0 +1,1696 @@
+{
+  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Enzo e Dino Ferrari · Voiture : Alpine A424 · Séance : course · Série : Open\nLongueur du circuit : 4901 m\nTours : 57 au total, 46 propres. Meilleur tour propre : 1:32.663 (tour 49). Tour théorique (meilleurs segments) : 1:31.937.\nRégularité : écart-type 1.06 s sur 46 tours propres, moyenne 1:33.887.\n\nTOURS (numéro, temps, état) :\n- T0 — stand, 0.40 L\n- T0 1:38.956 propre, 2.69 L\n- T1 1:36.705 incident, 2.60 L\n- T2 1:33.689 propre, 2.64 L\n- T3 1:33.245 propre, 2.59 L\n- T4 1:32.977 propre, 2.55 L\n- T5 1:43.527 sortie de piste, 2.67 L\n- T6 1:34.556 propre, 2.61 L\n- T7 1:33.423 propre, 2.58 L\n- T8 1:58.439 sortie de piste, incident, 2.60 L\n- T9 1:35.207 propre, 2.59 L\n- T10 1:33.941 propre, 2.53 L\n- T11 1:34.643 propre, 2.53 L\n- T12 1:33.359 propre, 2.55 L\n- T13 1:33.410 propre, 2.57 L\n- T14 1:34.675 propre, 2.50 L\n- T15 1:33.354 propre, 2.58 L\n- T16 1:33.420 propre, 2.58 L\n- T17 1:35.499 propre, 2.57 L\n- T18 1:33.749 propre, 2.61 L\n- T19 1:33.172 propre, 2.62 L\n- T20 1:33.027 propre, 2.63 L\n- T21 1:35.180 propre, 2.60 L\n- T22 1:32.771 propre, 2.63 L\n- T23 1:33.753 propre, 2.66 L\n- T24 1:33.280 propre, 2.65 L\n- T25 1:33.765 propre, 2.58 L\n- T26 1:33.668 incident, 2.59 L\n- T27 1:32.894 propre, 2.58 L\n- T28 1:33.595 propre, 2.51 L\n- T29 1:32.800 propre, 2.57 L\n- T30 1:33.266 propre, 2.60 L\n- T31 1:33.419 propre, 2.59 L\n- T32 1:33.556 propre, 2.47 L\n- T33 1:34.460 propre, 2.49 L\n- T34 2:22.497 stand\n- T35 1:49.082 stand, 2.58 L\n- T36 1:34.515 propre, 2.56 L\n- T37 1:34.303 propre, 2.57 L\n- T38 1:33.798 propre, 2.59 L\n- T39 1:43.226 sortie de piste, incident, 2.65 L\n- T40 1:34.485 propre, 2.54 L\n- T41 1:34.203 propre, 2.53 L\n- T42 1:46.983 sortie de piste, 2.65 L\n- T43 1:33.354 propre, 2.61 L\n- T44 1:44.062 sortie de piste, incident, 2.69 L\n- T45 1:34.404 propre, 2.57 L\n- T46 1:33.017 propre, 2.59 L\n- T47 1:33.427 propre, 2.62 L\n- T48 1:33.116 propre, 2.70 L\n- T49 1:32.663 propre, 2.68 L\n- T50 1:33.365 propre, 2.53 L\n- T51 1:33.055 propre, 2.52 L\n- T52 1:45.531 sortie de piste, incident, 2.59 L\n- T53 1:35.322 propre, 2.57 L\n- T54 1:34.165 propre, 2.60 L\n- T55 1:34.574 propre, 2.57 L\n\nCOMPARAISON : ton tour 28 (1:33.595) contre la référence ton tour 49 (1:32.663). Écart final +0.933 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Acque Minerali : +0.66 s · freinage plus tôt (-16 m) · vitesse mini 100 vs 114 km/h, gaz -1 m · sortie 179 vs 183 km/h\n- Variante Alta : +0.13 s · freinage plus tard (+5 m) · vitesse mini 85 vs 88 km/h, gaz -10 m · sortie 182 vs 179 km/h\n- Villeneuve : +0.04 s · freinage au même endroit · vitesse mini 131 vs 132 km/h, gaz +23 m · sortie 186 vs 198 km/h\n- V8 : -0.01 s · freinage plus tôt (-7 m) · vitesse mini 121 vs 117 km/h, gaz -17 m · sortie 188 vs 194 km/h\n- Piratella : -0.05 s · freinage plus tard (+17 m) · vitesse mini 150 vs 150 km/h, gaz -8 m · sortie 209 vs 209 km/h\n- Tamburello : -0.06 s · freinage plus tôt (-4 m) · vitesse mini 129 vs 124 km/h, gaz -8 m · sortie 185 vs 196 km/h\n- Rivazza : -0.06 s · freinage plus tard (+15 m) · vitesse mini 97 vs 99 km/h, gaz -4 m · sortie 140 vs 138 km/h\n- Tosa : -0.08 s · freinage plus tard (+20 m) · vitesse mini 85 vs 88 km/h, gaz +8 m · sortie 176 vs 176 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Acque Minerali : freinage trop précoce (gain estimé 0.33 à 0.66 s) : Tu freines environ 16 m plus tôt que la référence et ta vitesse minimale est inférieure de 14 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 0.66 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 11 m plus loin (réf. : 2634 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 114 km/h au minimum.\n- Variante Alta : perte de temps sans cause isolée (gain estimé 0.06 à 0.13 s) : Tu perds 0.13 s sur ce virage, mais freinage, vitesse minimale et remise des gaz restent dans les seuils de détection. Perte mesurée : 0.13 s par rapport à la référence. Confiance : faible. → Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Variante Alta : 0.29 s entre ton passage moyen et ton meilleur, sans sortie.\n- Variante Alta : 0/53 sorties, à prendre 0.29 s en refaisant ton meilleur passage · Aucune sortie sur 53 passages, et 0.29 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Tamburello : 2/53 sorties, à prendre 0.30 s en refaisant ton meilleur passage, une sortie coûte 15.3 s · 2 sortie(s) sur 53, 0.30 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Acque Minerali : 3/53 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 6.5 s · 3 sortie(s) sur 53, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Rivazza : 1/53 sorties, à prendre 0.16 s en refaisant ton meilleur passage, une sortie coûte 9.0 s · 1 sortie(s) sur 53, 0.16 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Tosa : 0/53 sorties, à prendre 0.22 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Villeneuve : 0/53 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V8 : 0/53 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Piratella : 0/53 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,47 s. Le plus gros : Tamburello (0,28 s).\n- Tamburello : −0.28 s possibles (meilleur passage au tour 27). Sur tes meilleurs passages, tu sors 8 km/h plus vite et tu freines 14 m plus tard.\n- Variante Alta : −0.24 s possibles (meilleur passage au tour 49). Sur tes meilleurs passages, tu portes 4 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.\n- Acque Minerali : −0.20 s possibles (meilleur passage au tour 30). Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu freines 20 m plus tard.\n- Tosa : −0.20 s possibles (meilleur passage au tour 47). Sur tes meilleurs passages, tu portes 2 km/h de plus au point le plus lent.\n- Piratella : −0.16 s possibles (meilleur passage au tour 27). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.\n- V8 : −0.14 s possibles (meilleur passage au tour 25). Sur tes meilleurs passages, tu sors 4 km/h plus vite.\n\nSORTIES DE PISTE :\n- Acque Minerali (à 2895 m) aux tours [5, 8, 44, 52]\n- Tamburello (à 870 m) aux tours [8, 42]\n- hors virage (à 1052 m) aux tours [8]\n- Rivazza (à 4143 m) aux tours [39]\n\nCOURSE : P3 → P1 sur 12 pilotes, 0x ; point noir : Acque Minerali\nGrille Some(3), arrivée Some(1), 12 pilotes, 0 incidents.\n- Acque Minerali : 4 incidents, 0x : Incidents aux tours 8, 26, 44, 52. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n",
+  "analysis_reference": 49,
+  "best": 49,
+  "comparisons": [
+    {
+      "compared": 22,
+      "corners": [
+        {
+          "apex_m": 705.0,
+          "dt": -0.115,
+          "min_cmp": 125.27,
+          "min_ref": 123.882
+        },
+        {
+          "apex_m": 1415.0,
+          "dt": 0.098,
+          "min_cmp": 131.685,
+          "min_ref": 132.496
+        },
+        {
+          "apex_m": 1705.0,
+          "dt": -0.152,
+          "min_cmp": 92.539,
+          "min_ref": 88.232
+        },
+        {
+          "apex_m": 2335.0,
+          "dt": 0.021,
+          "min_cmp": 143.577,
+          "min_ref": 150.476
+        },
+        {
+          "apex_m": 2855.0,
+          "dt": 0.02,
+          "min_cmp": 110.922,
+          "min_ref": 113.792
+        },
+        {
+          "apex_m": 3385.0,
+          "dt": 0.085,
+          "min_cmp": 86.506,
+          "min_ref": 87.73
+        },
+        {
+          "apex_m": 4140.0,
+          "dt": -0.085,
+          "min_cmp": 106.765,
+          "min_ref": 98.84
+        },
+        {
+          "apex_m": 4270.0,
+          "dt": 0.004,
+          "min_cmp": 123.138,
+          "min_ref": 117.233
+        }
+      ],
+      "delta_end_s": 0.108,
+      "insights": [
+        {
+          "confidence": "low",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.76 s",
+              "7.86 s",
+              "+0.10 s"
+            ],
+            [
+              "Début de freinage",
+              "1225 m",
+              "1225 m",
+              "-0 m"
+            ],
+            [
+              "Vitesse minimale",
+              "132 km/h",
+              "132 km/h",
+              "-0.8 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "199 km/h",
+              "199 km/h",
+              "-0.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1415 m",
+              "1410 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "12",
+              "8",
+              "-4"
+            ]
+          ],
+          "gain": [
+            0.049,
+            0.098
+          ],
+          "id": "corner-2",
+          "priority": "improvement",
+          "recommendation": "Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.",
+          "segment": "Villeneuve",
+          "title": "Villeneuve : perte de temps sans cause isolée"
+        },
+        {
+          "confidence": "low",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.29 s",
+              "8.37 s",
+              "+0.09 s"
+            ],
+            [
+              "Début de freinage",
+              "3235 m",
+              "3230 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "88 km/h",
+              "87 km/h",
+              "-1.2 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "181 km/h",
+              "181 km/h",
+              "-0.1 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3390 m",
+              "3385 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "7",
+              "6",
+              "-1"
+            ]
+          ],
+          "gain": [
+            0.043,
+            0.085
+          ],
+          "id": "corner-6",
+          "priority": "improvement",
+          "recommendation": "Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.",
+          "segment": "Variante Alta",
+          "title": "Variante Alta : perte de temps sans cause isolée"
+        }
+      ],
+      "reference": 49,
+      "warnings": []
+    },
+    {
+      "compared": 8,
+      "corners": [
+        {
+          "apex_m": 705.0,
+          "dt": 19.983,
+          "min_cmp": 28.4,
+          "min_ref": 123.882
+        },
+        {
+          "apex_m": 1415.0,
+          "dt": 0.678,
+          "min_cmp": 128.948,
+          "min_ref": 132.496
+        },
+        {
+          "apex_m": 1705.0,
+          "dt": 0.313,
+          "min_cmp": 82.902,
+          "min_ref": 88.232
+        },
+        {
+          "apex_m": 2335.0,
+          "dt": 0.195,
+          "min_cmp": 144.951,
+          "min_ref": 150.476
+        },
+        {
+          "apex_m": 2855.0,
+          "dt": 0.835,
+          "min_cmp": 95.744,
+          "min_ref": 113.792
+        },
+        {
+          "apex_m": 3385.0,
+          "dt": 0.37,
+          "min_cmp": 83.275,
+          "min_ref": 87.73
+        },
+        {
+          "apex_m": 4140.0,
+          "dt": -0.016,
+          "min_cmp": 95.323,
+          "min_ref": 98.84
+        },
+        {
+          "apex_m": 4270.0,
+          "dt": -0.007,
+          "min_cmp": 121.824,
+          "min_ref": 117.233
+        }
+      ],
+      "delta_end_s": 25.776,
+      "insights": [
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.69 s",
+              "28.67 s",
+              "+19.98 s"
+            ],
+            [
+              "Début de freinage",
+              "515 m",
+              "510 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "124 km/h",
+              "28 km/h",
+              "-95.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "197 km/h",
+              "77 km/h",
+              "-119.8 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "705 m",
+              "880 m",
+              "+175 m"
+            ],
+            [
+              "Corrections de volant",
+              "20",
+              "22",
+              "+2"
+            ]
+          ],
+          "gain": [
+            9.991,
+            19.983
+          ],
+          "id": "corner-1",
+          "priority": "critical",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 124 km/h vers 700 m).",
+          "segment": "Tamburello",
+          "title": "Tamburello : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.96 s",
+              "8.79 s",
+              "+0.84 s"
+            ],
+            [
+              "Début de freinage",
+              "2635 m",
+              "2670 m",
+              "+35 m"
+            ],
+            [
+              "Vitesse minimale",
+              "114 km/h",
+              "96 km/h",
+              "-18.0 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "184 km/h",
+              "142 km/h",
+              "-42.1 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2860 m",
+              "2930 m",
+              "+70 m"
+            ],
+            [
+              "Corrections de volant",
+              "14",
+              "16",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.418,
+            0.835
+          ],
+          "id": "corner-5",
+          "priority": "critical",
+          "recommendation": "Reviens vers le point de freinage de la référence (2635 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 184 km/h.",
+          "segment": "Acque Minerali",
+          "title": "Acque Minerali : freinage trop tardif, entrée surchargée"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.76 s",
+              "8.44 s",
+              "+0.68 s"
+            ],
+            [
+              "Début de freinage",
+              "1225 m",
+              "1210 m",
+              "-15 m"
+            ],
+            [
+              "Vitesse minimale",
+              "132 km/h",
+              "129 km/h",
+              "-3.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "196 km/h",
+              "194 km/h",
+              "-1.8 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1415 m",
+              "1415 m",
+              "+0 m"
+            ],
+            [
+              "Corrections de volant",
+              "12",
+              "16",
+              "+4"
+            ]
+          ],
+          "gain": [
+            0.339,
+            0.678
+          ],
+          "id": "corner-2",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 10 m plus loin (réf. : 1225 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 132 km/h au minimum.",
+          "segment": "Villeneuve",
+          "title": "Villeneuve : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.29 s",
+              "8.66 s",
+              "+0.37 s"
+            ],
+            [
+              "Début de freinage",
+              "3235 m",
+              "3225 m",
+              "-10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "88 km/h",
+              "83 km/h",
+              "-4.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "181 km/h",
+              "181 km/h",
+              "+0.3 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3390 m",
+              "3390 m",
+              "+0 m"
+            ],
+            [
+              "Corrections de volant",
+              "7",
+              "6",
+              "-1"
+            ]
+          ],
+          "gain": [
+            0.185,
+            0.37
+          ],
+          "id": "corner-6",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 3235 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 88 km/h au minimum.",
+          "segment": "Variante Alta",
+          "title": "Variante Alta : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.80 s",
+              "8.11 s",
+              "+0.31 s"
+            ],
+            [
+              "Début de freinage",
+              "1585 m",
+              "1565 m",
+              "-20 m"
+            ],
+            [
+              "Vitesse minimale",
+              "88 km/h",
+              "83 km/h",
+              "-5.3 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "176 km/h",
+              "175 km/h",
+              "-1.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1705 m",
+              "1725 m",
+              "+20 m"
+            ],
+            [
+              "Corrections de volant",
+              "2",
+              "5",
+              "+3"
+            ]
+          ],
+          "gain": [
+            0.157,
+            0.313
+          ],
+          "id": "corner-3",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 14 m plus loin (réf. : 1585 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 88 km/h au minimum.",
+          "segment": "Tosa",
+          "title": "Tosa : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.17 s",
+              "6.37 s",
+              "+0.20 s"
+            ],
+            [
+              "Début de freinage",
+              "2180 m",
+              "2185 m",
+              "+5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "150 km/h",
+              "145 km/h",
+              "-5.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "210 km/h",
+              "206 km/h",
+              "-3.1 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2335 m",
+              "2305 m",
+              "-30 m"
+            ],
+            [
+              "Corrections de volant",
+              "14",
+              "16",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.098,
+            0.195
+          ],
+          "id": "corner-4",
+          "priority": "important",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 150 km/h vers 2335 m).",
+          "segment": "Piratella",
+          "title": "Piratella : vitesse minimale insuffisante"
+        }
+      ],
+      "reference": 49,
+      "warnings": [
+        "Le tour analysé n°8 est perturbé ou invalide."
+      ]
+    }
+  ],
+  "consistency": {
+    "clean_laps": 46,
+    "cv_percent": 1.126,
+    "mean_s": 93.887,
+    "stddev_s": 1.057
+  },
+  "fastest": 49,
+  "lap_2": true,
+  "laps": [
+    {
+      "clean": false,
+      "fuel": 0.4,
+      "kind": "incomplete",
+      "n": 0,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    },
+    {
+      "clean": true,
+      "fuel": 2.694,
+      "kind": "flying",
+      "n": 0,
+      "sectors": [],
+      "time": 98.956,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.604,
+      "kind": "flying",
+      "n": 1,
+      "sectors": [
+        20.527,
+        31.113,
+        45.064
+      ],
+      "time": 96.705,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.64,
+      "kind": "flying",
+      "n": 2,
+      "sectors": [
+        19.321,
+        30.855,
+        43.512
+      ],
+      "time": 93.689,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.587,
+      "kind": "flying",
+      "n": 3,
+      "sectors": [
+        19.239,
+        30.839,
+        43.167
+      ],
+      "time": 93.245,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.549,
+      "kind": "flying",
+      "n": 4,
+      "sectors": [
+        19.056,
+        30.728,
+        43.193
+      ],
+      "time": 92.977,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.666,
+      "kind": "flying",
+      "n": 5,
+      "sectors": [
+        19.261,
+        30.867,
+        53.399
+      ],
+      "time": 103.527,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.605,
+      "kind": "flying",
+      "n": 6,
+      "sectors": [
+        19.308,
+        30.731,
+        44.517
+      ],
+      "time": 94.556,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.579,
+      "kind": "flying",
+      "n": 7,
+      "sectors": [
+        19.316,
+        30.79,
+        43.317
+      ],
+      "time": 93.423,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.602,
+      "kind": "flying",
+      "n": 8,
+      "sectors": [
+        41.928,
+        31.787,
+        44.724
+      ],
+      "time": 118.439,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.591,
+      "kind": "flying",
+      "n": 9,
+      "sectors": [
+        20.011,
+        31.307,
+        43.889
+      ],
+      "time": 95.207,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.528,
+      "kind": "flying",
+      "n": 10,
+      "sectors": [
+        19.667,
+        31.027,
+        43.247
+      ],
+      "time": 93.941,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.529,
+      "kind": "flying",
+      "n": 11,
+      "sectors": [
+        19.864,
+        30.814,
+        43.965
+      ],
+      "time": 94.643,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.551,
+      "kind": "flying",
+      "n": 12,
+      "sectors": [
+        19.357,
+        30.813,
+        43.189
+      ],
+      "time": 93.359,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.569,
+      "kind": "flying",
+      "n": 13,
+      "sectors": [
+        19.562,
+        30.582,
+        43.267
+      ],
+      "time": 93.41,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.504,
+      "kind": "flying",
+      "n": 14,
+      "sectors": [
+        19.283,
+        30.718,
+        44.673
+      ],
+      "time": 94.675,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.575,
+      "kind": "flying",
+      "n": 15,
+      "sectors": [
+        19.236,
+        30.985,
+        43.133
+      ],
+      "time": 93.354,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.582,
+      "kind": "flying",
+      "n": 16,
+      "sectors": [
+        19.363,
+        30.8,
+        43.257
+      ],
+      "time": 93.42,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.572,
+      "kind": "flying",
+      "n": 17,
+      "sectors": [
+        19.315,
+        31.697,
+        44.487
+      ],
+      "time": 95.499,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.605,
+      "kind": "flying",
+      "n": 18,
+      "sectors": [
+        19.49,
+        31.09,
+        43.169
+      ],
+      "time": 93.749,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.617,
+      "kind": "flying",
+      "n": 19,
+      "sectors": [
+        19.226,
+        30.598,
+        43.349
+      ],
+      "time": 93.172,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.632,
+      "kind": "flying",
+      "n": 20,
+      "sectors": [
+        19.122,
+        30.671,
+        43.234
+      ],
+      "time": 93.027,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.603,
+      "kind": "flying",
+      "n": 21,
+      "sectors": [
+        20.114,
+        31.021,
+        44.044
+      ],
+      "time": 95.18,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.634,
+      "kind": "flying",
+      "n": 22,
+      "sectors": [
+        19.103,
+        30.603,
+        43.065
+      ],
+      "time": 92.771,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.664,
+      "kind": "flying",
+      "n": 23,
+      "sectors": [
+        19.333,
+        31.317,
+        43.103
+      ],
+      "time": 93.753,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.649,
+      "kind": "flying",
+      "n": 24,
+      "sectors": [
+        19.161,
+        30.414,
+        43.705
+      ],
+      "time": 93.28,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.581,
+      "kind": "flying",
+      "n": 25,
+      "sectors": [
+        19.349,
+        30.542,
+        43.874
+      ],
+      "time": 93.765,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.588,
+      "kind": "flying",
+      "n": 26,
+      "sectors": [
+        19.01,
+        30.351,
+        44.308
+      ],
+      "time": 93.668,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.577,
+      "kind": "flying",
+      "n": 27,
+      "sectors": [
+        19.007,
+        30.465,
+        43.422
+      ],
+      "time": 92.894,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.511,
+      "kind": "flying",
+      "n": 28,
+      "sectors": [
+        19.305,
+        30.687,
+        43.604
+      ],
+      "time": 93.595,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.572,
+      "kind": "flying",
+      "n": 29,
+      "sectors": [
+        19.304,
+        30.637,
+        42.859
+      ],
+      "time": 92.8,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.602,
+      "kind": "flying",
+      "n": 30,
+      "sectors": [
+        19.372,
+        30.643,
+        43.251
+      ],
+      "time": 93.266,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.592,
+      "kind": "flying",
+      "n": 31,
+      "sectors": [
+        19.307,
+        31.028,
+        43.084
+      ],
+      "time": 93.419,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.468,
+      "kind": "flying",
+      "n": 32,
+      "sectors": [
+        19.333,
+        31.011,
+        43.213
+      ],
+      "time": 93.556,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.495,
+      "kind": "flying",
+      "n": 33,
+      "sectors": [
+        19.354,
+        31.389,
+        43.717
+      ],
+      "time": 94.46,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": null,
+      "kind": "in_lap",
+      "n": 34,
+      "sectors": [
+        19.385,
+        31.804,
+        91.308
+      ],
+      "time": 142.497,
+      "validity": "unknown"
+    },
+    {
+      "clean": false,
+      "fuel": 2.583,
+      "kind": "out_lap",
+      "n": 35,
+      "sectors": [
+        33.948,
+        31.031,
+        44.103
+      ],
+      "time": 109.082,
+      "validity": "unknown"
+    },
+    {
+      "clean": true,
+      "fuel": 2.562,
+      "kind": "flying",
+      "n": 36,
+      "sectors": [
+        19.456,
+        30.964,
+        44.094
+      ],
+      "time": 94.515,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.565,
+      "kind": "flying",
+      "n": 37,
+      "sectors": [
+        19.206,
+        31.094,
+        44.003
+      ],
+      "time": 94.303,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.592,
+      "kind": "flying",
+      "n": 38,
+      "sectors": [
+        19.246,
+        30.871,
+        43.681
+      ],
+      "time": 93.798,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.651,
+      "kind": "flying",
+      "n": 39,
+      "sectors": [
+        19.373,
+        30.683,
+        53.169
+      ],
+      "time": 103.226,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.541,
+      "kind": "flying",
+      "n": 40,
+      "sectors": [
+        19.472,
+        30.677,
+        44.336
+      ],
+      "time": 94.485,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.534,
+      "kind": "flying",
+      "n": 41,
+      "sectors": [
+        19.348,
+        30.855,
+        44.0
+      ],
+      "time": 94.203,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.651,
+      "kind": "flying",
+      "n": 42,
+      "sectors": [
+        32.221,
+        31.377,
+        43.385
+      ],
+      "time": 106.983,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.615,
+      "kind": "flying",
+      "n": 43,
+      "sectors": [
+        19.318,
+        30.422,
+        43.614
+      ],
+      "time": 93.354,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.692,
+      "kind": "incomplete",
+      "n": 44,
+      "sectors": [
+        19.378,
+        30.744,
+        53.94
+      ],
+      "time": 104.062,
+      "validity": "unknown"
+    },
+    {
+      "clean": true,
+      "fuel": 2.568,
+      "kind": "flying",
+      "n": 45,
+      "sectors": [
+        20.388,
+        30.756,
+        43.26
+      ],
+      "time": 94.404,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.591,
+      "kind": "flying",
+      "n": 46,
+      "sectors": [
+        19.269,
+        30.561,
+        43.187
+      ],
+      "time": 93.017,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.616,
+      "kind": "flying",
+      "n": 47,
+      "sectors": [
+        19.245,
+        30.675,
+        43.507
+      ],
+      "time": 93.427,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.697,
+      "kind": "flying",
+      "n": 48,
+      "sectors": [
+        19.167,
+        30.927,
+        43.022
+      ],
+      "time": 93.116,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.684,
+      "kind": "flying",
+      "n": 49,
+      "sectors": [
+        19.201,
+        30.602,
+        42.861
+      ],
+      "time": 92.663,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.529,
+      "kind": "flying",
+      "n": 50,
+      "sectors": [
+        19.272,
+        30.576,
+        43.517
+      ],
+      "time": 93.365,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.522,
+      "kind": "flying",
+      "n": 51,
+      "sectors": [
+        19.104,
+        30.794,
+        43.156
+      ],
+      "time": 93.055,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 2.595,
+      "kind": "flying",
+      "n": 52,
+      "sectors": [
+        19.19,
+        30.875,
+        55.466
+      ],
+      "time": 105.531,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.565,
+      "kind": "flying",
+      "n": 53,
+      "sectors": [
+        19.588,
+        31.012,
+        44.722
+      ],
+      "time": 95.322,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.595,
+      "kind": "flying",
+      "n": 54,
+      "sectors": [
+        19.514,
+        31.094,
+        43.557
+      ],
+      "time": 94.165,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 2.568,
+      "kind": "flying",
+      "n": 55,
+      "sectors": [
+        19.561,
+        30.796,
+        44.217
+      ],
+      "time": 94.574,
+      "validity": "valid"
+    }
+  ],
+  "off_tracks": [
+    {
+      "at_m": 2894.787,
+      "corner": "Acque Minerali",
+      "laps": [
+        5,
+        8,
+        44,
+        52
+      ]
+    },
+    {
+      "at_m": 870.243,
+      "corner": "Tamburello",
+      "laps": [
+        8,
+        42
+      ]
+    },
+    {
+      "at_m": 1051.568,
+      "corner": null,
+      "laps": [
+        8
+      ]
+    },
+    {
+      "at_m": 4143.289,
+      "corner": "Rivazza",
+      "laps": [
+        39
+      ]
+    }
+  ],
+  "race": {
+    "field": 12,
+    "finish": 1,
+    "headline": "P3 → P1 sur 12 pilotes, 0x ; point noir : Acque Minerali",
+    "incidents": 0,
+    "insights": [
+      {
+        "detail": "Incidents aux tours 8, 26, 44, 52. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.",
+        "kind": "danger",
+        "title": "Acque Minerali : 4 incidents, 0x"
+      }
+    ],
+    "pace": {
+      "best_s": 92.663,
+      "first_third_s": 93.943,
+      "laps": 45,
+      "last_third_s": 93.817,
+      "median_s": 93.556,
+      "spread_s": 0.73
+    },
+    "start": 3
+  },
+  "radio": [],
+  "regularity": {
+    "corners": [
+      {
+        "advice": "Sur tes meilleurs passages, tu sors 8 km/h plus vite et tu freines 14 m plus tard.",
+        "apex_m": 703.0,
+        "best_lap": 27,
+        "best_s": 16.834,
+        "brake_spread_m": 16.71,
+        "differences": [
+          {
+            "fast": 198.641,
+            "label": "tu sors 8 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 191.057
+          },
+          {
+            "fast": 506.0,
+            "label": "tu freines 14 m plus tard",
+            "metric": "brake",
+            "slow": 492.0
+          }
+        ],
+        "gain_s": 0.276,
+        "median_s": 17.11,
+        "name": "Tamburello",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 4 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.",
+        "apex_m": 3385.0,
+        "best_lap": 49,
+        "best_s": 13.345,
+        "brake_spread_m": 8.739,
+        "differences": [
+          {
+            "fast": 87.572,
+            "label": "tu portes 4 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 83.384
+          },
+          {
+            "fast": 179.257,
+            "label": "tu sors 2 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 176.98
+          }
+        ],
+        "gain_s": 0.236,
+        "median_s": 13.581,
+        "name": "Variante Alta",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu freines 20 m plus tard.",
+        "apex_m": 2855.0,
+        "best_lap": 30,
+        "best_s": 10.677,
+        "brake_spread_m": 21.243,
+        "differences": [
+          {
+            "fast": 114.568,
+            "label": "tu portes 8 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 106.514
+          },
+          {
+            "fast": 2666.0,
+            "label": "tu freines 20 m plus tard",
+            "metric": "brake",
+            "slow": 2646.0
+          },
+          {
+            "fast": 182.336,
+            "label": "tu sors 6 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 176.028
+          }
+        ],
+        "gain_s": 0.203,
+        "median_s": 10.88,
+        "name": "Acque Minerali",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 2 km/h de plus au point le plus lent.",
+        "apex_m": 1706.0,
+        "best_lap": 47,
+        "best_s": 10.896,
+        "brake_spread_m": 7.298,
+        "differences": [
+          {
+            "fast": 87.653,
+            "label": "tu portes 2 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 85.493
+          }
+        ],
+        "gain_s": 0.201,
+        "median_s": 11.097,
+        "name": "Tosa",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.",
+        "apex_m": 2336.0,
+        "best_lap": 27,
+        "best_s": 10.087,
+        "brake_spread_m": 6.266,
+        "differences": [
+          {
+            "fast": 148.293,
+            "label": "tu portes 9 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 139.575
+          },
+          {
+            "fast": 209.005,
+            "label": "tu sors 2 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 206.722
+          }
+        ],
+        "gain_s": 0.155,
+        "median_s": 10.242,
+        "name": "Piratella",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu sors 4 km/h plus vite.",
+        "apex_m": 4269.0,
+        "best_lap": 25,
+        "best_s": 12.174,
+        "brake_spread_m": 0.0,
+        "differences": [
+          {
+            "fast": 194.322,
+            "label": "tu sors 4 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 189.952
+          }
+        ],
+        "gain_s": 0.144,
+        "median_s": 12.318,
+        "name": "V8",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 3 km/h de plus au point le plus lent.",
+        "apex_m": 4138.0,
+        "best_lap": 29,
+        "best_s": 8.568,
+        "brake_spread_m": 17.303,
+        "differences": [
+          {
+            "fast": 100.32,
+            "label": "tu portes 3 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 97.524
+          }
+        ],
+        "gain_s": 0.126,
+        "median_s": 8.695,
+        "name": "Rivazza",
+        "passes": 46
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 3 km/h de plus au point le plus lent et tu freines 6 m plus tard.",
+        "apex_m": 1415.0,
+        "best_lap": 27,
+        "best_s": 9.321,
+        "brake_spread_m": 13.61,
+        "differences": [
+          {
+            "fast": 132.476,
+            "label": "tu portes 3 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 129.051
+          },
+          {
+            "fast": 1228.0,
+            "label": "tu freines 6 m plus tard",
+            "metric": "brake",
+            "slow": 1222.0
+          }
+        ],
+        "gain_s": 0.124,
+        "median_s": 9.445,
+        "name": "Villeneuve",
+        "passes": 46
+      }
+    ],
+    "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,47 s. Le plus gros : Tamburello (0,28 s).",
+    "laps": 46,
+    "total_gain_s": 1.466
+  },
+  "risk": [
+    {
+      "apex_m": 3385.0,
+      "best_clean_s": 8.184,
+      "entry_m": 3190.0,
+      "exit_m": 3516.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.293,
+      "mean_clean_s": 8.477,
+      "mean_off_s": null,
+      "message": "Aucune sortie sur 53 passages, et 0.29 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
+      "name": "Variante Alta",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 703.0,
+      "best_clean_s": 8.439,
+      "entry_m": 465.0,
+      "exit_m": 896.0,
+      "expected_cost_s": 0.577,
+      "gain_available_s": 0.297,
+      "mean_clean_s": 8.735,
+      "mean_off_s": 24.016,
+      "message": "2 sortie(s) sur 53, 0.30 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Tamburello",
+      "off_cost_s": 15.281,
+      "off_rate": 0.038,
+      "offs": 2,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 2855.0,
+      "best_clean_s": 7.831,
+      "entry_m": 2630.0,
+      "exit_m": 2987.0,
+      "expected_cost_s": 0.369,
+      "gain_available_s": 0.247,
+      "mean_clean_s": 8.079,
+      "mean_off_s": 14.591,
+      "message": "3 sortie(s) sur 53, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Acque Minerali",
+      "off_cost_s": 6.512,
+      "off_rate": 0.057,
+      "offs": 3,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 4138.0,
+      "best_clean_s": 6.417,
+      "entry_m": 3911.0,
+      "exit_m": 4201.0,
+      "expected_cost_s": 0.17,
+      "gain_available_s": 0.165,
+      "mean_clean_s": 6.581,
+      "mean_off_s": 15.617,
+      "message": "1 sortie(s) sur 53, 0.16 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Rivazza",
+      "off_cost_s": 9.035,
+      "off_rate": 0.019,
+      "offs": 1,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 1706.0,
+      "best_clean_s": 7.567,
+      "entry_m": 1580.0,
+      "exit_m": 1855.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.219,
+      "mean_clean_s": 7.786,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 53, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Tosa",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 1415.0,
+      "best_clean_s": 7.638,
+      "entry_m": 1186.0,
+      "exit_m": 1568.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.213,
+      "mean_clean_s": 7.852,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 53, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Villeneuve",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 4269.0,
+      "best_clean_s": 5.108,
+      "entry_m": 4201.0,
+      "exit_m": 4409.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.153,
+      "mean_clean_s": 5.262,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "V8",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 2336.0,
+      "best_clean_s": 6.052,
+      "entry_m": 2175.0,
+      "exit_m": 2486.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.147,
+      "mean_clean_s": 6.199,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Piratella",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 53,
+      "sessions": 1,
+      "verdict": "fine"
+    }
+  ],
+  "risk_headline": "Rester en piste, c'est acquis. Le temps est à prendre d'abord à Variante Alta : 0.29 s entre ton passage moyen et ton meilleur, sans sortie.",
+  "session": {
+    "car": "Alpine A424",
+    "config": null,
+    "kind": "race",
+    "length_m": 4900.674,
+    "setup": "open",
+    "sim": "lmu",
+    "track": "Autodromo Enzo e Dino Ferrari"
+  },
+  "strategy": {
+    "lap_time": 93.689,
+    "laps": 57,
+    "per_lap": 2.838,
+    "stints": [
+      [
+        1,
+        33,
+        100.0
+      ],
+      [
+        34,
+        57,
+        69.543
+      ]
+    ],
+    "stops": 1,
+    "unit": "energy"
+  },
+  "theoretical_best_s": 91.937
+}
