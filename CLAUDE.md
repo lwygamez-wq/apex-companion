@@ -77,6 +77,7 @@ Chaque changement, même petit :
 - Vibreurs : distance point-segment au bord (points relevés jusqu'à 7–9 m du bord).
 - LMU vérifié en jeu (essais Imola 9X8, 12 nov.) : `mVirtualEnergy` en % (≈ 3 %/tour), `mWear` = % restant (100 = neuf). Encore à vérifier : remise à zéro des limites de piste (restée à 0 alors que le jeu a invalidé 7 tours sur 9), détection d'arrêt (énergie +2 %).
 - Course au temps : le tour « multiclasse » en plus ne vaut que hors catégorie la plus rapide (`top_class`, Hypercar en LMU) ; le temps d'arrêt mesuré (`pit_loss_s`, à défaut celui des autres voitures du circuit) est décompté du chrono. En direct, la catégorie vient de la séance (`is_top_class`), pas seulement du calculateur (nouvelle voiture sans historique). Sans ça, 96 % au lieu de ~87 % à Imola (14 % d'énergie restante). En LMU, l'énergie ne donne pas de puissance : l'ingénieur ne dit jamais « attaque ».
+- Être doublé ne retire pas de tour : on finit au premier passage après la fin du chrono. Le leader peut en ajouter un (il passe juste avant la fin et repart) : `timed_laps_left` en tient compte avec l'écart au leader (`ApexLapsBehindLeader`, `ApexTimeBehindLeader`).
 - Ce que l'ingénieur a dit : journal d'Apex (`%LOCALAPPDATA%\app.apexcompanion.desktop\logs`, lignes `coach :`).
 - Tours invalidés par le jeu (limites de piste) : `clean` est faux, mais la consommation reste valable. La stratégie filtre sur les drapeaux (stand, sortie, incident, jaune, coupure), pas sur `clean`.
 
@@ -100,7 +101,7 @@ Chaque changement, même petit :
 
 ## Version et feuille de route
 
-- Version publiée : **v0.34.2** (12 nov. 2026) : catégorie Hypercar lue dans la séance en direct, temps d'arrêt pris sur les autres voitures du circuit faute d'historique. Avant : v0.34.1, plein à l'arrêt corrigé en course au temps.
+- Version publiée : **v0.35.0** (12 nov. 2026) : écart au leader lu en direct (LMU) et enregistré à chaque tour ; en Hypercar, fin de course au temps calée sur le passage du leader. Avant : v0.34.2, catégorie Hypercar lue en direct.
 - Suivant, par priorité : trafic multiclasse (tours gênés exclus des références) ; temps perdu aux stands mesuré ; lift and coast localisé ; séparation piste humide / nuit ; températures et pressions pneus ; hybride ; coach de course.
 - Setup Builder : décision go / analyseur seul / abandon après le premier rapport de la sonde (`sonde-lmu/` dans le dossier de données) ; étude dans le projet claude.ai (`claude/faisabilite-setup-builder.md`).
 - À valider sur le PC d'Alex : lectures LMU (limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.

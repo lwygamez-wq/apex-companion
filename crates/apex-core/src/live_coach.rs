@@ -310,6 +310,9 @@ pub struct LiveCoach {
     hint_ratio: Option<f32>,
     top_class: bool,
     pit_loss_s: Option<f64>,
+    /// Retard sur le leader (tours, secondes) : maintenant, et à chacun des derniers passages de ligne.
+    gap_now: (f64, f64),
+    gaps: VecDeque<(f64, f64)>,
 }
 
 /// Relais en cours, pour l'écran « Au volant » et la commande « carburant ».
@@ -364,6 +367,20 @@ fn meta_from(si: &SessionInfo) -> SessionMeta {
     }
 }
 
+/// Tours restants d'une course au temps, tour en cours compté pour la part qui reste (`rem`).
+/// Être doublé ne retire pas de tour : tu finis toujours au premier passage après la fin du chrono.
+/// Le leader peut en ajouter un : s'il passe la ligne juste avant la fin, il repart pour un tour.
+/// Le drapeau tombe quand le leader passe la ligne après la fin du chrono (`t` secondes) ; on finit
+/// le tour en cours à cet instant. Le leader a `d` secondes d'avance à ton rythme `lt` et te reprend
+/// `gain` secondes par tour. Leader toi-même (`d` = 0) : la règle « tour en cours + tours entamés ».
+pub fn timed_laps_left(rem: f64, lt: f64, t: f64, d: f64, gain: f64) -> f64 {
+    let lt_l = (lt - gain).max(lt * 0.9);
+    let c1 = rem * lt;
+    let l1 = if d <= 0.0 { c1 } else { (c1 - d).rem_euclid(lt_l) };
+    let flag = if l1 >= t { l1 } else { l1 + ((t - l1) / lt_l).ceil() * lt_l };
+    rem + ((flag - c1) / lt).ceil().max(0.0)
+}
+
 impl LiveCoach {
     /// `reference` : tour de référence du même circuit et de la même voiture (perso ou externe),
     /// `None` si aucun : le coach prendra ton meilleur tour propre de la session.
@@ -387,7 +404,7 @@ impl LiveCoach {
         // Catégorie lue dans la séance elle-même : valable même sans historique sur ce circuit.
         let top_class = crate::analysis::strategy::is_top_class(meta.sim, builder.session_info().profile.car.class.as_deref());
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -443,6 +460,7 @@ impl LiveCoach {
             self.engineer.reset();
             self.pending = None;
             self.lap_times.clear();
+            self.gaps.clear();
         }
         // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
         let dist = row[1];
@@ -500,8 +518,14 @@ impl LiveCoach {
         self.time_remain = row[20];
         self.laps_remain = row[21];
         self.lap_pct = row[2].clamp(0.0, 1.0);
+        self.gap_now = (row[25], row[26]);
         match self.builder.push(row) {
             Some(lap) => {
+                // Écart au leader relevé à chaque passage de ligne : son évolution donne le rythme du leader.
+                self.gaps.push_back(self.gap_now);
+                while self.gaps.len() > 4 {
+                    self.gaps.pop_front();
+                }
                 self.callout_done = false;
                 self.beep_stage = 0;
                 let flying = lap.meta.kind == LapKind::Flying;
@@ -575,11 +599,32 @@ impl LiveCoach {
             let lt = t.get(t.len() / 2).copied().or(self.best_lap.map(|b| b * 1.01)).filter(|l| *l > 1.0)?;
             // Arrêts encore prévus : leur temps ne fait pas de tours.
             let pits = self.engineer.stops_left().unwrap_or(0) as f64 * self.pit_loss_s.unwrap_or(0.0);
-            let after = ((self.time_remain - rem * lt - pits) / lt).ceil().max(0.0);
-            Some(rem + after + if self.top_class { 0.0 } else { 1.0 })
+            let t = self.time_remain - pits;
+            if !self.top_class {
+                // Hors catégorie la plus rapide : le leader est dans une autre catégorie, un tour de plus possible.
+                return Some(rem + ((t - rem * lt) / lt).ceil().max(0.0) + 1.0);
+            }
+            // Le drapeau tombe quand le leader passe la ligne après la fin du chrono ; on finit le tour en
+            // cours à ce moment-là. Le leader a `d` secondes d'avance (à ton rythme) et tourne en `lt_l`.
+            Some(timed_laps_left(rem, lt, t, self.leader_gap(lt), self.leader_gain(lt)))
         } else {
             None
         }
+    }
+
+    /// Avance du leader en secondes, à ton rythme : tours de retard × temps au tour + écart dans le tour.
+    /// (Que le jeu donne l'écart dans le tour ou au total, le modulo le ramène dans le tour.)
+    fn leader_gap(&self, lt: f64) -> f64 {
+        let (laps, secs) = self.gap_now;
+        laps.max(0.0).floor() * lt + secs.max(0.0).rem_euclid(lt)
+    }
+
+    /// Ce que le leader te reprend par tour (s), d'après l'écart aux derniers passages de ligne.
+    fn leader_gain(&self, lt: f64) -> f64 {
+        let d: Vec<f64> = self.gaps.iter().map(|&(l, s)| l.max(0.0).floor() * lt + s.max(0.0).rem_euclid(lt)).collect();
+        let mut g: Vec<f64> = d.windows(2).map(|w| w[1] - w[0]).filter(|x| x.abs() < lt * 0.1).collect();
+        g.sort_by(|a, b| a.total_cmp(b));
+        g.get(g.len() / 2).copied().unwrap_or(0.0).clamp(0.0, lt * 0.1)
     }
 
     /// La course vue par l'ingénieur au passage de la ligne : `None` hors course ou sans mesure.
@@ -1154,5 +1199,24 @@ mod tests {
         assert!(coach.top_class);
         let (lmp2, _) = LiveCoach::new(&live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap(), None, vec![], None);
         assert!(!lmp2.top_class);
+    }
+
+    #[test]
+    fn timed_laps_left_follows_the_leader() {
+        // Leader toi-même : même compte qu'avant (tour en cours + tours entamés avant la fin du chrono).
+        for &(rem, t) in &[(1.0f64, 870.0f64), (0.4, 760.0), (0.75, 30.0), (0.2, 5.0)] {
+            let lt: f64 = 94.3;
+            let old = rem + ((t - rem * lt) / lt).ceil().max(0.0);
+            assert_eq!(timed_laps_left(rem, lt, t, 0.0, 0.0), old, "{rem} {t}");
+        }
+        // Leader 8 s devant (à ton rythme), qui reprend 2 s par tour, tours de 40 s, 870 s au chrono :
+        // il passe la ligne à 32 s puis toutes les 38 s ; à 868 s le chrono n'est pas fini, il repart et
+        // prend le drapeau à 906 s. Toi : passages à 40, 80… 880, 920 : tu finis à 920, 23 tours.
+        assert_eq!(timed_laps_left(1.0, 40.0, 870.0, 8.0, 2.0), 23.0);
+        // Sans leader devant, drapeau à ton passage de 880 s : 22 tours.
+        assert_eq!(timed_laps_left(1.0, 40.0, 870.0, 0.0, 0.0), 22.0);
+        // Leader 35 s devant : il passe à 5 s puis toutes les 38 s, drapeau à 879 s ; tu finis à 880 s,
+        // 22 tours comme sans leader. Le leader ne peut que rajouter un tour, jamais en retirer.
+        assert_eq!(timed_laps_left(1.0, 40.0, 850.0, 35.0, 2.0), 22.0);
     }
 }

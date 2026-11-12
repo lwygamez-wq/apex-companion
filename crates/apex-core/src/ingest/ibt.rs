@@ -626,9 +626,11 @@ pub const LIVE_CHANNELS: [&str; LIVE_N] = [
     // Le Mans Ultimate seulement (absents d'iRacing : 0) : énergie virtuelle restante (%),
     // avertissements de limites de piste et nombre d'avertissements par pénalité.
     "ApexVirtualEnergy", "ApexTrackLimitSteps", "ApexTrackLimitStepsPerPenalty",
+    // Le Mans Ultimate : tours et temps de retard sur le leader (fin de course au temps).
+    "ApexLapsBehindLeader", "ApexTimeBehindLeader",
 ];
 /// Nombre de canaux lus en direct.
-pub const LIVE_N: usize = 25;
+pub const LIVE_N: usize = 27;
 
 /// Reconstitution des tours en direct : on empile les échantillons et, à chaque passage de la
 /// ligne, le tour qui vient de se terminer est découpé par le même code que les fichiers .ibt.
