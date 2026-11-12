@@ -3350,7 +3350,7 @@ mod tests {
         let (svc, tel) = guarded_service(root.path());
         let ibt = crate::ingest::ibt::writer::synthetic();
         let f = tel.join("w.ibt");
-        let mut w = std::fs::OpenOptions::new().write(true).create(true).share_mode(1 /* FILE_SHARE_READ */).open(&f).unwrap();
+        let mut w = std::fs::OpenOptions::new().write(true).create(true).truncate(true).share_mode(1 /* FILE_SHARE_READ */).open(&f).unwrap();
         w.write_all(&ibt[..ibt.len() / 2]).unwrap();
         w.flush().unwrap();
         assert_eq!(svc.guard_iracing_files().unwrap(), 1, "garde posée pendant l'écriture");

@@ -1,0 +1,5 @@
+# Version de Rust figée : CI, publication et poste de dev compilent avec la même version, et une
+# nouvelle règle clippy ne bloque pas une sortie à l'improviste. Montée de version : PR dédiée.
+[toolchain]
+channel = "1.97.0"
+components = ["clippy"]
