@@ -1,0 +1,971 @@
+{
+  "ai_context": "Simulateur : iRacing · Circuit : Okayama International Circuit (Short) · Voiture : Mazda MX-5 Cup · Séance : course · Série : Fixed\nLongueur du circuit : 1929 m\nTours : 14 au total, 7 propres. Meilleur tour propre : 1:01.545 (tour 7). Tour théorique (meilleurs segments) : 1:01.185.\nRégularité : écart-type 0.37 s sur 7 tours propres, moyenne 1:02.069.\n\nTOURS (numéro, temps, état) :\n- T0 — stand, 0.12 L\n- T1 1:20.561 sortie de piste, incident, stand, drapeau jaune, 0.52 L\n- T2 1:04.380 sortie de piste, incident, 0.45 L\n- T3 1:02.104 propre, 0.45 L\n- T4 1:02.522 drapeau jaune, 0.43 L\n- T5 1:02.677 propre, 0.45 L\n- T6 1:01.960 propre, 0.46 L\n- T7 1:01.545 propre, 0.46 L\n- T8 1:02.019 drapeau jaune, 0.47 L\n- T9 1:02.357 propre, 0.47 L\n- T10 1:01.773 propre, 0.47 L\n- T11 1:02.120 drapeau jaune, 0.46 L\n- T12 1:02.063 propre, 0.46 L\n- T13 — incomplet, 0.00 L\n\nCOMPARAISON : ton tour 3 (1:02.104) contre la référence ton tour 7 (1:01.545). Écart final +0.559 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- V1 : +0.26 s · freinage plus tôt (-17 m) · vitesse mini 96 vs 99 km/h, gaz -14 m · sortie 131 vs 129 km/h\n- V2 : +0.16 s · freinage plus tôt (-14 m) · vitesse mini 79 vs 78 km/h, gaz -24 m · sortie 121 vs 121 km/h\n- V3 : +0.15 s · freinage plus tôt (-9 m) · vitesse mini 75 vs 74 km/h, gaz -5 m · sortie 92 vs 95 km/h\n- V4 : +0.12 s · freinage au même endroit · vitesse mini 64 vs 67 km/h, gaz +15 m · sortie 125 vs 122 km/h\n- V5 : +0.01 s · freinage plus tôt (-8 m) · vitesse mini 95 vs 94 km/h, gaz -16 m · sortie 131 vs 129 km/h\nConseils calculés par Apex (priorité décroissante) :\n- V1 : freinage trop précoce (gain estimé 0.13 à 0.26 s) : Tu freines environ 17 m plus tôt que la référence. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 0.26 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 12 m plus loin (réf. : 114 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 99 km/h au minimum.\n- V2 : freinage trop précoce (gain estimé 0.08 à 0.16 s) : Tu freines environ 14 m plus tôt que la référence. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 0.16 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 10 m plus loin (réf. : 418 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 78 km/h au minimum.\n- V3 : freinage trop précoce (gain estimé 0.07 à 0.15 s) : Tu freines environ 9 m plus tôt que la référence. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 0.15 s par rapport à la référence. Confiance : moyenne. → Décale ton point de freinage d'environ 6 m plus loin (réf. : 867 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 74 km/h au minimum.\n- V4 : vitesse minimale insuffisante (gain estimé 0.06 à 0.12 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 3 km/h (64 km/h contre 67 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.12 s par rapport à la référence. Confiance : moyenne. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 67 km/h vers 1079 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à V2 : 0.25 s entre ton passage moyen et ton meilleur, sans sortie.\n- V2 : 0/11 sorties, à prendre 0.25 s en refaisant ton meilleur passage · Aucune sortie sur 11 passages, et 0.25 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- V3 : 1/11 sorties, à prendre 0.13 s en refaisant ton meilleur passage, une sortie coûte 2.1 s · 1 sortie(s) sur 11, 0.13 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V1 : 0/11 sorties, à prendre 0.18 s en refaisant ton meilleur passage · 0 sortie(s) sur 11, 0.18 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V4 : 0/11 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 11, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V5 : 0/11 sorties, à prendre 0.10 s en refaisant ton meilleur passage · 0 sortie(s) sur 11, 0.10 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 0,77 s. Le plus gros : V1 (0,22 s).\n- V1 : −0.22 s possibles (meilleur passage au tour 7). Point de freinage qui varie de ±8 m : prends un repère fixe.\n- V2 : −0.20 s possibles (meilleur passage au tour 10). Sur tes meilleurs passages, tu remets les gaz 46 m plus tard et tu freines 15 m plus tard.\n- V3 : −0.13 s possibles (meilleur passage au tour 10). Pas de cause nette : trafic, ou petites variations de trajectoire.\n- V4 : −0.12 s possibles (meilleur passage au tour 7). Sur tes meilleurs passages, tu remets les gaz 23 m plus tard et tu portes 3 km/h de plus au point le plus lent.\n- V5 : −0.11 s possibles (meilleur passage au tour 3). Sur tes meilleurs passages, tu sors 6 km/h plus vite.\n\nSORTIES DE PISTE :\n- V1 (à 347 m) aux tours [1]\n- V2 (à 479 m) aux tours [1]\n- V3 (à 963 m) aux tours [2]\n\nCOURSE : P6 → P7 sur 12 pilotes, 3x\nGrille Some(6), arrivée Some(7), 12 pilotes, 3 incidents.\n- Départ : 2 places perdues au premier tour : P6 sur la grille, P8 après un tour. Le premier tour se joue au freinage du virage 1 et dans le peloton : vise la sortie propre plutôt que l'attaque.\n- Rythme très régulier : ±0.34 s sur 7 tours propres : La régularité est acquise ; la marge est maintenant dans la vitesse pure (comparaison avec une référence plus rapide).\n",
+  "analysis_reference": 7,
+  "best": 7,
+  "comparisons": [
+    {
+      "compared": 10,
+      "corners": [
+        {
+          "apex_m": 260.0,
+          "dt": 0.247,
+          "min_cmp": 96.539,
+          "min_ref": 99.008
+        },
+        {
+          "apex_m": 540.0,
+          "dt": -0.169,
+          "min_cmp": 79.088,
+          "min_ref": 77.855
+        },
+        {
+          "apex_m": 955.0,
+          "dt": -0.091,
+          "min_cmp": 75.208,
+          "min_ref": 74.373
+        },
+        {
+          "apex_m": 1075.0,
+          "dt": 0.119,
+          "min_cmp": 65.521,
+          "min_ref": 67.498
+        },
+        {
+          "apex_m": 1495.0,
+          "dt": 0.084,
+          "min_cmp": 95.522,
+          "min_ref": 94.182
+        }
+      ],
+      "delta_end_s": 0.227,
+      "insights": [
+        {
+          "confidence": "low",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.78 s",
+              "9.03 s",
+              "+0.25 s"
+            ],
+            [
+              "Début de freinage",
+              "115 m",
+              "120 m",
+              "+5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "99 km/h",
+              "97 km/h",
+              "-2.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "130 km/h",
+              "130 km/h",
+              "+0.7 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "255 m",
+              "240 m",
+              "-15 m"
+            ],
+            [
+              "Corrections de volant",
+              "5",
+              "6",
+              "+1"
+            ]
+          ],
+          "gain": [
+            0.123,
+            0.247
+          ],
+          "id": "corner-1",
+          "priority": "important",
+          "recommendation": "Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.",
+          "segment": "V1",
+          "title": "V1 : perte de temps sans cause isolée"
+        },
+        {
+          "confidence": "low",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "9.56 s",
+              "9.68 s",
+              "+0.12 s"
+            ],
+            [
+              "Début de freinage",
+              "1035 m",
+              "1030 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "67 km/h",
+              "66 km/h",
+              "-2.0 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "122 km/h",
+              "123 km/h",
+              "+0.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1080 m",
+              "1070 m",
+              "-10 m"
+            ],
+            [
+              "Corrections de volant",
+              "10",
+              "8",
+              "-2"
+            ]
+          ],
+          "gain": [
+            0.059,
+            0.119
+          ],
+          "id": "corner-4",
+          "priority": "improvement",
+          "recommendation": "Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.",
+          "segment": "V4",
+          "title": "V4 : perte de temps sans cause isolée"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.06 s",
+              "7.14 s",
+              "+0.08 s"
+            ],
+            [
+              "Début de freinage",
+              "1415 m",
+              "1415 m",
+              "-0 m"
+            ],
+            [
+              "Vitesse minimale",
+              "94 km/h",
+              "96 km/h",
+              "+1.3 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "129 km/h",
+              "127 km/h",
+              "-1.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1490 m",
+              "1500 m",
+              "+10 m"
+            ],
+            [
+              "Corrections de volant",
+              "6",
+              "10",
+              "+4"
+            ]
+          ],
+          "gain": [
+            0.042,
+            0.084
+          ],
+          "id": "corner-5",
+          "priority": "improvement",
+          "recommendation": "Reprends l'accélérateur dès que le volant commence à se redresser, vers 1490 m comme sur la référence, en dosant progressivement.",
+          "segment": "V5",
+          "title": "V5 : remise des gaz tardive"
+        }
+      ],
+      "reference": 7,
+      "warnings": []
+    },
+    {
+      "compared": 2,
+      "corners": [
+        {
+          "apex_m": 260.0,
+          "dt": 0.127,
+          "min_cmp": 95.251,
+          "min_ref": 99.008
+        },
+        {
+          "apex_m": 540.0,
+          "dt": 0.256,
+          "min_cmp": 80.46,
+          "min_ref": 77.855
+        },
+        {
+          "apex_m": 955.0,
+          "dt": 2.166,
+          "min_cmp": 44.373,
+          "min_ref": 74.373
+        },
+        {
+          "apex_m": 1075.0,
+          "dt": 0.219,
+          "min_cmp": 69.906,
+          "min_ref": 67.498
+        },
+        {
+          "apex_m": 1495.0,
+          "dt": 0.1,
+          "min_cmp": 96.06,
+          "min_ref": 94.182
+        }
+      ],
+      "delta_end_s": 2.837,
+      "insights": [
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.76 s",
+              "8.93 s",
+              "+2.17 s"
+            ],
+            [
+              "Début de freinage",
+              "870 m",
+              "860 m",
+              "-10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "74 km/h",
+              "44 km/h",
+              "-30.0 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "95 km/h",
+              "76 km/h",
+              "-18.8 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "950 m",
+              "985 m",
+              "+35 m"
+            ],
+            [
+              "Corrections de volant",
+              "5",
+              "2",
+              "-3"
+            ]
+          ],
+          "gain": [
+            1.083,
+            2.166
+          ],
+          "id": "corner-3",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 870 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 74 km/h au minimum.",
+          "segment": "V3",
+          "title": "V3 : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "12.37 s",
+              "12.62 s",
+              "+0.26 s"
+            ],
+            [
+              "Début de freinage",
+              "420 m",
+              "400 m",
+              "-20 m"
+            ],
+            [
+              "Vitesse minimale",
+              "78 km/h",
+              "80 km/h",
+              "+2.6 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "121 km/h",
+              "121 km/h",
+              "-0.2 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "540 m",
+              "500 m",
+              "-40 m"
+            ],
+            [
+              "Corrections de volant",
+              "13",
+              "13",
+              "+0"
+            ]
+          ],
+          "gain": [
+            0.128,
+            0.256
+          ],
+          "id": "corner-2",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 14 m plus loin (réf. : 420 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 78 km/h au minimum.",
+          "segment": "V2",
+          "title": "V2 : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "9.56 s",
+              "9.78 s",
+              "+0.22 s"
+            ],
+            [
+              "Début de freinage",
+              "1035 m",
+              "1080 m",
+              "+45 m"
+            ],
+            [
+              "Vitesse minimale",
+              "67 km/h",
+              "70 km/h",
+              "+2.4 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "122 km/h",
+              "120 km/h",
+              "-1.7 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1080 m",
+              "1100 m",
+              "+20 m"
+            ],
+            [
+              "Corrections de volant",
+              "10",
+              "4",
+              "-6"
+            ]
+          ],
+          "gain": [
+            0.11,
+            0.219
+          ],
+          "id": "corner-4",
+          "priority": "important",
+          "recommendation": "Reprends l'accélérateur dès que le volant commence à se redresser, vers 1080 m comme sur la référence, en dosant progressivement.",
+          "segment": "V4",
+          "title": "V4 : remise des gaz tardive"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.78 s",
+              "8.91 s",
+              "+0.13 s"
+            ],
+            [
+              "Début de freinage",
+              "115 m",
+              "110 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "99 km/h",
+              "95 km/h",
+              "-3.8 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "129 km/h",
+              "130 km/h",
+              "+1.8 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "255 m",
+              "270 m",
+              "+15 m"
+            ],
+            [
+              "Corrections de volant",
+              "5",
+              "8",
+              "+3"
+            ]
+          ],
+          "gain": [
+            0.064,
+            0.127
+          ],
+          "id": "corner-1",
+          "priority": "important",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 99 km/h vers 255 m).",
+          "segment": "V1",
+          "title": "V1 : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.06 s",
+              "7.16 s",
+              "+0.10 s"
+            ],
+            [
+              "Début de freinage",
+              "1415 m",
+              "1395 m",
+              "-20 m"
+            ],
+            [
+              "Vitesse minimale",
+              "94 km/h",
+              "96 km/h",
+              "+1.9 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "129 km/h",
+              "132 km/h",
+              "+2.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1490 m",
+              "1465 m",
+              "-25 m"
+            ],
+            [
+              "Corrections de volant",
+              "6",
+              "8",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.05,
+            0.1
+          ],
+          "id": "corner-5",
+          "priority": "improvement",
+          "recommendation": "Décale ton point de freinage d'environ 14 m plus loin (réf. : 1415 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 94 km/h au minimum.",
+          "segment": "V5",
+          "title": "V5 : freinage trop précoce"
+        }
+      ],
+      "reference": 7,
+      "warnings": [
+        "Le tour analysé n°2 est perturbé ou invalide."
+      ]
+    }
+  ],
+  "consistency": {
+    "clean_laps": 7,
+    "cv_percent": 0.599,
+    "mean_s": 62.069,
+    "stddev_s": 0.372
+  },
+  "fastest": 7,
+  "lap_2": true,
+  "laps": [
+    {
+      "clean": false,
+      "fuel": 0.125,
+      "kind": "incomplete",
+      "n": 0,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    },
+    {
+      "clean": false,
+      "fuel": 0.517,
+      "kind": "out_lap",
+      "n": 1,
+      "sectors": [],
+      "time": 80.561,
+      "validity": "unknown"
+    },
+    {
+      "clean": false,
+      "fuel": 0.445,
+      "kind": "flying",
+      "n": 2,
+      "sectors": [],
+      "time": 64.38,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.452,
+      "kind": "flying",
+      "n": 3,
+      "sectors": [],
+      "time": 62.104,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 0.43,
+      "kind": "flying",
+      "n": 4,
+      "sectors": [],
+      "time": 62.522,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.454,
+      "kind": "flying",
+      "n": 5,
+      "sectors": [],
+      "time": 62.677,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.463,
+      "kind": "flying",
+      "n": 6,
+      "sectors": [],
+      "time": 61.96,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.456,
+      "kind": "flying",
+      "n": 7,
+      "sectors": [],
+      "time": 61.545,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 0.471,
+      "kind": "flying",
+      "n": 8,
+      "sectors": [],
+      "time": 62.019,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.466,
+      "kind": "flying",
+      "n": 9,
+      "sectors": [],
+      "time": 62.357,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.465,
+      "kind": "flying",
+      "n": 10,
+      "sectors": [],
+      "time": 61.773,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 0.459,
+      "kind": "flying",
+      "n": 11,
+      "sectors": [],
+      "time": 62.12,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 0.464,
+      "kind": "flying",
+      "n": 12,
+      "sectors": [],
+      "time": 62.063,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 0.003,
+      "kind": "incomplete",
+      "n": 13,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    }
+  ],
+  "off_tracks": [
+    {
+      "at_m": 346.815,
+      "corner": "V1",
+      "laps": [
+        1
+      ]
+    },
+    {
+      "at_m": 479.019,
+      "corner": "V2",
+      "laps": [
+        1
+      ]
+    },
+    {
+      "at_m": 963.261,
+      "corner": "V3",
+      "laps": [
+        2
+      ]
+    }
+  ],
+  "race": {
+    "field": 12,
+    "finish": 7,
+    "headline": "P6 → P7 sur 12 pilotes, 3x",
+    "incidents": 3,
+    "insights": [
+      {
+        "detail": "P6 sur la grille, P8 après un tour. Le premier tour se joue au freinage du virage 1 et dans le peloton : vise la sortie propre plutôt que l'attaque.",
+        "kind": "warning",
+        "title": "Départ : 2 places perdues au premier tour"
+      },
+      {
+        "detail": "La régularité est acquise ; la marge est maintenant dans la vitesse pure (comparaison avec une référence plus rapide).",
+        "kind": "good",
+        "title": "Rythme très régulier : ±0.34 s sur 7 tours propres"
+      }
+    ],
+    "pace": {
+      "best_s": 61.545,
+      "first_third_s": 62.391,
+      "laps": 7,
+      "last_third_s": 61.918,
+      "median_s": 62.063,
+      "spread_s": 0.344
+    },
+    "start": 6
+  },
+  "radio": [
+    [
+      0,
+      "hello",
+      "Coach prêt. Référence : ton meilleur tour ici, 1 minute 1 point 5."
+    ],
+    [
+      1,
+      "invalid",
+      "Tour de stand, non compté."
+    ],
+    [
+      2,
+      "invalid",
+      "Tour non compté, sortie de piste au virage 3."
+    ],
+    [
+      3,
+      "focus",
+      "Plus 6 dixièmes. Premier relevé, focus virage 1, secteur 1 : 3 dixièmes perdus. Freine 10 mètres plus tard."
+    ],
+    [
+      4,
+      "invalid",
+      "Tour non compté, incident. Focus toujours virage 1."
+    ],
+    [
+      5,
+      "focus",
+      "Plus 1 seconde 1. Toujours virage 1 : freine 10 mètres plus tard."
+    ],
+    [
+      6,
+      "focus",
+      "Meilleur tour, 1 minute 1 point 9. Plus 4 dixièmes. Toujours virage 1 : freine 10 mètres plus tard."
+    ],
+    [
+      7,
+      "focus",
+      "Meilleur tour, 1 minute 1 point 5. À égalité avec la référence. Toujours virage 1 : freine 5 mètres plus tard."
+    ],
+    [
+      8,
+      "invalid",
+      "Tour non compté, incident. Focus toujours virage 1."
+    ],
+    [
+      9,
+      "focus",
+      "Plus 8 dixièmes. Focus virage 1, secteur 1 : 2 dixièmes perdus. Vise la corde de la référence."
+    ],
+    [
+      10,
+      "focus",
+      "Plus 2 dixièmes. Focus virage 1, secteur 1 : 2 dixièmes perdus. Relâche le frein plus tôt, garde 3 kilomètres heure de plus à la corde."
+    ],
+    [
+      11,
+      "invalid",
+      "Tour non compté, incident. Focus toujours virage 1."
+    ],
+    [
+      12,
+      "focus",
+      "Plus 5 dixièmes. Focus virage 1, secteur 1 : 2 dixièmes perdus. Vise la corde de la référence."
+    ]
+  ],
+  "regularity": {
+    "corners": [
+      {
+        "advice": "Point de freinage qui varie de ±8 m : prends un repère fixe.",
+        "apex_m": 259.0,
+        "best_lap": 7,
+        "best_s": 11.089,
+        "brake_spread_m": 7.547,
+        "differences": [],
+        "gain_s": 0.217,
+        "median_s": 11.306,
+        "name": "V1",
+        "passes": 7
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu remets les gaz 46 m plus tard et tu freines 15 m plus tard.",
+        "apex_m": 540.0,
+        "best_lap": 10,
+        "best_s": 12.639,
+        "brake_spread_m": 7.458,
+        "differences": [
+          {
+            "fast": 541.0,
+            "label": "tu remets les gaz 46 m plus tard",
+            "metric": "throttle",
+            "slow": 495.0
+          },
+          {
+            "fast": 419.0,
+            "label": "tu freines 15 m plus tard",
+            "metric": "brake",
+            "slow": 404.0
+          },
+          {
+            "fast": 77.058,
+            "label": "tu passes 3 km/h moins vite au point le plus lent, mais tu sors mieux",
+            "metric": "min_speed",
+            "slow": 80.018
+          }
+        ],
+        "gain_s": 0.198,
+        "median_s": 12.837,
+        "name": "V2",
+        "passes": 7
+      },
+      {
+        "advice": "Pas de cause nette : trafic, ou petites variations de trajectoire.",
+        "apex_m": 953.0,
+        "best_lap": 10,
+        "best_s": 9.352,
+        "brake_spread_m": 4.821,
+        "differences": [],
+        "gain_s": 0.13,
+        "median_s": 9.482,
+        "name": "V3",
+        "passes": 7
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu remets les gaz 23 m plus tard et tu portes 3 km/h de plus au point le plus lent.",
+        "apex_m": 1078.0,
+        "best_lap": 7,
+        "best_s": 10.577,
+        "brake_spread_m": 3.546,
+        "differences": [
+          {
+            "fast": 1083.0,
+            "label": "tu remets les gaz 23 m plus tard",
+            "metric": "throttle",
+            "slow": 1060.0
+          },
+          {
+            "fast": 65.661,
+            "label": "tu portes 3 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 62.308
+          },
+          {
+            "fast": 1034.0,
+            "label": "tu freines 7 m plus tard",
+            "metric": "brake",
+            "slow": 1027.0
+          }
+        ],
+        "gain_s": 0.121,
+        "median_s": 10.698,
+        "name": "V4",
+        "passes": 7
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu sors 6 km/h plus vite.",
+        "apex_m": 1493.0,
+        "best_lap": 3,
+        "best_s": 17.466,
+        "brake_spread_m": 5.146,
+        "differences": [
+          {
+            "fast": 129.975,
+            "label": "tu sors 6 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 124.468
+          }
+        ],
+        "gain_s": 0.105,
+        "median_s": 17.571,
+        "name": "V5",
+        "passes": 7
+      }
+    ],
+    "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 0,77 s. Le plus gros : V1 (0,22 s).",
+    "laps": 7,
+    "total_gain_s": 0.771
+  },
+  "risk": [
+    {
+      "apex_m": 540.0,
+      "best_clean_s": 12.06,
+      "entry_m": 418.0,
+      "exit_m": 743.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.253,
+      "mean_clean_s": 12.313,
+      "mean_off_s": null,
+      "message": "Aucune sortie sur 11 passages, et 0.25 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
+      "name": "V2",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 11,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 953.0,
+      "best_clean_s": 6.644,
+      "entry_m": 866.0,
+      "exit_m": 1030.0,
+      "expected_cost_s": 0.193,
+      "gain_available_s": 0.133,
+      "mean_clean_s": 6.778,
+      "mean_off_s": 8.901,
+      "message": "1 sortie(s) sur 11, 0.13 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "V3",
+      "off_cost_s": 2.123,
+      "off_rate": 0.091,
+      "offs": 1,
+      "passes": 11,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 259.0,
+      "best_clean_s": 8.698,
+      "entry_m": 110.0,
+      "exit_m": 397.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.182,
+      "mean_clean_s": 8.881,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 11, 0.18 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "V1",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 11,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 1078.0,
+      "best_clean_s": 9.504,
+      "entry_m": 1030.0,
+      "exit_m": 1268.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.152,
+      "mean_clean_s": 9.656,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 11, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "V4",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 11,
+      "sessions": 1,
+      "verdict": "fine"
+    },
+    {
+      "apex_m": 1493.0,
+      "best_clean_s": 6.953,
+      "entry_m": 1413.0,
+      "exit_m": 1629.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.104,
+      "mean_clean_s": 7.058,
+      "mean_off_s": null,
+      "message": "0 sortie(s) sur 11, 0.10 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "V5",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 11,
+      "sessions": 1,
+      "verdict": "fine"
+    }
+  ],
+  "risk_headline": "Rester en piste, c'est acquis. Le temps est à prendre d'abord à V2 : 0.25 s entre ton passage moyen et ton meilleur, sans sortie.",
+  "session": {
+    "car": "Mazda MX-5 Cup",
+    "config": "Short",
+    "kind": "race",
+    "length_m": 1929.0,
+    "setup": "fixed",
+    "sim": "iracing",
+    "track": "Okayama International Circuit"
+  },
+  "strategy": {
+    "lap_time": 62.063,
+    "laps": 14,
+    "per_lap": 0.46,
+    "stints": [
+      [
+        1,
+        14,
+        6.902
+      ]
+    ],
+    "stops": 0,
+    "unit": "litres"
+  },
+  "theoretical_best_s": 61.185
+}

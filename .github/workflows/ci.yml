@@ -25,6 +25,9 @@ concurrency:
 jobs:
   linux:
     runs-on: ubuntu-latest
+    env:
+      # Jeton en lecture seule sur le dépôt privé du corpus de séances réelles (absent : test ignoré).
+      CORPUS_TOKEN: ${{ secrets.APEX_CORPUS_TOKEN }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -68,10 +71,23 @@ jobs:
           cargo clippy -p apex-core --all-targets -- -D warnings
           cargo clippy -p apex-companion --all-targets -- -D warnings
 
+      - name: Corpus de séances réelles (dépôt privé)
+        if: env.CORPUS_TOKEN != ''
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: lwygamez-wq/apex-corpus
+          token: ${{ env.CORPUS_TOKEN }}
+          path: corpus
+          persist-credentials: false
+
       - name: Tests Rust
         run: |
           cargo test -p apex-core
           cargo test -p apex-companion
+
+      - name: Non-régression sur séances réelles
+        if: env.CORPUS_TOKEN != ''
+        run: APEX_CORPUS_DIR="$PWD/corpus" cargo test -p apex-core --test real_corpus -- --nocapture | tee -a "$GITHUB_STEP_SUMMARY"
 
   windows:
     runs-on: windows-latest

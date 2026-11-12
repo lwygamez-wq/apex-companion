@@ -29,7 +29,12 @@ npm run dev:mobile                                       # app mobile, http://lo
 npm run tauri dev                                        # app complète (Linux sans écran : xvfb-run -a npm run tauri dev)
 cargo run -p apex-core --example demo_report             # rapport texte sur données de démo
 cargo run -p apex-core --example strategy_check -- copie/apex.db   # stratégie sur une COPIE de vraie base
+APEX_CORPUS_DIR=corpus cargo test -p apex-core --test real_corpus -- --nocapture   # séances réelles
+APEX_UPDATE_SNAPSHOTS=1 APEX_CORPUS_DIR=corpus cargo test -p apex-core --test real_corpus   # changement voulu
+cargo run --release -p apex-core --example corpus_prepare -- sortie/ fichier.ibt   # anonymise + compresse
 ```
+
+Corpus de séances réelles : dépôt privé `lwygamez-wq/apex-corpus` (fichiers `.ibt.gz` / `.apexlmu.gz` passés par `corpus_prepare` : noms et identifiants de pilotes remplacés, tours vérifiés identiques). La CI le récupère avec le secret `APEX_CORPUS_TOKEN` (lecture seule). Les instantanés (`crates/apex-core/tests/corpus/*.json`, chiffres seulement, sans iRating ni nom) sont versionnés ici : tout écart fait échouer la CI. Un écart voulu se met à jour avec `APEX_UPDATE_SNAPSHOTS=1` et s'explique dans la PR. Le test vérifie aussi qu'aucun conseil n'est donné sans chiffre mesuré.
 
 L'installeur Windows se construit par le workflow `build-windows.yml`, pas en local.
 
