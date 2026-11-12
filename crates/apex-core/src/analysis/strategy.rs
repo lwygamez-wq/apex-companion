@@ -141,6 +141,11 @@ pub struct Strategy {
     pub summary: String,
 }
 
+/// Catégorie la plus rapide de la course : Hypercar en LMU (classe « Hyper »).
+pub fn is_top_class(sim: crate::model::SimId, class: Option<&str>) -> bool {
+    sim == crate::model::SimId::Lmu && class.is_some_and(|c| c.to_ascii_lowercase().contains("hyper"))
+}
+
 /// Tours à parcourir. Course au temps : quand le chrono tombe, le leader termine son tour (l'arrondi
 /// au-dessus). Hors de la catégorie la plus rapide, un tour de plus : le drapeau tombe quand le leader
 /// de la catégorie la plus rapide passe la ligne, une GT3 peut boucler un tour de plus. En Hypercar
