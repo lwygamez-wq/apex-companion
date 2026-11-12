@@ -772,3 +772,68 @@ export interface RegularityReport {
   corners: CornerRegularity[];
   headline: string;
 }
+
+// --- Setups LMU (setup.rs, lmu_probe.rs) ---------------------------------------------------------
+
+export interface SetupEntry {
+  path: string;
+  name: string;
+  track: string;
+  vehicle_class: string;
+  modified_unix: number;
+}
+
+export interface SetupLibraryView {
+  found: string[];
+  dir: string | null;
+  files: SetupEntry[];
+}
+
+export interface SetupChange {
+  group: string;
+  label: string;
+  key: string;
+  from: string;
+  to: string;
+  from_index: number;
+  to_index: number;
+  steps: number;
+  meaning: string | null;
+}
+
+export interface SetupComparison {
+  a: string;
+  b: string;
+  same_car: boolean;
+  vehicle_a: string;
+  vehicle_b: string;
+  changes: SetupChange[];
+  unchanged: number;
+}
+
+export interface ProbeField {
+  name: string;
+  filled_pct: number;
+  min: number;
+  max: number;
+  mean: number;
+}
+
+export interface ProbeApiRead {
+  name: string;
+  path: string;
+  ok: boolean;
+  bytes: number;
+  error: string | null;
+}
+
+export interface ProbeReport {
+  stem: string;
+  car: string;
+  track: string;
+  game_version: number;
+  frames: number;
+  fields: ProbeField[];
+  api: ProbeApiRead[];
+  garage: { settings: number; with_range: number; presets: number | null; optimal_conditions: boolean | null };
+}

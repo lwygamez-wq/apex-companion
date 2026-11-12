@@ -168,6 +168,24 @@ pub async fn race_strategy(
     blocking(state.svc.clone(), move |s| s.race_strategy(sim, &track, track_config.as_deref(), &car, setup, length, margin_laps, formation_laps, &overrides.unwrap_or_default())).await
 }
 
+/// Bibliothèque des setups LMU (`.svm`) : dossier choisi, sinon trouvé dans Steam.
+#[tauri::command]
+pub async fn setup_library(state: State<'_, AppState>, dir: Option<String>) -> R<apex_core::service::SetupLibraryView> {
+    blocking(state.svc.clone(), move |s| Ok(s.setup_library(dir.as_deref()))).await
+}
+
+/// Compare deux setups LMU (lecture seule).
+#[tauri::command]
+pub async fn setup_compare(state: State<'_, AppState>, a: String, b: String) -> R<apex_core::setup::SetupComparison> {
+    blocking(state.svc.clone(), move |s| s.setup_compare(&a, &b)).await
+}
+
+/// Rapports de la sonde setup LMU.
+#[tauri::command]
+pub async fn setup_probe_reports(state: State<'_, AppState>) -> R<Vec<apex_core::connectors::lmu_probe::ProbeReport>> {
+    blocking(state.svc.clone(), move |s| Ok(s.setup_probe_reports())).await
+}
+
 /// Plan suivi par l'ingénieur de course sur ce circuit avec cette voiture (calculateur, « Suivre en course »).
 #[tauri::command]
 pub async fn set_engineer_plan(

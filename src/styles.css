@@ -699,3 +699,29 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .consumption-calc { margin-top: 12px; }
 .consumption-calc > summary { cursor: pointer; font-weight: 700; color: var(--cmp); padding: 6px 0; }
 .consumption-calc .fuelcalc { padding: 14px 0 0; background: transparent; }
+
+/* Setups : comparateur et sonde */
+.setups-page .card + .card { margin-top: 16px; }
+.su-dir { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.su-dir .muted { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.su-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.su-pick { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.su-pick select { background: var(--panel-2); border: 1px solid transparent; border-radius: var(--radius); padding: 7px 9px; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--text, inherit); }
+.su-summary { margin: 4px 0 10px; }
+.su-summary b { font-size: 18px; }
+.su-group h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 14px 0 6px; }
+.su-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.su-group .su-table { table-layout: fixed; }
+.su-group .su-table th:nth-child(1) { width: 24%; }
+.su-group .su-table th:nth-child(2), .su-group .su-table th:nth-child(3) { width: 13%; }
+.su-group .su-table th:nth-child(4) { width: 10%; }
+.su-group .su-table td.num, .su-group .su-table th:nth-child(n+2):nth-child(-n+4) { text-align: right; }
+.su-table th { text-align: left; font-weight: 550; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--panel-2); }
+.su-table td { padding: 6px 8px; border-bottom: 1px solid var(--panel-2); vertical-align: top; }
+.su-table td.num { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.su-flag { font-weight: 800; width: 48px; }
+.su-flag.ok { color: #2fbf71; }
+.su-flag.ko { color: var(--red); }
+.su-flag.unk { color: var(--muted); }
+.su-note { margin: 12px 0 0; font-size: 12px; }
+@media (max-width: 720px) { .su-picks { grid-template-columns: 1fr; } }

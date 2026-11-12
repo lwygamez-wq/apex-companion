@@ -22,6 +22,7 @@ pub mod live_coach;
 pub mod race_engineer;
 pub mod mock;
 pub mod service;
+pub mod setup;
 pub mod model;
 pub mod storage;
 pub mod tracks;
