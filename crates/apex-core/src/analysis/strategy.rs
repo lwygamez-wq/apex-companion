@@ -70,6 +70,14 @@ pub struct StrategyInput {
     pub fuel_ratio: Option<f32>,
     #[serde(default)]
     pub fuel_tank: Option<f32>,
+    /// Ta voiture est dans la catégorie la plus rapide (Hypercar en LMU) : le drapeau tombe quand le
+    /// leader de ta catégorie passe la ligne, pas de tour en plus (voir `race_laps`).
+    #[serde(default)]
+    pub top_class: bool,
+    /// Temps perdu par arrêt (voie des stands + plein), mesuré sur tes courses : une course au temps
+    /// compte moins de tours quand on s'arrête.
+    #[serde(default)]
+    pub pit_loss_s: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -133,15 +141,16 @@ pub struct Strategy {
     pub summary: String,
 }
 
-/// Tours à parcourir. Course au temps : quand le chrono tombe, le leader termine son tour ;
-/// on compte un tour de plus que ce que le temps permet (en multiclasse, le drapeau tombe quand le
-/// leader de la catégorie la plus rapide passe la ligne : une GT3 peut boucler un tour de plus).
-pub fn race_laps(length: RaceLength, lap_time_s: f32) -> u32 {
+/// Tours à parcourir. Course au temps : quand le chrono tombe, le leader termine son tour (l'arrondi
+/// au-dessus). Hors de la catégorie la plus rapide, un tour de plus : le drapeau tombe quand le leader
+/// de la catégorie la plus rapide passe la ligne, une GT3 peut boucler un tour de plus. En Hypercar
+/// (`top_class`), ce tour en trop faisait mettre un tour d'énergie de trop (Imola, 12 nov.).
+pub fn race_laps(length: RaceLength, lap_time_s: f32, top_class: bool) -> u32 {
     match length {
         RaceLength::Laps(n) => n.max(1),
         RaceLength::Minutes(m) => {
             let lt = lap_time_s.max(1.0);
-            ((m * 60.0) / lt).ceil() as u32 + 1
+            ((m * 60.0) / lt).ceil().max(1.0) as u32 + u32::from(!top_class)
         }
     }
 }
@@ -218,8 +227,10 @@ fn build_stints(laps: u32, c: f32, start: f32, cap: f32, reserve: f32, formation
 /// Niveau à régler à un arrêt : de quoi faire le relais suivant, les relais restants étant
 /// équilibrés, à la consommation `c` + 2 %, plus la marge. Même règle que l'ingénieur en course.
 pub fn pit_fill(laps_after: u32, stops_left: u32, c: f32, reserve: f32, cap: f32) -> f32 {
+    // La marge (`reserve`) suffit : l'ingénieur recalcule à chaque tour et demande du lift si besoin.
+    // Les 2 % ajoutés en plus de la marge faisaient finir avec un demi-tour d'énergie de trop.
     let ns = (laps_after as f32 / stops_left.max(1) as f32).ceil();
-    (ns * c * 1.02 + reserve).min(cap)
+    (ns * c + reserve).min(cap)
 }
 
 /// Relais tels que l'ingénieur les annoncera si tu roules à `c` par tour avec `stops` arrêts :
@@ -279,10 +290,21 @@ pub fn fuel_ratio(pairs: &[(f32, f32)]) -> Option<(f32, f32)> {
 }
 
 pub fn plan(i: &StrategyInput) -> Strategy {
+    // Course au temps : chaque arrêt mange du chrono, donc des tours. On planifie sans, puis on retire
+    // le temps des arrêts prévus (deux passes : un arrêt de moins peut en découler).
+    if let (RaceLength::Minutes(m), Some(pl)) = (i.length, i.pit_loss_s.filter(|p| *p > 0.0)) {
+        let at = |stops: u32| StrategyInput { length: RaceLength::Minutes((m - stops as f32 * pl / 60.0).max(1.0)), pit_loss_s: None, ..i.clone() };
+        let first = plan(&StrategyInput { pit_loss_s: None, ..i.clone() });
+        if first.stops == 0 {
+            return first;
+        }
+        let second = plan(&at(first.stops));
+        return if second.stops == first.stops { second } else { plan(&at(second.stops)) };
+    }
     let u = i.unit;
     let per = i.per_lap.max(0.01);
     let lt = i.lap_time_s.max(1.0);
-    let laps = race_laps(i.length, i.lap_time_s);
+    let laps = race_laps(i.length, i.lap_time_s, i.top_class);
     let formation = i.formation_laps.max(0.0) * per;
     let reserve = i.margin_laps.max(0.0) * per;
     let total = laps as f32 * per + reserve + formation;
@@ -397,7 +419,7 @@ mod tests {
     use super::*;
 
     fn input(length: RaceLength, tank: Option<f32>) -> StrategyInput {
-        StrategyInput { length, unit: Unit::Litres, per_lap: 1.6, lap_time_s: 110.0, tank, margin_laps: 1.0, formation_laps: 0.5, fuel_ratio: None, fuel_tank: None }
+        StrategyInput { length, unit: Unit::Litres, per_lap: 1.6, lap_time_s: 110.0, tank, margin_laps: 1.0, formation_laps: 0.5, fuel_ratio: None, fuel_tank: None, top_class: false, pit_loss_s: None }
     }
 
     #[test]
@@ -461,7 +483,7 @@ mod tests {
 
     fn spa(ratio: Option<f32>, fuel_tank: Option<f32>) -> Strategy {
         // 6 h à 3:30 (Spa en Hypercar), 4,8 % d'énergie par tour.
-        plan(&StrategyInput { length: RaceLength::Minutes(360.0), unit: Unit::Energy, per_lap: 4.8, lap_time_s: 210.0, tank: Some(100.0), margin_laps: 0.5, formation_laps: 0.5, fuel_ratio: ratio, fuel_tank })
+        plan(&StrategyInput { length: RaceLength::Minutes(360.0), unit: Unit::Energy, per_lap: 4.8, lap_time_s: 210.0, tank: Some(100.0), margin_laps: 0.5, formation_laps: 0.5, fuel_ratio: ratio, fuel_tank, top_class: false, pit_loss_s: None })
     }
 
     #[test]
@@ -538,5 +560,32 @@ mod tests {
         // Arrêts minimum avec 0 % ou 5 % d'économie.
         assert_eq!(stops_needed(46.0, 46.0, 1.6, 28, 1.6, 0.0), Some(1));
         assert_eq!(stops_needed(46.0, 46.0, 1.6, 28, 1.6, 0.05), Some(0));
+    }
+
+    /// Course LMU d'Imola du 12 nov. (9X8, 90 min, 3,18 %/tour, 1:34,3, arrêt de 72,5 s) : 57 tours
+    /// courus, un arrêt au tour 30. L'ancien calcul comptait 59 tours (tour multiclasse en trop, arrêt
+    /// non décompté) et faisait mettre 96 % à l'arrêt : 14,4 % d'énergie restaient à l'arrivée.
+    #[test]
+    fn imola_hypercar_race_counts_the_laps_actually_run() {
+        assert_eq!(race_laps(RaceLength::Minutes(90.0), 94.3, false), 59);
+        assert_eq!(race_laps(RaceLength::Minutes(90.0), 94.3, true), 58);
+        let i = StrategyInput { length: RaceLength::Minutes(90.0), unit: Unit::Energy, per_lap: 3.18, lap_time_s: 94.3, tank: Some(100.0), margin_laps: 0.5, formation_laps: 0.5, fuel_ratio: Some(0.83), fuel_tank: Some(110.0), top_class: true, pit_loss_s: Some(72.5) };
+        let s = plan(&i);
+        assert_eq!((s.laps, s.stops), (57, 1));
+        // Niveau du 2e relais : les tours qui restent après l'arrêt, plus la demi-tour de marge.
+        let second = &s.stints[1];
+        let laps_after = (second.to_lap - second.from_lap + 1) as f32;
+        assert!((second.amount - (laps_after * 3.18 + 0.5 * 3.18)).abs() < 0.01, "{second:?}");
+        assert!(second.amount < 90.0, "{second:?}");
+        // Pas de temps d'arrêt mesuré : la course au temps garde son compte (sans tour en trop).
+        assert_eq!(plan(&StrategyInput { pit_loss_s: None, ..i.clone() }).laps, 58);
+        // GT3 dans la même course : le tour en plus reste (le leader Hypercar peut finir avant).
+        assert_eq!(plan(&StrategyInput { top_class: false, ..i }).laps, 58);
+    }
+
+    #[test]
+    fn pit_fill_keeps_only_the_margin() {
+        // 26 tours après l'arrêt, 3,18 %/tour, marge d'une demi-tour : 84,3 % (l'ancien calcul ajoutait 2 %).
+        assert!((pit_fill(26, 1, 3.18, 1.59, 100.0) - 84.27).abs() < 0.01);
     }
 }

@@ -254,6 +254,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                     let (mut c, hello) = LiveCoach::new(yaml, reference, svc.user_corner_names(&meta), plan);
                                     let hint = svc.engineer_hint(&meta);
                                     c.set_engineer(hint.plan, hint.unit.zip(hint.per_lap), hint.fuel_ratio);
+                                    c.set_race_context(hint.top_class, hint.pit_loss_s);
                                     if let Ok(mut s) = status.lock() {
                                         s.coach_plan = Some(c.plan_text());
                                         s.coach_repeat = None;

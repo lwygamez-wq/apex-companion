@@ -308,6 +308,8 @@ pub struct LiveCoach {
     /// Avant le premier tour mesuré : consommation et ratio mesurés sur tes séances précédentes.
     hint_per: Option<(crate::analysis::strategy::Unit, f32)>,
     hint_ratio: Option<f32>,
+    top_class: bool,
+    pit_loss_s: Option<f64>,
 }
 
 /// Relais en cours, pour l'écran « Au volant » et la commande « carburant ».
@@ -383,7 +385,7 @@ impl LiveCoach {
         };
         let self_reference = reference.is_none();
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class: false, pit_loss_s: None },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -398,6 +400,13 @@ impl LiveCoach {
         self.engineer.set_plan(plan);
         self.hint_per = per_lap.filter(|(_, p)| *p > 0.0);
         self.hint_ratio = fuel_ratio.filter(|r| *r > 0.0);
+    }
+
+    /// Fin de course au temps : catégorie la plus rapide (pas de tour en plus) et temps perdu par
+    /// arrêt mesuré sur tes courses (les arrêts restants mangent du chrono, donc des tours).
+    pub fn set_race_context(&mut self, top_class: bool, pit_loss_s: Option<f32>) {
+        self.top_class = top_class;
+        self.pit_loss_s = pit_loss_s.filter(|p| *p > 0.0).map(f64::from);
     }
 
     /// Nouveau plan choisi pendant la séance.
@@ -561,8 +570,10 @@ impl LiveCoach {
             let mut t: Vec<f64> = self.lap_times.iter().copied().collect();
             t.sort_by(|a, b| a.total_cmp(b));
             let lt = t.get(t.len() / 2).copied().or(self.best_lap.map(|b| b * 1.01)).filter(|l| *l > 1.0)?;
-            let after = ((self.time_remain - rem * lt) / lt).ceil().max(0.0);
-            Some(rem + after + 1.0)
+            // Arrêts encore prévus : leur temps ne fait pas de tours.
+            let pits = self.engineer.stops_left().unwrap_or(0) as f64 * self.pit_loss_s.unwrap_or(0.0);
+            let after = ((self.time_remain - rem * lt - pits) / lt).ceil().max(0.0);
+            Some(rem + after + if self.top_class { 0.0 } else { 1.0 })
         } else {
             None
         }
@@ -1089,5 +1100,35 @@ mod tests {
         let t = coach.strategy_text();
         assert!(t.starts_with("Plan auto"), "{t}");
         assert!(t.contains("ratio 0,41"), "{t}");
+    }
+
+    /// Même course : en Hypercar (catégorie la plus rapide), pas de tour en plus ; l'arrêt prévu
+    /// (80 s mesurées, soit 2 tours de 40 s) ne fait pas de tours. 3 tours de moins à couvrir.
+    #[test]
+    fn timed_race_laps_left_drop_the_extra_lap_and_the_pit_time() {
+        use crate::ingest::lmu::{live_yaml, testkit::*, LiveState};
+        let run = |ctx: Option<(bool, Option<f32>)>| {
+            let y = live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap();
+            let (mut coach, _) = LiveCoach::new(&y, None, vec![], None);
+            if let Some((top, pit)) = ctx {
+                coach.set_race_context(top, pit);
+            }
+            let mut live = LiveState::default();
+            let mut et = 0.0f64;
+            while et < 330.0 {
+                let d = 1500.0 + et * 50.0;
+                let sc_et = (et * 5.0).floor() / 5.0;
+                let mut f = frame(100.0 + et, d, 100.0 + sc_et, 1500.0 + sc_et * 50.0, 10);
+                f.info.mEndET = 100.0 + 40.0 * 30.0;
+                if let Some(r) = live.row(&f) {
+                    coach.push(r);
+                }
+                et += 0.02;
+            }
+            coach.fuel_snapshot().unwrap().laps_left.unwrap()
+        };
+        let base = run(None);
+        assert!((base - run(Some((true, Some(80.0)))) - 3.0).abs() < 1e-3);
+        assert!((base - run(Some((true, None))) - 1.0).abs() < 1e-3);
     }
 }
