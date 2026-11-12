@@ -179,6 +179,11 @@ impl Engineer {
         self.last.as_ref()
     }
 
+    /// Arrêts encore prévus (connu après le premier tour de course).
+    pub fn stops_left(&self) -> Option<u32> {
+        self.stops_left
+    }
+
     pub fn stops_done(&self) -> u32 {
         self.stops_done
     }
@@ -306,8 +311,9 @@ impl Engineer {
         let verdict_txt = |v: Verdict| match v {
             Verdict::Lift => format!("Tu fais {avg} : lift and coast, {} de moins par tour.", per(u, s.per_lap - tg.per_lap)),
             Verdict::OnTarget => "Tu es dans la cible.".to_string(),
-            Verdict::Push if r == 0 => format!("Tu fais {avg}, {} de marge à l'arrivée : attaque jusqu'au drapeau.", plural((finish_spare.unwrap_or(0.0).max(0.0) + 1e-3).floor() as u32, "tour")),
-            Verdict::Push => format!("Tu fais {avg} : pas besoin d'économiser, attaque."),
+            Verdict::Push if r == 0 => format!("Tu fais {avg}, {} de marge à l'arrivée : pas besoin d'économiser, roule à ton rythme.", plural((finish_spare.unwrap_or(0.0).max(0.0) + 1e-3).floor() as u32, "tour")),
+            // Pas « attaque » : l'énergie ne donne pas de puissance, ne pas économiser ne fait pas gagner de temps.
+            Verdict::Push => format!("Tu fais {avg} : pas besoin d'économiser, roule à ton rythme."),
         };
         if !self.stint_announced {
             let head = if r == 0 && self.stops_done == 0 {
@@ -411,7 +417,7 @@ mod tests {
         let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
         let first = e.on_lap(&state(95.2, 4.8, 104, 1)).unwrap();
         assert!(first.starts_with("Relais 1 sur 6. Box à la fin du tour"), "{first}");
-        assert!(first.contains("pas besoin d'économiser, attaque"), "{first}");
+        assert!(first.contains("pas besoin d'économiser, roule à ton rythme"), "{first}");
         assert_eq!(e.last().unwrap().stops_left, 5);
         // Tours suivants à la même consommation : on ne parle plus avant l'appel au stand.
         let (mut level, mut lap) = (95.2f32, 1);
@@ -473,7 +479,7 @@ mod tests {
         s.energy_laps = Some(12.5);
         let m = e.on_lap(&s).unwrap();
         assert!(m.starts_with("Course sans arrêt, 10 tours"), "{m}");
-        assert!(m.contains("attaque jusqu'au drapeau"), "{m}");
+        assert!(m.contains("de marge à l'arrivée : pas besoin d'économiser"), "{m}");
         assert!(m.contains("le carburant lâchera avant l'énergie"), "{m}");
         assert!(e.last().unwrap().fuel_limits);
         assert!(e.summary(Unit::Energy).contains("carburant limite"));
@@ -484,7 +490,7 @@ mod tests {
     #[test]
     fn live_calls_match_the_calculator() {
         use crate::analysis::strategy::{plan, PlanKind, RaceLength, StrategyInput};
-        let s = plan(&StrategyInput { length: RaceLength::Laps(104), unit: Unit::Energy, per_lap: 4.8, lap_time_s: 210.0, tank: Some(100.0), margin_laps: 0.5, formation_laps: 0.5, fuel_ratio: None, fuel_tank: None });
+        let s = plan(&StrategyInput { length: RaceLength::Laps(104), unit: Unit::Energy, per_lap: 4.8, lap_time_s: 210.0, tank: Some(100.0), margin_laps: 0.5, formation_laps: 0.5, fuel_ratio: None, fuel_tank: None, top_class: false, pit_loss_s: None });
         for (mode, kind) in [(EngineerMode::Attack, PlanKind::Attack), (EngineerMode::Save, PlanKind::Save)] {
             let o = s.options.iter().find(|o| o.kind == kind).unwrap();
             let c = if kind == PlanKind::Save { o.target_per_lap } else { 4.8 };

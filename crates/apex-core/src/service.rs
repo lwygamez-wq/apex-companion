@@ -363,6 +363,11 @@ pub struct RaceStrategyView {
     pub fuel_tank_l: Option<f32>,
     /// Plan suivi par l'ingénieur de course sur ce circuit avec cette voiture.
     pub engineer: crate::race_engineer::EngineerPlan,
+    /// Catégorie la plus rapide : pas de tour en plus en fin de course au temps.
+    pub top_class: bool,
+    /// Temps perdu par arrêt mesuré sur tes courses (médiane), et nombre d'arrêts mesurés.
+    pub pit_loss_s: Option<f32>,
+    pub pit_stops_measured: usize,
 }
 
 /// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
@@ -374,6 +379,9 @@ pub struct EngineerHint {
     pub unit: Option<crate::analysis::strategy::Unit>,
     /// Ratio carburant conseillé (énergie virtuelle).
     pub fuel_ratio: Option<f32>,
+    /// Catégorie la plus rapide (pas de tour en plus) et temps perdu par arrêt mesuré.
+    pub top_class: bool,
+    pub pit_loss_s: Option<f32>,
 }
 
 /// Valeurs saisies à la main dans le calculateur (remplacent la mesure).
@@ -2197,7 +2205,29 @@ impl AppService {
             };
             return Err(ServiceError::User(msg.into()));
         };
-        let fuel_tank = db.latest_profile(track, car)?.or(db.latest_car_profile(car)?).and_then(|p| p.usable_tank_l());
+        let profile = db.latest_profile(track, car)?.or(db.latest_car_profile(car)?);
+        let fuel_tank = profile.as_ref().and_then(|p| p.usable_tank_l());
+        // Catégorie la plus rapide (Hypercar en LMU) : pas de tour en plus à la fin d'une course au temps.
+        let top_class = sim == SimId::Lmu && profile.as_ref().and_then(|p| p.car.class.as_deref()).is_some_and(|c| c.to_ascii_lowercase().contains("hyper"));
+        // Temps perdu par arrêt, mesuré sur tes courses ici : tour de rentrée + tour de sortie, moins
+        // deux tours normaux de la même course. Médiane des arrêts.
+        let mut losses: Vec<f32> = vec![];
+        for s in sessions.iter().filter(|s| s.kind == SessionKind::Race) {
+            let laps = db.laps(s.id)?;
+            let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
+            normal.sort_by(|a, b| a.total_cmp(b));
+            let Some(&med) = normal.get(normal.len() / 2) else { continue };
+            for w in laps.windows(2) {
+                if let (LapKind::InLap, LapKind::OutLap, Some(a), Some(b)) = (w[0].meta.kind, w[1].meta.kind, w[0].meta.lap_time_s, w[1].meta.lap_time_s) {
+                    let loss = (a + b - 2.0 * med) as f32;
+                    if (5.0..600.0).contains(&loss) {
+                        losses.push(loss);
+                    }
+                }
+            }
+        }
+        losses.sort_by(|a, b| a.total_cmp(b));
+        let pit_loss_s = losses.get(losses.len() / 2).copied();
         let measured_tank = match unit {
             Unit::Energy => Some(100.0),
             Unit::Litres => fuel_tank,
@@ -2226,6 +2256,8 @@ impl AppService {
             formation_laps,
             fuel_ratio,
             fuel_tank: fuel_tank.filter(|_| unit == Unit::Energy),
+            top_class,
+            pit_loss_s,
         });
         let tyre_wear_per_lap = (!wear.is_empty()).then(|| {
             let n = wear.len() as f32;
@@ -2253,6 +2285,9 @@ impl AppService {
             fuel_ratio_suggested: ratio.map(|r| r.1),
             fuel_ratio,
             fuel_tank_l: fuel_tank,
+            top_class,
+            pit_loss_s,
+            pit_stops_measured: losses.len(),
             // Même verrou que ci-dessus : `engineer_plan_for` le reprendrait (blocage).
             engineer: db.get_setting(&engineer_key(sim, track, track_config, car)).ok().flatten().and_then(|j| serde_json::from_str(&j).ok()).unwrap_or_default(),
         })
@@ -2284,7 +2319,7 @@ impl AppService {
     pub fn engineer_hint(&self, meta: &SessionMeta) -> EngineerHint {
         let plan = self.engineer_plan(meta);
         match self.race_strategy(meta.sim, &meta.track, meta.track_config.as_deref(), &meta.car, meta.setup, None, plan.margin_laps, 0.0, &StrategyOverrides::default()) {
-            Ok(v) => EngineerHint { plan, per_lap: v.per_lap_measured, unit: Some(v.unit), fuel_ratio: v.fuel_ratio_suggested },
+            Ok(v) => EngineerHint { plan, per_lap: v.per_lap_measured, unit: Some(v.unit), fuel_ratio: v.fuel_ratio_suggested, top_class: v.top_class, pit_loss_s: v.pit_loss_s },
             Err(_) => EngineerHint { plan, ..Default::default() },
         }
     }
