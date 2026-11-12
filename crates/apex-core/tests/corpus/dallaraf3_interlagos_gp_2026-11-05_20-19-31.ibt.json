@@ -1,0 +1,979 @@
+{
+  "ai_context": "Simulateur : iRacing · Circuit : Autódromo José Carlos Pace (Grand Prix) · Voiture : Dallara F312 F3 · Séance : qualification · Série : Open\nLongueur du circuit : 4223 m\nTours : 4 au total, 2 propres. Meilleur tour propre : 1:30.686 (tour 2). Tour théorique (meilleurs segments) : 1:30.623.\nRégularité : écart-type 0.88 s sur 2 tours propres, moyenne 1:31.305.\n\nTOURS (numéro, temps, état) :\n- T0 — sortie de piste, incident, stand, 1.12 L\n- T1 1:31.924 propre, 1.16 L\n- T2 1:30.686 propre, 1.16 L\n- T3 — incomplet, 0.42 L\n\nCOMPARAISON : ton tour 1 (1:31.924) contre la référence ton tour 2 (1:30.686). Écart final +1.238 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Junção : +0.35 s · freinage plus tôt (-3 m) · vitesse mini 98 vs 105 km/h, gaz -1 m · sortie 156 vs 159 km/h\n- S do Senna : +0.33 s · freinage plus tôt (-8 m) · vitesse mini 99 vs 104 km/h, gaz +15 m · sortie 127 vs 131 km/h\n- Laranjinha : +0.27 s · freinage plus tôt (-7 m) · vitesse mini 71 vs 73 km/h, gaz +9 m · sortie 120 vs 115 km/h\n- Descida do Lago : +0.20 s · freinage plus tôt (-5 m) · vitesse mini 124 vs 129 km/h, gaz +2 m · sortie 178 vs 181 km/h\n- Pinheirinho : +0.15 s · freinage (la référence n'en a pas) · vitesse mini 95 vs 98 km/h, gaz -8 m · sortie 163 vs 162 km/h\n- V4 : +0.13 s · freinage plus tôt (-13 m) · vitesse mini 164 vs 164 km/h, gaz +72 m · sortie 174 vs 180 km/h\n- Bico de Pato : +0.11 s · freinage plus tard (+6 m) · vitesse mini 75 vs 79 km/h, gaz -4 m · sortie 159 vs 161 km/h\n- V2 : -0.30 s · pas de freinage · vitesse mini 127 vs 117 km/h, gaz -44 m · sortie 174 vs 168 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Junção : vitesse minimale insuffisante (gain estimé 0.18 à 0.35 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 7 km/h (98 km/h contre 105 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.35 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 105 km/h vers 3191 m).\n- S do Senna : freinage trop précoce (gain estimé 0.16 à 0.33 s) : Tu freines environ 8 m plus tôt que la référence et ta vitesse minimale est inférieure de 5 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 0.33 s par rapport à la référence. Confiance : moyenne. → Décale ton point de freinage d'environ 6 m plus loin (réf. : 208 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 104 km/h au minimum.\n- Laranjinha : remise des gaz trop brutale (gain estimé 0.13 à 0.27 s) : Ta montée des gaz est 0.39 s plus rapide que la référence et suivie de 4 corrections de volant supplémentaires : signe d'un train arrière déstabilisé. Perte mesurée : 0.27 s par rapport à la référence. Confiance : moyenne. → Allonge la montée des gaz entre la corde et la sortie ; n'atteins 100 % qu'une fois le volant quasiment droit.\n- Descida do Lago : vitesse minimale insuffisante (gain estimé 0.10 à 0.20 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 5 km/h (124 km/h contre 129 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.20 s par rapport à la référence. Confiance : moyenne. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 129 km/h vers 1358 m).\n- Pinheirinho : freinage inutile (gain estimé 0.07 à 0.15 s) : Sur la référence, tu passes ce virage sans freiner (simple levé de pied) à 98 km/h. Ici, tu freines vers 2363 m et tombes à 95 km/h : 3 km/h de moins à la corde. Perte mesurée : 0.15 s par rapport à la référence. Confiance : moyenne. → Essaie de ne pas toucher au frein : lève le pied un peu plus tôt, garde de la vitesse et vise 98 km/h à la corde comme sur ton meilleur tour.\n\nCARTE DE RISQUE (toutes tes séances ici) :\n- Junção : 0/2 sorties, à prendre 0.18 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- S do Senna : 0/2 sorties, à prendre 0.16 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- V2 : 0/2 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- Laranjinha : 0/2 sorties, à prendre 0.13 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- Descida do Lago : 0/2 sorties, à prendre 0.10 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- Pinheirinho : 0/2 sorties, à prendre 0.07 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- V4 : 0/2 sorties, à prendre 0.06 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n- Bico de Pato : 0/2 sorties, à prendre 0.05 s en refaisant ton meilleur passage · 2 passage(s) : pas assez pour juger (il en faut 4).\n\nSORTIES DE PISTE :\n- Descida do Lago (à 1461 m) aux tours [0]\n",
+  "analysis_reference": 2,
+  "best": 2,
+  "comparisons": [
+    {
+      "compared": 1,
+      "corners": [
+        {
+          "apex_m": 350.0,
+          "dt": 0.022,
+          "min_cmp": 99.04,
+          "min_ref": 104.069
+        },
+        {
+          "apex_m": 1360.0,
+          "dt": 0.204,
+          "min_cmp": 124.012,
+          "min_ref": 129.355
+        },
+        {
+          "apex_m": 2045.0,
+          "dt": 0.13,
+          "min_cmp": 164.481,
+          "min_ref": 163.991
+        },
+        {
+          "apex_m": 2275.0,
+          "dt": 0.266,
+          "min_cmp": 71.307,
+          "min_ref": 73.253
+        },
+        {
+          "apex_m": 2410.0,
+          "dt": 0.15,
+          "min_cmp": 95.004,
+          "min_ref": 98.37
+        },
+        {
+          "apex_m": 2695.0,
+          "dt": 0.11,
+          "min_cmp": 75.565,
+          "min_ref": 79.783
+        },
+        {
+          "apex_m": 3190.0,
+          "dt": 0.355,
+          "min_cmp": 97.605,
+          "min_ref": 105.46
+        }
+      ],
+      "delta_end_s": 1.254,
+      "insights": [
+        {
+          "confidence": "high",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.60 s",
+              "6.95 s",
+              "+0.36 s"
+            ],
+            [
+              "Début de freinage",
+              "3080 m",
+              "3075 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "105 km/h",
+              "98 km/h",
+              "-7.9 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "159 km/h",
+              "156 km/h",
+              "-3.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3195 m",
+              "3190 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "5",
+              "+1"
+            ]
+          ],
+          "gain": [
+            0.178,
+            0.355
+          ],
+          "id": "corner-7",
+          "priority": "critical",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 105 km/h vers 3190 m).",
+          "segment": "Junção",
+          "title": "Junção : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.27 s",
+              "6.54 s",
+              "+0.27 s"
+            ],
+            [
+              "Début de freinage",
+              "2190 m",
+              "2185 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "73 km/h",
+              "71 km/h",
+              "-1.9 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "114 km/h",
+              "118 km/h",
+              "+4.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2280 m",
+              "2285 m",
+              "+5 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "6",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.133,
+            0.266
+          ],
+          "id": "corner-4",
+          "priority": "critical",
+          "recommendation": "Allonge la montée des gaz entre la corde et la sortie ; n'atteins 100 % qu'une fois le volant quasiment droit.",
+          "segment": "Laranjinha",
+          "title": "Laranjinha : remise des gaz trop brutale"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.72 s",
+              "6.92 s",
+              "+0.20 s"
+            ],
+            [
+              "Début de freinage",
+              "1250 m",
+              "1245 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "129 km/h",
+              "124 km/h",
+              "-5.3 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "181 km/h",
+              "179 km/h",
+              "-2.5 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1360 m",
+              "1360 m",
+              "+0 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "2",
+              "-1"
+            ]
+          ],
+          "gain": [
+            0.102,
+            0.204
+          ],
+          "id": "corner-2",
+          "priority": "important",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 129 km/h vers 1360 m).",
+          "segment": "Descida do Lago",
+          "title": "Descida do Lago : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.25 s",
+              "6.40 s",
+              "+0.15 s"
+            ],
+            [
+              "Début de freinage",
+              "—",
+              "2365 m",
+              "—"
+            ],
+            [
+              "Vitesse minimale",
+              "98 km/h",
+              "95 km/h",
+              "-3.4 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "162 km/h",
+              "163 km/h",
+              "+0.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2415 m",
+              "2410 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "5",
+              "+1"
+            ]
+          ],
+          "gain": [
+            0.075,
+            0.15
+          ],
+          "id": "corner-5",
+          "priority": "important",
+          "recommendation": "Essaie de ne pas toucher au frein : lève le pied un peu plus tôt, garde de la vitesse et vise 98 km/h à la corde comme sur ton meilleur tour.",
+          "segment": "Pinheirinho",
+          "title": "Pinheirinho : freinage inutile"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "5.61 s",
+              "5.74 s",
+              "+0.13 s"
+            ],
+            [
+              "Début de freinage",
+              "1925 m",
+              "1915 m",
+              "-10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "164 km/h",
+              "164 km/h",
+              "+0.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "179 km/h",
+              "174 km/h",
+              "-5.0 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2040 m",
+              "2110 m",
+              "+70 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "5",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.065,
+            0.13
+          ],
+          "id": "corner-3",
+          "priority": "important",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 1925 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 164 km/h au minimum.",
+          "segment": "Ferradura",
+          "title": "Ferradura : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.63 s",
+              "8.74 s",
+              "+0.11 s"
+            ],
+            [
+              "Début de freinage",
+              "2600 m",
+              "2610 m",
+              "+10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "80 km/h",
+              "76 km/h",
+              "-4.2 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "162 km/h",
+              "160 km/h",
+              "-2.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2695 m",
+              "2690 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "9",
+              "7",
+              "-2"
+            ]
+          ],
+          "gain": [
+            0.055,
+            0.11
+          ],
+          "id": "corner-6",
+          "priority": "improvement",
+          "recommendation": "Reviens vers le point de freinage de la référence (2600 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 162 km/h.",
+          "segment": "Bico de Pato",
+          "title": "Bico de Pato : freinage trop tardif, entrée surchargée"
+        }
+      ],
+      "reference": 2,
+      "warnings": []
+    },
+    {
+      "compared": 1,
+      "corners": [
+        {
+          "apex_m": 350.0,
+          "dt": 0.022,
+          "min_cmp": 99.04,
+          "min_ref": 104.069
+        },
+        {
+          "apex_m": 1360.0,
+          "dt": 0.204,
+          "min_cmp": 124.012,
+          "min_ref": 129.355
+        },
+        {
+          "apex_m": 2045.0,
+          "dt": 0.13,
+          "min_cmp": 164.481,
+          "min_ref": 163.991
+        },
+        {
+          "apex_m": 2275.0,
+          "dt": 0.266,
+          "min_cmp": 71.307,
+          "min_ref": 73.253
+        },
+        {
+          "apex_m": 2410.0,
+          "dt": 0.15,
+          "min_cmp": 95.004,
+          "min_ref": 98.37
+        },
+        {
+          "apex_m": 2695.0,
+          "dt": 0.11,
+          "min_cmp": 75.565,
+          "min_ref": 79.783
+        },
+        {
+          "apex_m": 3190.0,
+          "dt": 0.355,
+          "min_cmp": 97.605,
+          "min_ref": 105.46
+        }
+      ],
+      "delta_end_s": 1.254,
+      "insights": [
+        {
+          "confidence": "high",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.60 s",
+              "6.95 s",
+              "+0.36 s"
+            ],
+            [
+              "Début de freinage",
+              "3080 m",
+              "3075 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "105 km/h",
+              "98 km/h",
+              "-7.9 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "159 km/h",
+              "156 km/h",
+              "-3.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3195 m",
+              "3190 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "5",
+              "+1"
+            ]
+          ],
+          "gain": [
+            0.178,
+            0.355
+          ],
+          "id": "corner-7",
+          "priority": "critical",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 105 km/h vers 3190 m).",
+          "segment": "Junção",
+          "title": "Junção : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.27 s",
+              "6.54 s",
+              "+0.27 s"
+            ],
+            [
+              "Début de freinage",
+              "2190 m",
+              "2185 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "73 km/h",
+              "71 km/h",
+              "-1.9 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "114 km/h",
+              "118 km/h",
+              "+4.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2280 m",
+              "2285 m",
+              "+5 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "6",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.133,
+            0.266
+          ],
+          "id": "corner-4",
+          "priority": "critical",
+          "recommendation": "Allonge la montée des gaz entre la corde et la sortie ; n'atteins 100 % qu'une fois le volant quasiment droit.",
+          "segment": "Laranjinha",
+          "title": "Laranjinha : remise des gaz trop brutale"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.72 s",
+              "6.92 s",
+              "+0.20 s"
+            ],
+            [
+              "Début de freinage",
+              "1250 m",
+              "1245 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "129 km/h",
+              "124 km/h",
+              "-5.3 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "181 km/h",
+              "179 km/h",
+              "-2.5 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1360 m",
+              "1360 m",
+              "+0 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "2",
+              "-1"
+            ]
+          ],
+          "gain": [
+            0.102,
+            0.204
+          ],
+          "id": "corner-2",
+          "priority": "important",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 129 km/h vers 1360 m).",
+          "segment": "Descida do Lago",
+          "title": "Descida do Lago : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.25 s",
+              "6.40 s",
+              "+0.15 s"
+            ],
+            [
+              "Début de freinage",
+              "—",
+              "2365 m",
+              "—"
+            ],
+            [
+              "Vitesse minimale",
+              "98 km/h",
+              "95 km/h",
+              "-3.4 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "162 km/h",
+              "163 km/h",
+              "+0.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2415 m",
+              "2410 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "5",
+              "+1"
+            ]
+          ],
+          "gain": [
+            0.075,
+            0.15
+          ],
+          "id": "corner-5",
+          "priority": "important",
+          "recommendation": "Essaie de ne pas toucher au frein : lève le pied un peu plus tôt, garde de la vitesse et vise 98 km/h à la corde comme sur ton meilleur tour.",
+          "segment": "Pinheirinho",
+          "title": "Pinheirinho : freinage inutile"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "5.61 s",
+              "5.74 s",
+              "+0.13 s"
+            ],
+            [
+              "Début de freinage",
+              "1925 m",
+              "1915 m",
+              "-10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "164 km/h",
+              "164 km/h",
+              "+0.5 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "179 km/h",
+              "174 km/h",
+              "-5.0 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2040 m",
+              "2110 m",
+              "+70 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "5",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.065,
+            0.13
+          ],
+          "id": "corner-3",
+          "priority": "important",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 1925 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 164 km/h au minimum.",
+          "segment": "Ferradura",
+          "title": "Ferradura : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.63 s",
+              "8.74 s",
+              "+0.11 s"
+            ],
+            [
+              "Début de freinage",
+              "2600 m",
+              "2610 m",
+              "+10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "80 km/h",
+              "76 km/h",
+              "-4.2 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "162 km/h",
+              "160 km/h",
+              "-2.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2695 m",
+              "2690 m",
+              "-5 m"
+            ],
+            [
+              "Corrections de volant",
+              "9",
+              "7",
+              "-2"
+            ]
+          ],
+          "gain": [
+            0.055,
+            0.11
+          ],
+          "id": "corner-6",
+          "priority": "improvement",
+          "recommendation": "Reviens vers le point de freinage de la référence (2600 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 162 km/h.",
+          "segment": "Bico de Pato",
+          "title": "Bico de Pato : freinage trop tardif, entrée surchargée"
+        }
+      ],
+      "reference": 2,
+      "warnings": []
+    }
+  ],
+  "consistency": {
+    "clean_laps": 2,
+    "cv_percent": 0.959,
+    "mean_s": 91.305,
+    "stddev_s": 0.875
+  },
+  "fastest": 2,
+  "lap_2": true,
+  "laps": [
+    {
+      "clean": false,
+      "fuel": 1.12,
+      "kind": "incomplete",
+      "n": 0,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    },
+    {
+      "clean": true,
+      "fuel": 1.16,
+      "kind": "flying",
+      "n": 1,
+      "sectors": [],
+      "time": 91.924,
+      "validity": "valid"
+    },
+    {
+      "clean": true,
+      "fuel": 1.159,
+      "kind": "flying",
+      "n": 2,
+      "sectors": [],
+      "time": 90.686,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 0.424,
+      "kind": "incomplete",
+      "n": 3,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    }
+  ],
+  "off_tracks": [
+    {
+      "at_m": 1460.633,
+      "corner": "Descida do Lago",
+      "laps": [
+        0
+      ]
+    }
+  ],
+  "race": null,
+  "radio": [
+    [
+      0,
+      "hello",
+      "Coach prêt. Référence : ton meilleur tour ici, 1 minute 30 point 6."
+    ],
+    [
+      1,
+      "focus",
+      "Plus 1 seconde 2. Premier relevé, focus Junção, secteur 3 : 4 dixièmes perdus. Relâche le frein plus tôt, garde 7 kilomètres heure de plus à la corde."
+    ],
+    [
+      2,
+      "callout",
+      "Junção, relâche le frein plus tôt."
+    ],
+    [
+      2,
+      "focus",
+      "Meilleur tour, 1 minute 30 point 6. À égalité avec la référence. Junção : c'est mieux. Rien de significatif à corriger, garde ce rythme."
+    ]
+  ],
+  "regularity": null,
+  "risk": [
+    {
+      "apex_m": 3192.0,
+      "best_clean_s": 6.593,
+      "entry_m": 3074.0,
+      "exit_m": 3324.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.177,
+      "mean_clean_s": 6.77,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Junção",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 348.0,
+      "best_clean_s": 5.545,
+      "entry_m": 195.0,
+      "exit_m": 409.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.163,
+      "mean_clean_s": 5.708,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "S do Senna",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 453.0,
+      "best_clean_s": 4.442,
+      "entry_m": 409.0,
+      "exit_m": 590.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.152,
+      "mean_clean_s": 4.594,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "V2",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2276.0,
+      "best_clean_s": 6.226,
+      "entry_m": 2189.0,
+      "exit_m": 2368.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.134,
+      "mean_clean_s": 6.36,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Laranjinha",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 1360.0,
+      "best_clean_s": 6.631,
+      "entry_m": 1238.0,
+      "exit_m": 1538.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.101,
+      "mean_clean_s": 6.732,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Descida do Lago",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2412.0,
+      "best_clean_s": 6.271,
+      "entry_m": 2368.0,
+      "exit_m": 2578.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.075,
+      "mean_clean_s": 6.346,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Pinheirinho",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2042.0,
+      "best_clean_s": 5.557,
+      "entry_m": 1917.0,
+      "exit_m": 2189.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.064,
+      "mean_clean_s": 5.621,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "V4",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2693.0,
+      "best_clean_s": 8.499,
+      "entry_m": 2598.0,
+      "exit_m": 2867.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.054,
+      "mean_clean_s": 8.554,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Bico de Pato",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2103.0,
+      "best_clean_s": 2.591,
+      "entry_m": 2043.0,
+      "exit_m": 2163.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.006,
+      "mean_clean_s": 2.597,
+      "mean_off_s": null,
+      "message": "2 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Ferradura",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 2,
+      "sessions": 1,
+      "verdict": "insufficient"
+    }
+  ],
+  "risk_headline": null,
+  "session": {
+    "car": "Dallara F312 F3",
+    "config": "Grand Prix",
+    "kind": "qualifying",
+    "length_m": 4222.6,
+    "setup": "open",
+    "sim": "iracing",
+    "track": "Autódromo José Carlos Pace"
+  },
+  "strategy": {
+    "lap_time": 91.924,
+    "laps": 21,
+    "per_lap": 1.16,
+    "stints": [
+      [
+        1,
+        21,
+        25.511
+      ]
+    ],
+    "stops": 0,
+    "unit": "litres"
+  },
+  "theoretical_best_s": 90.623
+}

@@ -1,0 +1,999 @@
+{
+  "ai_context": "Simulateur : iRacing · Circuit : Red Bull Ring (Grand Prix) · Voiture : Mercedes-AMG W13 E Performance · Séance : test · Série : Open\nLongueur du circuit : 4283 m\nTours : 8 au total, 2 propres. Meilleur tour propre : 1:09.749 (tour 6). Tour théorique (meilleurs segments) : 1:09.428.\n\nTOURS (numéro, temps, état) :\n- T0 — sortie de piste, incident, stand, 1.63 L\n- T1 1:18.289 propre, 1.79 L\n- T2 1:23.090 sortie de piste, incident, 1.77 L\n- T3 1:13.115 sortie de piste, incident, 1.77 L\n- T4 1:31.783 sortie de piste, incident, 1.81 L\n- T5 1:26.065 incident, 1.59 L\n- T6 1:09.749 propre, 1.71 L\n- T7 — incident, 0.27 L\n\nCOMPARAISON : ton tour 1 (1:18.289) contre la référence ton tour 6 (1:09.749). Écart final +8.539 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Virage 9 : +2.16 s · freinage plus tôt (-195 m) · vitesse mini 127 vs 220 km/h, gaz -27 m · sortie 192 vs 237 km/h\n- Schlossgold : +1.36 s · freinage plus tôt (-25 m) · vitesse mini 74 vs 98 km/h, gaz -25 m · sortie 215 vs 225 km/h\n- Virage 10 : +0.78 s · freinage plus tôt (-7 m) · vitesse mini 133 vs 171 km/h, gaz -22 m · sortie 212 vs 229 km/h\n- Remus : +0.56 s · freinage plus tôt (-7 m) · vitesse mini 57 vs 65 km/h, gaz +4 m · sortie 212 vs 225 km/h\n- V4 : +0.48 s · freinage plus tôt (-19 m) · vitesse mini 179 vs 194 km/h, gaz +23 m · sortie 227 vs 232 km/h\n- Virage 1 : +0.43 s · freinage plus tôt (-6 m) · vitesse mini 122 vs 141 km/h, gaz -14 m · sortie 225 vs 233 km/h\n- V5 : -0.30 s · freinage plus tôt (-3 m) · vitesse mini 198 vs 192 km/h, gaz -74 m · sortie 245 vs 238 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Virage 1 : sécuriser avant d'attaquer (gain estimé 1.28 à 2.57 s) : Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s. → Prochaine session à Virage 1 : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.\n- Virage 9 : freinage trop précoce (gain estimé 1.08 à 2.16 s) : Tu freines environ 195 m plus tôt que la référence et ta vitesse minimale est inférieure de 94 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 2.16 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 136 m plus loin (réf. : 3711 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 220 km/h au minimum.\n- Schlossgold : freinage trop précoce (gain estimé 0.68 à 1.36 s) : Tu freines environ 25 m plus tôt que la référence et ta vitesse minimale est inférieure de 24 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 1.36 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 18 m plus loin (réf. : 2061 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 98 km/h au minimum.\n- Virage 10 : vitesse minimale insuffisante (gain estimé 0.39 à 0.78 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 38 km/h (133 km/h contre 171 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.78 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 171 km/h vers 3970 m).\n- Remus : vitesse minimale insuffisante (gain estimé 0.28 à 0.56 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 8 km/h (57 km/h contre 65 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.56 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 65 km/h vers 1389 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Priorité : rester en piste. 1 virage(s) à sécuriser, Virage 1 en tête (2 sorties sur 6). Tes sorties te coûtent en moyenne 2.57 s par tour, avant même de parler de rythme.\n- Virage 1 : 2/6 sorties, à prendre 0.23 s en refaisant ton meilleur passage, une sortie coûte 7.7 s · Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s.\n- Remus : 1/6 sorties, à prendre 0.43 s en refaisant ton meilleur passage, une sortie coûte 8.7 s · 1 sortie sur 6 et 0.43 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Schlossgold : 0/6 sorties, à prendre 1.09 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 1.09 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Virage 9 : 0/6 sorties, à prendre 0.74 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 0.74 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- V5 : 1/6 sorties, à prendre 0.67 s en refaisant ton meilleur passage, une sortie coûte -0.4 s · 1 sortie sur 6 et 0.67 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- V4 : 0/6 sorties, à prendre 0.63 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 0.63 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Virage 10 : 1/6 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie(s) sur 6, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nSORTIES DE PISTE :\n- Virage 1 (à 580 m) aux tours [2, 4]\n- hors virage (à 858 m) aux tours [0]\n- Remus (à 1466 m) aux tours [4]\n- V5 (à 3117 m) aux tours [2]\n- Virage 10 (à 3961 m) aux tours [3]\n",
+  "analysis_reference": 6,
+  "best": 6,
+  "comparisons": [
+    {
+      "compared": 3,
+      "corners": [
+        {
+          "apex_m": 445.0,
+          "dt": -0.178,
+          "min_cmp": 139.732,
+          "min_ref": 141.155
+        },
+        {
+          "apex_m": 1390.0,
+          "dt": 1.069,
+          "min_cmp": 46.03,
+          "min_ref": 65.245
+        },
+        {
+          "apex_m": 2200.0,
+          "dt": -0.019,
+          "min_cmp": 99.75,
+          "min_ref": 98.176
+        },
+        {
+          "apex_m": 2700.0,
+          "dt": 0.848,
+          "min_cmp": 166.33,
+          "min_ref": 194.449
+        },
+        {
+          "apex_m": 3110.0,
+          "dt": -0.438,
+          "min_cmp": 211.109,
+          "min_ref": 192.668
+        },
+        {
+          "apex_m": 3795.0,
+          "dt": 1.047,
+          "min_cmp": 155.167,
+          "min_ref": 220.518
+        },
+        {
+          "apex_m": 3970.0,
+          "dt": 0.395,
+          "min_cmp": 158.563,
+          "min_ref": 170.822
+        }
+      ],
+      "delta_end_s": 3.364,
+      "insights": [
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Sorties de piste",
+              "0",
+              "2 sur 6 passages",
+              "33 %"
+            ],
+            [
+              "Temps de traversée",
+              "6.38 s (propre)",
+              "14.08 s (sortie)",
+              "+7.70 s"
+            ]
+          ],
+          "gain": [
+            1.284,
+            2.568
+          ],
+          "id": "risk-447",
+          "priority": "critical",
+          "recommendation": "Prochaine session à Virage 1 : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.",
+          "segment": "Virage 1",
+          "title": "Virage 1 : sécuriser avant d'attaquer"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.50 s",
+              "9.57 s",
+              "+1.07 s"
+            ],
+            [
+              "Début de freinage",
+              "1265 m",
+              "1280 m",
+              "+15 m"
+            ],
+            [
+              "Vitesse minimale",
+              "65 km/h",
+              "46 km/h",
+              "-19.2 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "226 km/h",
+              "221 km/h",
+              "-5.7 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1390 m",
+              "1405 m",
+              "+15 m"
+            ],
+            [
+              "Corrections de volant",
+              "2",
+              "10",
+              "+8"
+            ]
+          ],
+          "gain": [
+            0.535,
+            1.069
+          ],
+          "id": "corner-2",
+          "priority": "critical",
+          "recommendation": "Reviens vers le point de freinage de la référence (1265 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 226 km/h.",
+          "segment": "Remus",
+          "title": "Remus : freinage trop tardif, entrée surchargée"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "3.31 s",
+              "4.36 s",
+              "+1.05 s"
+            ],
+            [
+              "Début de freinage",
+              "3715 m",
+              "3625 m",
+              "-90 m"
+            ],
+            [
+              "Vitesse minimale",
+              "221 km/h",
+              "155 km/h",
+              "-65.4 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "237 km/h",
+              "181 km/h",
+              "-56.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3790 m",
+              "3760 m",
+              "-30 m"
+            ],
+            [
+              "Corrections de volant",
+              "5",
+              "4",
+              "-1"
+            ]
+          ],
+          "gain": [
+            0.524,
+            1.047
+          ],
+          "id": "corner-6",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 63 m plus loin (réf. : 3715 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 221 km/h au minimum.",
+          "segment": "Virage 9",
+          "title": "Virage 9 : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "5.32 s",
+              "6.16 s",
+              "+0.85 s"
+            ],
+            [
+              "Début de freinage",
+              "2580 m",
+              "2535 m",
+              "-45 m"
+            ],
+            [
+              "Vitesse minimale",
+              "194 km/h",
+              "166 km/h",
+              "-28.1 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "233 km/h",
+              "215 km/h",
+              "-18.0 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2700 m",
+              "2645 m",
+              "-55 m"
+            ],
+            [
+              "Corrections de volant",
+              "7",
+              "7",
+              "+0"
+            ]
+          ],
+          "gain": [
+            0.424,
+            0.848
+          ],
+          "id": "corner-4",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 32 m plus loin (réf. : 2580 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 194 km/h au minimum.",
+          "segment": "V4",
+          "title": "V4 : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "3.83 s",
+              "4.23 s",
+              "+0.40 s"
+            ],
+            [
+              "Début de freinage",
+              "3890 m",
+              "3900 m",
+              "+10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "171 km/h",
+              "159 km/h",
+              "-12.3 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "230 km/h",
+              "220 km/h",
+              "-9.6 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3970 m",
+              "3970 m",
+              "+0 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "5",
+              "+2"
+            ]
+          ],
+          "gain": [
+            0.198,
+            0.395
+          ],
+          "id": "corner-7",
+          "priority": "critical",
+          "recommendation": "Reviens vers le point de freinage de la référence (3890 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 230 km/h.",
+          "segment": "Virage 10",
+          "title": "Virage 10 : freinage trop tardif, entrée surchargée"
+        }
+      ],
+      "reference": 6,
+      "warnings": [
+        "Le tour analysé n°3 est perturbé ou invalide."
+      ]
+    },
+    {
+      "compared": 4,
+      "corners": [
+        {
+          "apex_m": 445.0,
+          "dt": 7.282,
+          "min_cmp": 15.561,
+          "min_ref": 141.155
+        },
+        {
+          "apex_m": 1390.0,
+          "dt": 9.137,
+          "min_cmp": 20.075,
+          "min_ref": 65.245
+        },
+        {
+          "apex_m": 2200.0,
+          "dt": 0.335,
+          "min_cmp": 111.942,
+          "min_ref": 98.176
+        },
+        {
+          "apex_m": 2700.0,
+          "dt": 0.384,
+          "min_cmp": 170.52,
+          "min_ref": 194.449
+        },
+        {
+          "apex_m": 3110.0,
+          "dt": 0.092,
+          "min_cmp": 175.686,
+          "min_ref": 192.668
+        },
+        {
+          "apex_m": 3795.0,
+          "dt": 0.403,
+          "min_cmp": 198.177,
+          "min_ref": 220.518
+        },
+        {
+          "apex_m": 3970.0,
+          "dt": 0.195,
+          "min_cmp": 169.177,
+          "min_ref": 170.822
+        }
+      ],
+      "delta_end_s": 22.034,
+      "insights": [
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Sorties de piste",
+              "0",
+              "2 sur 6 passages",
+              "33 %"
+            ],
+            [
+              "Temps de traversée",
+              "6.38 s (propre)",
+              "14.08 s (sortie)",
+              "+7.70 s"
+            ]
+          ],
+          "gain": [
+            1.284,
+            2.568
+          ],
+          "id": "risk-447",
+          "priority": "critical",
+          "recommendation": "Prochaine session à Virage 1 : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.",
+          "segment": "Virage 1",
+          "title": "Virage 1 : sécuriser avant d'attaquer"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "8.50 s",
+              "17.64 s",
+              "+9.14 s"
+            ],
+            [
+              "Début de freinage",
+              "1265 m",
+              "1260 m",
+              "-5 m"
+            ],
+            [
+              "Vitesse minimale",
+              "65 km/h",
+              "20 km/h",
+              "-45.2 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "226 km/h",
+              "142 km/h",
+              "-84.8 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "1390 m",
+              "1480 m",
+              "+90 m"
+            ],
+            [
+              "Corrections de volant",
+              "2",
+              "10",
+              "+8"
+            ]
+          ],
+          "gain": [
+            4.569,
+            9.137
+          ],
+          "id": "corner-2",
+          "priority": "critical",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 65 km/h vers 1390 m).",
+          "segment": "Remus",
+          "title": "Remus : vitesse minimale insuffisante"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "3.31 s",
+              "3.72 s",
+              "+0.40 s"
+            ],
+            [
+              "Début de freinage",
+              "3715 m",
+              "3635 m",
+              "-80 m"
+            ],
+            [
+              "Vitesse minimale",
+              "221 km/h",
+              "198 km/h",
+              "-22.3 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "233 km/h",
+              "233 km/h",
+              "+0.5 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3790 m",
+              "3770 m",
+              "-20 m"
+            ],
+            [
+              "Corrections de volant",
+              "5",
+              "1",
+              "-4"
+            ]
+          ],
+          "gain": [
+            0.201,
+            0.403
+          ],
+          "id": "corner-6",
+          "priority": "critical",
+          "recommendation": "Décale ton point de freinage d'environ 56 m plus loin (réf. : 3715 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 221 km/h au minimum.",
+          "segment": "Virage 9",
+          "title": "Virage 9 : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "5.32 s",
+              "5.70 s",
+              "+0.38 s"
+            ],
+            [
+              "Début de freinage",
+              "2580 m",
+              "2600 m",
+              "+20 m"
+            ],
+            [
+              "Vitesse minimale",
+              "194 km/h",
+              "171 km/h",
+              "-23.9 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "233 km/h",
+              "205 km/h",
+              "-28.0 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2700 m",
+              "2750 m",
+              "+50 m"
+            ],
+            [
+              "Corrections de volant",
+              "7",
+              "3",
+              "-4"
+            ]
+          ],
+          "gain": [
+            0.192,
+            0.384
+          ],
+          "id": "corner-4",
+          "priority": "critical",
+          "recommendation": "Reviens vers le point de freinage de la référence (2580 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 233 km/h.",
+          "segment": "V4",
+          "title": "V4 : freinage trop tardif, entrée surchargée"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "7.57 s",
+              "7.91 s",
+              "+0.33 s"
+            ],
+            [
+              "Début de freinage",
+              "2065 m",
+              "2065 m",
+              "-0 m"
+            ],
+            [
+              "Vitesse minimale",
+              "98 km/h",
+              "112 km/h",
+              "+13.8 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "225 km/h",
+              "204 km/h",
+              "-21.7 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2205 m",
+              "2240 m",
+              "+35 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "3",
+              "+0"
+            ]
+          ],
+          "gain": [
+            0.167,
+            0.335
+          ],
+          "id": "corner-3",
+          "priority": "critical",
+          "recommendation": "Reprends l'accélérateur dès que le volant commence à se redresser, vers 2205 m comme sur la référence, en dosant progressivement.",
+          "segment": "Schlossgold",
+          "title": "Schlossgold : remise des gaz tardive"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "3.83 s",
+              "4.03 s",
+              "+0.20 s"
+            ],
+            [
+              "Début de freinage",
+              "3890 m",
+              "3875 m",
+              "-15 m"
+            ],
+            [
+              "Vitesse minimale",
+              "171 km/h",
+              "169 km/h",
+              "-1.6 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "230 km/h",
+              "229 km/h",
+              "-1.5 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3970 m",
+              "3940 m",
+              "-30 m"
+            ],
+            [
+              "Corrections de volant",
+              "3",
+              "3",
+              "+0"
+            ]
+          ],
+          "gain": [
+            0.098,
+            0.195
+          ],
+          "id": "corner-7",
+          "priority": "important",
+          "recommendation": "Décale ton point de freinage d'environ 10 m plus loin (réf. : 3890 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 171 km/h au minimum.",
+          "segment": "Virage 10",
+          "title": "Virage 10 : freinage trop précoce"
+        },
+        {
+          "confidence": "medium",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "4.38 s",
+              "4.47 s",
+              "+0.09 s"
+            ],
+            [
+              "Début de freinage",
+              "2970 m",
+              "3040 m",
+              "+70 m"
+            ],
+            [
+              "Vitesse minimale",
+              "193 km/h",
+              "176 km/h",
+              "-17.0 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "239 km/h",
+              "224 km/h",
+              "-15.7 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3110 m",
+              "3120 m",
+              "+10 m"
+            ],
+            [
+              "Corrections de volant",
+              "2",
+              "5",
+              "+3"
+            ]
+          ],
+          "gain": [
+            0.046,
+            0.092
+          ],
+          "id": "corner-5",
+          "priority": "improvement",
+          "recommendation": "Reviens vers le point de freinage de la référence (2970 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 239 km/h.",
+          "segment": "V5",
+          "title": "V5 : freinage trop tardif, entrée surchargée"
+        }
+      ],
+      "reference": 6,
+      "warnings": [
+        "Le tour analysé n°4 est perturbé ou invalide."
+      ]
+    }
+  ],
+  "consistency": null,
+  "fastest": 6,
+  "lap_2": true,
+  "laps": [
+    {
+      "clean": false,
+      "fuel": 1.63,
+      "kind": "incomplete",
+      "n": 0,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    },
+    {
+      "clean": true,
+      "fuel": 1.788,
+      "kind": "flying",
+      "n": 1,
+      "sectors": [],
+      "time": 78.289,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 1.774,
+      "kind": "flying",
+      "n": 2,
+      "sectors": [],
+      "time": 83.09,
+      "validity": "invalid"
+    },
+    {
+      "clean": false,
+      "fuel": 1.773,
+      "kind": "flying",
+      "n": 3,
+      "sectors": [],
+      "time": 73.115,
+      "validity": "invalid"
+    },
+    {
+      "clean": false,
+      "fuel": 1.815,
+      "kind": "flying",
+      "n": 4,
+      "sectors": [],
+      "time": 91.783,
+      "validity": "invalid"
+    },
+    {
+      "clean": false,
+      "fuel": 1.595,
+      "kind": "flying",
+      "n": 5,
+      "sectors": [],
+      "time": 86.065,
+      "validity": "invalid"
+    },
+    {
+      "clean": true,
+      "fuel": 1.711,
+      "kind": "flying",
+      "n": 6,
+      "sectors": [],
+      "time": 69.749,
+      "validity": "valid"
+    },
+    {
+      "clean": false,
+      "fuel": 0.273,
+      "kind": "incomplete",
+      "n": 7,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    }
+  ],
+  "off_tracks": [
+    {
+      "at_m": 579.85,
+      "corner": "Virage 1",
+      "laps": [
+        2,
+        4
+      ]
+    },
+    {
+      "at_m": 857.621,
+      "corner": null,
+      "laps": [
+        0
+      ]
+    },
+    {
+      "at_m": 1466.357,
+      "corner": "Remus",
+      "laps": [
+        4
+      ]
+    },
+    {
+      "at_m": 3116.699,
+      "corner": "V5",
+      "laps": [
+        2
+      ]
+    },
+    {
+      "at_m": 3961.197,
+      "corner": "Virage 10",
+      "laps": [
+        3
+      ]
+    }
+  ],
+  "race": null,
+  "radio": [
+    [
+      0,
+      "hello",
+      "Coach prêt. Référence : ton meilleur tour ici, 1 minute 9 point 7."
+    ],
+    [
+      1,
+      "focus",
+      "Plus 8 secondes 5. Premier relevé, focus Virage 9, secteur 3 : 2 secondes 2 perdus. Commence à tourner plus tôt."
+    ],
+    [
+      2,
+      "callout",
+      "Virage 9, tourne plus tôt."
+    ],
+    [
+      2,
+      "invalid",
+      "Tour non compté, sortie de piste à Virage 1. Focus toujours Virage 9."
+    ],
+    [
+      3,
+      "callout",
+      "Virage 9, tourne plus tôt."
+    ],
+    [
+      3,
+      "invalid",
+      "Tour non compté, sortie de piste à Virage 10. Focus toujours Virage 9."
+    ],
+    [
+      4,
+      "callout",
+      "Virage 9, tourne plus tôt."
+    ],
+    [
+      4,
+      "invalid",
+      "Tour non compté, deuxième sortie à Virage 1. Garde de la marge ici. Focus toujours Virage 9."
+    ],
+    [
+      5,
+      "callout",
+      "Virage 9, tourne plus tôt."
+    ],
+    [
+      5,
+      "invalid",
+      "Tour non compté, incident. Focus toujours Virage 9."
+    ],
+    [
+      6,
+      "callout",
+      "Virage 9, tourne plus tôt."
+    ],
+    [
+      6,
+      "focus",
+      "Meilleur tour, 1 minute 9 point 7. À égalité avec la référence. Virage 9 : c'est mieux. Rien de significatif à corriger, garde ce rythme."
+    ]
+  ],
+  "regularity": null,
+  "risk": [
+    {
+      "apex_m": 447.0,
+      "best_clean_s": 6.149,
+      "entry_m": 321.0,
+      "exit_m": 649.0,
+      "expected_cost_s": 2.568,
+      "gain_available_s": 0.227,
+      "mean_clean_s": 6.375,
+      "mean_off_s": 14.08,
+      "message": "Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s.",
+      "name": "Virage 1",
+      "off_cost_s": 7.705,
+      "off_rate": 0.333,
+      "offs": 2,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "secure"
+    },
+    {
+      "apex_m": 1388.0,
+      "best_clean_s": 8.415,
+      "entry_m": 1247.0,
+      "exit_m": 1581.0,
+      "expected_cost_s": 1.444,
+      "gain_available_s": 0.429,
+      "mean_clean_s": 8.844,
+      "mean_off_s": 17.511,
+      "message": "1 sortie sur 6 et 0.43 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.",
+      "name": "Remus",
+      "off_cost_s": 8.667,
+      "off_rate": 0.167,
+      "offs": 1,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 2202.0,
+      "best_clean_s": 7.525,
+      "entry_m": 2051.0,
+      "exit_m": 2394.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 1.092,
+      "mean_clean_s": 8.616,
+      "mean_off_s": null,
+      "message": "Aucune sortie sur 6 passages, et 1.09 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
+      "name": "Schlossgold",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 3793.0,
+      "best_clean_s": 3.316,
+      "entry_m": 3666.0,
+      "exit_m": 3886.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.736,
+      "mean_clean_s": 4.052,
+      "mean_off_s": null,
+      "message": "Aucune sortie sur 6 passages, et 0.74 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
+      "name": "Virage 9",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 3109.0,
+      "best_clean_s": 3.831,
+      "entry_m": 3013.0,
+      "exit_m": 3251.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.673,
+      "mean_clean_s": 4.504,
+      "mean_off_s": 4.097,
+      "message": "1 sortie sur 6 et 0.67 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.",
+      "name": "V5",
+      "off_cost_s": -0.407,
+      "off_rate": 0.167,
+      "offs": 1,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 2699.0,
+      "best_clean_s": 5.242,
+      "entry_m": 2572.0,
+      "exit_m": 2882.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.626,
+      "mean_clean_s": 5.868,
+      "mean_off_s": null,
+      "message": "Aucune sortie sur 6 passages, et 0.63 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
+      "name": "V4",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "push"
+    },
+    {
+      "apex_m": 3972.0,
+      "best_clean_s": 3.787,
+      "entry_m": 3886.0,
+      "exit_m": 4098.0,
+      "expected_cost_s": 0.023,
+      "gain_available_s": 0.248,
+      "mean_clean_s": 4.035,
+      "mean_off_s": 4.176,
+      "message": "1 sortie(s) sur 6, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "name": "Virage 10",
+      "off_cost_s": 0.141,
+      "off_rate": 0.167,
+      "offs": 1,
+      "passes": 6,
+      "sessions": 1,
+      "verdict": "fine"
+    }
+  ],
+  "risk_headline": "Priorité : rester en piste. 1 virage(s) à sécuriser, Virage 1 en tête (2 sorties sur 6). Tes sorties te coûtent en moyenne 2.57 s par tour, avant même de parler de rythme.",
+  "session": {
+    "car": "Mercedes-AMG W13 E Performance",
+    "config": "Grand Prix",
+    "kind": "private_testing",
+    "length_m": 4283.4,
+    "setup": "open",
+    "sim": "iracing",
+    "track": "Red Bull Ring"
+  },
+  "strategy": {
+    "lap_time": 78.289,
+    "laps": 24,
+    "per_lap": 1.749,
+    "stints": [
+      [
+        1,
+        24,
+        43.732
+      ]
+    ],
+    "stops": 0,
+    "unit": "litres"
+  },
+  "theoretical_best_s": 69.428
+}

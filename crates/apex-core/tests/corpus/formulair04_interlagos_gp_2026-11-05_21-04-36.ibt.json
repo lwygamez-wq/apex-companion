@@ -1,0 +1,233 @@
+{
+  "ai_context": "Simulateur : iRacing · Circuit : Autódromo José Carlos Pace (Grand Prix) · Voiture : FIA F4 · Séance : qualification · Série : Fixed\nLongueur du circuit : 4223 m\nTours : 3 au total, 0 propres. Meilleur tour propre : — (tour 0). Tour théorique (meilleurs segments) : —.\n\nTOURS (numéro, temps, état) :\n- T0 — sortie de piste, incident, stand, 0.89 L\n- T1 1:59.307 sortie de piste, incident, 0.99 L\n- T2 — sortie de piste, incident, stand\n\nCARTE DE RISQUE (toutes tes séances ici) :\n- S do Senna : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Descida do Lago : 1/1 sorties · 1 passage(s) : pas assez pour juger (il en faut 4).\n- V2 : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Ferradura : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Laranjinha : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Pinheirinho : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Bico de Pato : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Junção : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n\nSORTIES DE PISTE :\n- S do Senna (à 383 m) aux tours [2]\n- V2 (à 1443 m) aux tours [1]\n- Junção (à 3202 m) aux tours [0]\n",
+  "analysis_reference": 1,
+  "best": null,
+  "comparisons": [],
+  "consistency": null,
+  "fastest": 1,
+  "lap_2": true,
+  "laps": [
+    {
+      "clean": false,
+      "fuel": 0.894,
+      "kind": "incomplete",
+      "n": 0,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    },
+    {
+      "clean": false,
+      "fuel": 0.988,
+      "kind": "flying",
+      "n": 1,
+      "sectors": [],
+      "time": 119.307,
+      "validity": "invalid"
+    },
+    {
+      "clean": false,
+      "fuel": null,
+      "kind": "incomplete",
+      "n": 2,
+      "sectors": [],
+      "time": null,
+      "validity": "unknown"
+    }
+  ],
+  "off_tracks": [
+    {
+      "at_m": 383.226,
+      "corner": "S do Senna",
+      "laps": [
+        2
+      ]
+    },
+    {
+      "at_m": 1443.24,
+      "corner": "V2",
+      "laps": [
+        1
+      ]
+    },
+    {
+      "at_m": 3202.334,
+      "corner": "Junção",
+      "laps": [
+        0
+      ]
+    }
+  ],
+  "race": null,
+  "radio": [
+    [
+      0,
+      "hello",
+      "Coach prêt. Pas de référence enregistrée ici : je prends ton meilleur tour propre de la session."
+    ],
+    [
+      1,
+      "invalid",
+      "Tour non propre, je ne peux pas encore en faire une référence."
+    ]
+  ],
+  "regularity": null,
+  "risk": [
+    {
+      "apex_m": 366.0,
+      "best_clean_s": 19.494,
+      "entry_m": 203.0,
+      "exit_m": 566.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 19.494,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "S do Senna",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 1379.0,
+      "best_clean_s": null,
+      "entry_m": 1319.0,
+      "exit_m": 1439.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": null,
+      "mean_clean_s": null,
+      "mean_off_s": 5.875,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Descida do Lago",
+      "off_cost_s": null,
+      "off_rate": 1.0,
+      "offs": 1,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 1441.0,
+      "best_clean_s": 9.719,
+      "entry_m": 1409.0,
+      "exit_m": 1578.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 9.719,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "V2",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2100.0,
+      "best_clean_s": 6.067,
+      "entry_m": 1958.0,
+      "exit_m": 2212.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 6.067,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Ferradura",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2297.0,
+      "best_clean_s": 5.427,
+      "entry_m": 2212.0,
+      "exit_m": 2357.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 5.427,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Laranjinha",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2401.0,
+      "best_clean_s": 8.503,
+      "entry_m": 2357.0,
+      "exit_m": 2600.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 8.503,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Pinheirinho",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 2695.0,
+      "best_clean_s": 11.347,
+      "entry_m": 2600.0,
+      "exit_m": 2869.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 11.347,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Bico de Pato",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    },
+    {
+      "apex_m": 3209.0,
+      "best_clean_s": 8.226,
+      "entry_m": 3084.0,
+      "exit_m": 3340.0,
+      "expected_cost_s": 0.0,
+      "gain_available_s": 0.0,
+      "mean_clean_s": 8.226,
+      "mean_off_s": null,
+      "message": "1 passage(s) : pas assez pour juger (il en faut 4).",
+      "name": "Junção",
+      "off_cost_s": null,
+      "off_rate": 0.0,
+      "offs": 0,
+      "passes": 1,
+      "sessions": 1,
+      "verdict": "insufficient"
+    }
+  ],
+  "risk_headline": null,
+  "session": {
+    "car": "FIA F4",
+    "config": "Grand Prix",
+    "kind": "qualifying",
+    "length_m": 4222.6,
+    "setup": "fixed",
+    "sim": "iracing",
+    "track": "Autódromo José Carlos Pace"
+  },
+  "strategy": null,
+  "theoretical_best_s": null
+}
