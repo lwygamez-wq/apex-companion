@@ -216,9 +216,10 @@ pub fn summarize(garage: Option<&str>, overview: Option<&str>, tyres: Option<&st
         walk_vm(&v, &mut s);
     }
     if let Some(v) = overview.and_then(|t| serde_json::from_str::<Value>(t).ok()) {
+        // `carPresetSetups` : `{ "presets": [...] }` dans LMU (12 nov. 2026), parfois une liste directe.
         s.presets = find_key(&v, "carPresetSetups").map(|p| match p {
             Value::Array(a) => a.len(),
-            Value::Object(o) => o.len(),
+            Value::Object(o) => o.get("presets").and_then(Value::as_array).map_or(o.len(), Vec::len),
             _ => 0,
         });
     }
@@ -235,7 +236,34 @@ pub fn summarize(garage: Option<&str>, overview: Option<&str>, tyres: Option<&st
 }
 
 /// Lit l'API du jeu (GET seulement) et enregistre chaque réponse brute dans `dir/<stem>/`.
-pub fn read_api(base: &str, dir: &Path, stem: &str) -> (Vec<ApiRead>, GarageSummary) {
+/// Setup de la séance d'après `CarSetupOverview` (`carSetup.garageValues` : réglages `VM_*` de la
+/// voiture et `WM_*-W_FL`… par roue) et `TireManagement` (température idéale par gomme).
+pub fn setup_snapshot(overview: &str, tyres: Option<&str>) -> Option<crate::ingest::lmu::SetupSnapshot> {
+    use crate::ingest::lmu::{SetupSnapshot, SetupValue};
+    let v: Value = serde_json::from_str(overview).ok()?;
+    let gv = find_key(&v, "garageValues")?.as_object()?;
+    let int = |x: &Value, k: &str| x.get(k).and_then(Value::as_i64).map(|n| n as i32);
+    let mut values: Vec<SetupValue> = gv
+        .iter()
+        .filter_map(|(key, x)| {
+            Some(SetupValue { key: key.clone(), value: int(x, "value")?, display: x.get("stringValue").and_then(Value::as_str).unwrap_or_default().trim().to_string(), min: int(x, "minValue").unwrap_or(0), max: int(x, "maxValue").unwrap_or(0) })
+        })
+        .collect();
+    values.sort_by(|a, b| a.key.cmp(&b.key));
+    let presets = find_key(&v, "carPresetSetups")
+        .and_then(|p| p.get("presets").or(Some(p)))
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(|p| p.get("translated").or(p.get("unTranslated")).and_then(Value::as_str).map(str::to_string)).collect())
+        .unwrap_or_default();
+    let optimal_temp_c = tyres
+        .and_then(|t| serde_json::from_str::<Value>(t).ok())
+        .and_then(|t| find_key(&t, "optimalCompoundConditions").and_then(|c| c.get("compounds")).and_then(Value::as_array).cloned())
+        .map(|a| a.iter().filter_map(|c| Some((c.get("type")?.as_str()?.to_string(), c.get("optimalTemperature")?.as_f64()? as f32))).collect())
+        .unwrap_or_default();
+    (!values.is_empty()).then_some(SetupSnapshot { values, presets, optimal_temp_c })
+}
+
+pub fn read_api(base: &str, dir: &Path, stem: &str) -> (Vec<ApiRead>, GarageSummary, Option<crate::ingest::lmu::SetupSnapshot>) {
     let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(4))).proxy(None).build().into();
     let out_dir = dir.join(stem);
     let _ = std::fs::create_dir_all(&out_dir);
@@ -260,7 +288,8 @@ pub fn read_api(base: &str, dir: &Path, stem: &str) -> (Vec<ApiRead>, GarageSumm
         reads.push(r);
     }
     let summary = summarize(bodies.get("garage").map(String::as_str), bodies.get("setup-overview").map(String::as_str), bodies.get("tyres").map(String::as_str));
-    (reads, summary)
+    let setup = bodies.get("setup-overview").and_then(|o| setup_snapshot(o, bodies.get("tyres").map(String::as_str)));
+    (reads, summary, setup)
 }
 
 pub fn write_report(dir: &Path, r: &ProbeReport) -> std::io::Result<PathBuf> {
@@ -318,9 +347,25 @@ mod tests {
     fn api_absent_is_reported_not_fatal() {
         let d = tempfile::tempdir().unwrap();
         // Port fermé : chaque lecture échoue proprement.
-        let (reads, s) = read_api("http://127.0.0.1:9", d.path(), "x");
+        let (reads, s, setup) = read_api("http://127.0.0.1:9", d.path(), "x");
+        assert!(setup.is_none());
         assert_eq!(reads.len(), API_READS.len());
         assert!(reads.iter().all(|r| !r.ok && r.error.is_some()));
         assert_eq!(s, GarageSummary::default());
+    }
+
+    #[test]
+    fn reads_the_setup_of_the_session() {
+        // Forme des réponses de LMU (12 nov. 2026), valeurs inventées.
+        let overview = r#"{"carPresetSetups":{"presets":[{"translated":"fast","unTranslated":"fast"},{"translated":"safe"}]},"carSetup":{"garageValues":{"VM_REAR_WING":{"value":17,"stringValue":"P18","minValue":0,"maxValue":18,"available":true},"WM_CAMBER-W_FL":{"value":27,"stringValue":"-1.3 deg","minValue":0,"maxValue":31},"gearGraph":{"value":null}}}}"#;
+        let tyres = r#"{"optimalCompoundConditions":{"compounds":[{"type":"Medium","optimalTemperature":92.0}]}}"#;
+        let s = setup_snapshot(overview, Some(tyres)).unwrap();
+        assert_eq!(s.values.len(), 2);
+        assert_eq!((s.values[0].key.as_str(), s.values[0].value, s.values[0].max), ("VM_REAR_WING", 17, 18));
+        assert_eq!((s.values[1].display.as_str(), s.values[1].max), ("-1.3 deg", 31));
+        assert_eq!(s.presets, ["fast", "safe"]);
+        assert_eq!(s.optimal_temp_c, [("Medium".to_string(), 92.0)]);
+        assert_eq!(summarize(None, Some(overview), None).presets, Some(2));
+        assert!(setup_snapshot("{}", None).is_none());
     }
 }

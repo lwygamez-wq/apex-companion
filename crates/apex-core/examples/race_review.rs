@@ -105,6 +105,23 @@ fn main() {
         println!("Arrivée : {:.1} % d'énergie, soit {:.1} tours à {:.2} %", end.energy, spare, c);
     }
 
+    // Setup et pneus (fichiers Apex 0.36 et plus).
+    if let Some(s) = &r.setup {
+        let get = |k: &str| s.values.iter().find(|v| v.key == k).map(|v| format!("{} (cran {}/{})", v.display, v.value, v.max)).unwrap_or_else(|| "?".into());
+        println!("Setup : {} réglages · aileron AR {} · carrossage AvG {} · pression AvG {} · idéal pneus {:?}", s.values.len(), get("VM_REAR_WING"), get("WM_CAMBER-W_FL"), get("WM_PRESSURE-W_FL"), s.optimal_temp_c);
+    }
+    if !r.wheels.is_empty() {
+        let on: Vec<_> = r.wheels.iter().filter(|w| w.temp_c[0][1] > 30.0).collect();
+        let names = ["AvG", "AvD", "ArG", "ArD"];
+        for (k, n) in names.iter().enumerate() {
+            let m = |z: usize| on.iter().map(|w| w.temp_c[k][z]).sum::<f32>() / on.len().max(1) as f32;
+            let p = on.iter().map(|w| w.pressure_kpa[k]).sum::<f32>() / on.len().max(1) as f32;
+            let b = on.iter().map(|w| w.brake_c[k]).fold(0.0f32, f32::max);
+            let h = t.iter().map(|x| x.ride_h_m[k]).filter(|v| *v > 0.0).fold(f32::MAX, f32::min);
+            println!("  {n} : pneus {:.0}/{:.0}/{:.0} °C (gauche/milieu/droite), {:.0} kPa, freins max {:.0} °C, hauteur mini {:.1} mm", m(0), m(1), m(2), p, b, if h == f32::MAX { 0.0 } else { h * 1000.0 });
+        }
+    }
+
     let mut issues: Vec<String> = vec![];
     // Dernier relais : ce qu'il aurait fallu régler (tours réellement courus + une demi-tour de marge).
     if let Some(s) = st.iter().rev().find(|s| s.e_out > s.e_in + 2.0) {
