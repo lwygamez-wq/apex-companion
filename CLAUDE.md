@@ -48,7 +48,7 @@ L'installeur Windows se construit par le workflow `build-windows.yml`, pas en lo
 - Tout nouveau calcul de coaching ou de stratégie vit dans `apex-core` avec un test qui fixe les chiffres attendus.
 - Nouveau champ dans `LapMeta` / un struct persisté : `#[serde(default)]`, migration SQLite ajoutée en fin de `MIGRATIONS` (jamais modifier une migration existante), mettre à jour tous les constructeurs (`mock`, `race`, `session`, `service`, `tests/analysis_e2e.rs`).
 - Canaux live : lus par nom dans `LIVE_CHANNELS` (absent = 0), garder `LIVE_N` et l'ordre de `LiveState::row` (LMU) alignés.
-- Fichiers `.apexlmu` : le décodage doit accepter les anciens fichiers sans les extensions récentes.
+- Fichiers `.apexlmu` : le décodage doit accepter les anciens fichiers sans les extensions récentes. Extensions : `EXT1` (0.31 : énergie, usure, limites de piste), `EXT2` (0.36 : hauteur par roue, pneus et freins à 5 Hz) ; setup de la séance dans l'en-tête JSON (`setup`). Températures de surface dans l'ordre du jeu : gauche / milieu / droite (gauche = extérieur pour les roues gauches).
 
 ## Méthode
 
@@ -102,7 +102,7 @@ Chaque changement, même petit :
 
 ## Version et feuille de route
 
-- Version publiée : **v0.35.0** (12 nov. 2026) : écart au leader lu en direct (LMU) et enregistré à chaque tour ; en Hypercar, fin de course au temps calée sur le passage du leader. Avant : v0.34.2, catégorie Hypercar lue en direct.
+- Version publiée : **v0.36.0** (12 nov. 2026) : Setup Builder étape 1, enregistrement du setup de la séance (API du jeu : 170 réglages avec crans, presets, température idéale des gommes) et des pneus, freins et hauteurs par roue (`.apexlmu` extension 2). Avant : v0.35.0, écart au leader.
 - Suivant, par priorité : trafic multiclasse (tours gênés exclus des références) ; temps perdu aux stands mesuré ; lift and coast localisé ; séparation piste humide / nuit ; températures et pressions pneus ; hybride ; coach de course.
-- Setup Builder : décision go / analyseur seul / abandon après le premier rapport de la sonde (`sonde-lmu/` dans le dossier de données) ; étude dans le projet claude.ai (`claude/faisabilite-setup-builder.md`).
+- Setup Builder : **go** (sonde du 12 nov.), plan dans le projet claude.ai (`claude/plan-setup-builder.md`). Étape 1 faite (v0.36.0). Suivant : étape 2, diagnostic sans conseil (pneus, freins, hauteurs, équilibre), validé sur ≥ 2 séances même voiture avec setups différents.
 - À valider sur le PC d'Alex : lectures LMU (limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.

@@ -162,12 +162,16 @@ pub struct LmuDriver {
     probe: Option<Probe>,
 }
 
+type ApiResult = (Vec<super::lmu_probe::ApiRead>, super::lmu_probe::GarageSummary, Option<crate::ingest::lmu::SetupSnapshot>);
+
 /// Sonde de la séance en cours : statistiques de la mémoire partagée et lecture de l'API du jeu.
 struct Probe {
     stem: String,
     stats: super::lmu_probe::ShmStats,
     last: Option<Frame>,
-    api: Option<std::thread::JoinHandle<(Vec<super::lmu_probe::ApiRead>, super::lmu_probe::GarageSummary)>>,
+    api: Option<std::thread::JoinHandle<ApiResult>>,
+    /// Réponse de l'API, une fois la lecture terminée.
+    api_done: Option<(Vec<super::lmu_probe::ApiRead>, super::lmu_probe::GarageSummary)>,
 }
 
 impl LmuDriver {
@@ -200,11 +204,10 @@ impl LmuDriver {
         let Some(last) = p.last else { return };
         std::thread::spawn(move || {
             let mut r = super::lmu_probe::ProbeReport::new(&p.stem, &last, &p.stats);
-            if let Some(h) = p.api {
-                if let Ok((api, garage)) = h.join() {
-                    r.api = api;
-                    r.garage = garage;
-                }
+            let done = p.api_done.or_else(|| p.api.and_then(|h| h.join().ok()).map(|(a, g, _)| (a, g)));
+            if let Some((api, garage)) = done {
+                r.api = api;
+                r.garage = garage;
             }
             match super::lmu_probe::write_report(&dir, &r) {
                 Ok(f) => log::info!("sonde setup LMU : {}", f.display()),
@@ -219,13 +222,23 @@ impl LmuDriver {
         let stem = self.recorder.current().map(file_stem);
         if self.probe.as_ref().map(|p| &p.stem) != stem.as_ref() {
             self.flush_probe();
-            self.probe = stem.map(|stem| Probe { stem, stats: Default::default(), last: None, api: None });
+            self.probe = stem.map(|stem| Probe { stem, stats: Default::default(), last: None, api: None, api_done: None });
         }
         let Some(p) = self.probe.as_mut() else { return };
+        // Lecture de l'API terminée : le setup de la séance rejoint l'enregistrement.
+        if p.api.as_ref().is_some_and(|h| h.is_finished()) {
+            if let Some((api, garage, setup)) = p.api.take().and_then(|h| h.join().ok()) {
+                p.api_done = Some((api, garage));
+                if let Some(s) = setup {
+                    self.recorder.set_setup(s);
+                }
+            }
+            return;
+        }
         let Some(t) = f.telem.as_ref().filter(|_| on_track) else { return };
         p.stats.add(t);
         p.last = Some(*f);
-        if p.api.is_none() && !self.probe_api.is_empty() {
+        if p.api.is_none() && p.api_done.is_none() && !self.probe_api.is_empty() {
             let (base, stem) = (self.probe_api.clone(), p.stem.clone());
             p.api = Some(std::thread::spawn(move || super::lmu_probe::read_api(&base, &dir, &stem)));
         }
@@ -535,5 +548,49 @@ mod tests {
         assert_eq!(field("appui_av_n"), 100.0);
         assert_eq!(field("pneu_temperature_optimale"), 0.0);
         assert!(v["api"].as_array().unwrap().is_empty());
+    }
+
+    /// Le setup lu dans l'API du jeu au départ de la séance est enregistré avec elle (API simulée).
+    #[test]
+    fn the_session_setup_is_saved_with_the_recording() {
+        use std::io::{Read, Write};
+        let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", server.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for mut c in server.incoming().flatten().take(4) {
+                let mut buf = [0u8; 2048];
+                let n = c.read(&mut buf).unwrap_or(0);
+                let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                let body = if req.contains("CarSetupOverview") {
+                    r#"{"carPresetSetups":{"presets":[{"translated":"fast"}]},"carSetup":{"garageValues":{"VM_REAR_WING":{"value":17,"stringValue":"P18","minValue":0,"maxValue":18}}}}"#
+                } else if req.contains("TireManagement") {
+                    r#"{"optimalCompoundConditions":{"compounds":[{"type":"Medium","optimalTemperature":92.0}]}}"#
+                } else {
+                    "{}"
+                };
+                let _ = write!(c, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body);
+            }
+        });
+        let dir = tempfile::tempdir().unwrap();
+        let rec_dir = dir.path().join("enregistrements-lmu");
+        let mut d = LmuDriver::new(rec_dir.clone(), 50.0);
+        d.probe_dir = Some(dir.path().join("sonde-lmu"));
+        d.probe_api = base;
+        let mut et = 0.0f64;
+        while et < 60.0 {
+            d.step(&frame(et, 1), 1_790_000_000);
+            et += 0.02;
+            // Laisse le temps à la lecture de l'API (fil séparé) sans bloquer la boucle.
+            if (et * 50.0).round() as i64 % 500 == 0 {
+                std::thread::sleep(Duration::from_millis(20));
+            }
+        }
+        d.finish();
+        let f = std::fs::read_dir(&rec_dir).unwrap().flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|x| x == "apexlmu")).expect("séance écrite");
+        let r = crate::ingest::lmu::decode(&std::fs::read(f).unwrap()).unwrap();
+        let s = r.setup.expect("setup enregistré");
+        assert_eq!((s.values[0].key.as_str(), s.values[0].display.as_str(), s.values[0].max), ("VM_REAR_WING", "P18", 18));
+        assert_eq!(s.optimal_temp_c, [("Medium".to_string(), 92.0)]);
+        assert!(!r.wheels.is_empty());
     }
 }

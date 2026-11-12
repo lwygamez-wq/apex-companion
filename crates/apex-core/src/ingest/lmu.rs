@@ -112,6 +112,42 @@ pub struct Tick {
     pub wear: [f32; 4],
     /// Avertissements de limites de piste en cours (0 si inconnu).
     pub tl_steps: u8,
+    /// Hauteur de caisse par roue (m), AvG, AvD, ArG, ArD ; 0 si inconnu (fichier d'avant 0.36).
+    pub ride_h_m: [f32; 4],
+}
+
+/// Pneus et freins, relevés 5 fois par seconde (ils varient lentement). Ordre des roues : AvG, AvD,
+/// ArG, ArD. Températures de surface dans l'ordre du jeu : gauche, milieu, droite de la bande de
+/// roulement (côté gauche = extérieur pour les roues gauches, intérieur pour les roues droites).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct WheelSample {
+    pub et: f64,
+    pub temp_c: [[f32; 3]; 4],
+    pub carcass_c: [f32; 4],
+    pub pressure_kpa: [f32; 4],
+    pub brake_c: [f32; 4],
+}
+
+/// Un réglage du garage au départ de la séance (API du jeu) : cran, valeur affichée, crans mini et maxi.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SetupValue {
+    pub key: String,
+    pub value: i32,
+    pub display: String,
+    pub min: i32,
+    pub max: i32,
+}
+
+/// Setup utilisé pour la séance, lu dans l'API du jeu (lecture seule).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SetupSnapshot {
+    pub values: Vec<SetupValue>,
+    /// Setups fournis par le jeu (noms).
+    #[serde(default)]
+    pub presets: Vec<String>,
+    /// Température idéale par gomme (°C).
+    #[serde(default)]
+    pub optimal_temp_c: Vec<(String, f32)>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -120,6 +156,10 @@ pub struct Recording {
     pub ticks: Vec<Tick>,
     pub anchors: Vec<Anchor>,
     pub laps: Vec<LapEvent>,
+    /// Pneus et freins à 5 Hz (vide dans les fichiers d'avant 0.36).
+    pub wheels: Vec<WheelSample>,
+    /// Setup de la séance (absent si l'API du jeu n'a pas répondu, ou fichier ancien).
+    pub setup: Option<SetupSnapshot>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -127,6 +167,8 @@ struct Meta {
     header: Header,
     anchors: Vec<Anchor>,
     laps: Vec<LapEvent>,
+    #[serde(default)]
+    setup: Option<SetupSnapshot>,
 }
 
 // --- Conversion d'une image de la mémoire partagée ------------------------------------------------
@@ -241,6 +283,20 @@ fn tick_from(f: &Frame, t: &VehicleTelemetry, s: Option<&VehicleScoring>, impact
         energy: virtual_energy_pct(t).unwrap_or(0.0),
         wear: tyre_left_pct(t),
         tl_steps: t.mTrackLimitsSteps,
+        ride_h_m: std::array::from_fn(|k| t.mWheels[k].mRideHeight as f32),
+    }
+}
+
+const KELVIN: f64 = 273.15;
+
+fn wheel_from(t: &VehicleTelemetry) -> WheelSample {
+    let c = |k: f64| if k > 0.0 { (k - KELVIN) as f32 } else { 0.0 };
+    WheelSample {
+        et: t.mElapsedTime,
+        temp_c: std::array::from_fn(|w| std::array::from_fn(|z| c(t.mWheels[w].mTemperature[z]))),
+        carcass_c: std::array::from_fn(|w| c(t.mWheels[w].mTireCarcassTemperature)),
+        pressure_kpa: std::array::from_fn(|w| t.mWheels[w].mPressure as f32),
+        brake_c: std::array::from_fn(|w| c(t.mWheels[w].mBrakeTemp)),
     }
 }
 
@@ -276,11 +332,12 @@ pub struct Recorder {
     last_total_laps: Option<i32>,
     last_impact_et: f64,
     impacts: u32,
+    last_wheel_et: f64,
 }
 
 impl Recorder {
     pub fn new(hz: f32) -> Self {
-        Self { hz: hz.clamp(10.0, 100.0), rec: None, key: None, last_et: f64::NEG_INFINITY, last_scoring_et: f64::NEG_INFINITY, last_total_laps: None, last_impact_et: 0.0, impacts: 0 }
+        Self { hz: hz.clamp(10.0, 100.0), rec: None, key: None, last_et: f64::NEG_INFINITY, last_scoring_et: f64::NEG_INFINITY, last_total_laps: None, last_impact_et: 0.0, impacts: 0, last_wheel_et: f64::NEG_INFINITY }
     }
 
     /// Séance en cours (pour l'affichage).
@@ -308,6 +365,7 @@ impl Recorder {
             self.last_total_laps = s.map(|s| s.mTotalLaps as i32);
             self.last_impact_et = t.mLastImpactET;
             self.impacts = 0;
+            self.last_wheel_et = f64::NEG_INFINITY;
         }
         let rec = self.rec.as_mut()?;
         if t.mLastImpactET != self.last_impact_et {
@@ -338,7 +396,18 @@ impl Recorder {
             self.last_et = t.mElapsedTime;
             rec.ticks.push(tick_from(f, t, s, self.impacts));
         }
+        if t.mElapsedTime - self.last_wheel_et >= 0.2 * 0.9 {
+            self.last_wheel_et = t.mElapsedTime;
+            rec.wheels.push(wheel_from(t));
+        }
         done
+    }
+
+    /// Setup lu dans l'API du jeu, joint à la séance en cours.
+    pub fn set_setup(&mut self, setup: SetupSnapshot) {
+        if let Some(r) = self.rec.as_mut() {
+            r.setup = Some(setup);
+        }
     }
 
     /// Termine la séance en cours (jeu fermé, application quittée). `None` si rien d'exploitable.
@@ -361,7 +430,7 @@ fn put_f32(out: &mut Vec<u8>, it: impl Iterator<Item = f32>) {
 
 /// Fichier compressé : en-tête JSON, puis échantillons en colonnes.
 pub fn encode(r: &Recording) -> Vec<u8> {
-    let meta = serde_json::to_vec(&Meta { header: r.header.clone(), anchors: r.anchors.clone(), laps: r.laps.clone() }).unwrap_or_default();
+    let meta = serde_json::to_vec(&Meta { header: r.header.clone(), anchors: r.anchors.clone(), laps: r.laps.clone(), setup: r.setup.clone() }).unwrap_or_default();
     let n = r.ticks.len();
     let mut raw = Vec::with_capacity(16 + meta.len() + n * 70);
     raw.extend_from_slice(MAGIC);
@@ -397,6 +466,27 @@ pub fn encode(r: &Recording) -> Vec<u8> {
     for t in &r.ticks {
         raw.push(t.tl_steps);
     }
+    // Extension 2 (Apex 0.36) : hauteur par roue (dixièmes de mm), puis pneus et freins à 5 Hz.
+    raw.extend_from_slice(EXT2);
+    for k in 0..4 {
+        for t in &r.ticks {
+            raw.extend_from_slice(&((t.ride_h_m[k] * 10_000.0).round().clamp(-32768.0, 32767.0) as i16).to_le_bytes());
+        }
+    }
+    raw.extend_from_slice(&(r.wheels.len() as u32).to_le_bytes());
+    for w in &r.wheels {
+        raw.extend_from_slice(&w.et.to_le_bytes());
+    }
+    for k in 0..4 {
+        for z in 0..3 {
+            put_f32(&mut raw, r.wheels.iter().map(|w| w.temp_c[k][z]));
+        }
+    }
+    for col in [|w: &WheelSample, k: usize| w.carcass_c[k], |w: &WheelSample, k: usize| w.pressure_kpa[k], |w: &WheelSample, k: usize| w.brake_c[k]] {
+        for k in 0..4 {
+            put_f32(&mut raw, r.wheels.iter().map(|w| col(w, k)));
+        }
+    }
     let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     let _ = gz.write_all(&raw);
     gz.finish().unwrap_or_default()
@@ -404,6 +494,8 @@ pub fn encode(r: &Recording) -> Vec<u8> {
 
 /// Marqueur de l'extension 1 du fichier (énergie, pneus, limites de piste).
 const EXT1: &[u8; 4] = b"EXT1";
+/// Marqueur de l'extension 2 (hauteurs par roue, pneus et freins à 5 Hz).
+const EXT2: &[u8; 4] = b"EXT2";
 
 /// Taille décompressée maximale d'un enregistrement (une séance de 24 h à 60 Hz en fait ≈ 400 Mo).
 const MAX_RAW_BYTES: u64 = 512 * 1024 * 1024;
@@ -487,7 +579,45 @@ pub fn decode(bytes: &[u8]) -> Result<Recording, String> {
             ticks[i].tl_steps = *b;
         }
     }
-    Ok(Recording { header: meta.header, ticks, anchors: meta.anchors, laps: meta.laps })
+    let mut wheels = vec![];
+    if raw.get(o..o + 4) == Some(EXT2.as_slice()) {
+        o += 4;
+        for k in 0..4 {
+            for (i, c) in take(&mut o, n * 2)?.chunks_exact(2).enumerate() {
+                ticks[i].ride_h_m[k] = i16::from_le_bytes(c.try_into().unwrap()) as f32 / 10_000.0;
+            }
+        }
+        let m = u32::from_le_bytes(take(&mut o, 4)?.try_into().unwrap()) as usize;
+        // 8 + 24 × 4 octets par relevé : nombre annoncé cohérent avec les données présentes.
+        if m.checked_mul(104).is_none_or(|need| need > raw.len().saturating_sub(o)) {
+            return Err("fichier LMU tronqué".into());
+        }
+        wheels = vec![WheelSample::default(); m];
+        for (i, c) in take(&mut o, m * 8)?.chunks_exact(8).enumerate() {
+            wheels[i].et = f64::from_le_bytes(c.try_into().unwrap());
+        }
+        let mut col = |o: &mut usize, set: &dyn Fn(&mut WheelSample, f32)| -> Result<(), String> {
+            for (i, c) in take(o, m * 4)?.chunks_exact(4).enumerate() {
+                set(&mut wheels[i], f32::from_le_bytes(c.try_into().unwrap()));
+            }
+            Ok(())
+        };
+        for k in 0..4 {
+            for z in 0..3 {
+                col(&mut o, &|w, v| w.temp_c[k][z] = v)?;
+            }
+        }
+        for k in 0..4 {
+            col(&mut o, &|w, v| w.carcass_c[k] = v)?;
+        }
+        for k in 0..4 {
+            col(&mut o, &|w, v| w.pressure_kpa[k] = v)?;
+        }
+        for k in 0..4 {
+            col(&mut o, &|w, v| w.brake_c[k] = v)?;
+        }
+    }
+    Ok(Recording { header: meta.header, ticks, anchors: meta.anchors, laps: meta.laps, wheels, setup: meta.setup })
 }
 
 // --- Distance depuis la ligne ---------------------------------------------------------------------
@@ -950,15 +1080,43 @@ mod tests {
 
     #[test]
     fn recording_round_trips_through_the_file_format() {
-        let r = record(1);
+        let mut r = record(1);
         assert!(r.ticks.len() > 8000, "{}", r.ticks.len());
+        // Le pilote LMU de test ne remplit ni hauteurs, ni pneus, ni setup : on les pose ici.
+        r.ticks[1234].ride_h_m = [0.0451, 0.0452, 0.0603, 0.0604];
+        assert!(r.wheels.len() > 900, "{}", r.wheels.len());
+        r.wheels[7] = WheelSample { et: 12.5, temp_c: [[85.0, 88.5, 91.0]; 4], carcass_c: [90.0; 4], pressure_kpa: [131.2; 4], brake_c: [450.0, 455.0, 380.0, 382.0] };
+        r.setup = Some(SetupSnapshot { values: vec![SetupValue { key: "WM_CAMBER-W_FL".into(), value: 27, display: "-1.3 deg".into(), min: 0, max: 31 }], presets: vec!["fast".into()], optimal_temp_c: vec![("Medium".into(), 92.0)] });
         let back = decode(&encode(&r)).unwrap();
+        assert_eq!(back.wheels, r.wheels);
+        assert_eq!(back.setup, r.setup);
+        for k in 0..4 {
+            assert!((back.ticks[1234].ride_h_m[k] - r.ticks[1234].ride_h_m[k]).abs() < 1e-4);
+            r.ticks[1234].ride_h_m[k] = back.ticks[1234].ride_h_m[k];
+        }
         assert_eq!(back.header, r.header);
         assert_eq!(back.ticks.len(), r.ticks.len());
         assert_eq!(back.ticks[1234], r.ticks[1234]);
         assert_eq!(back.anchors, r.anchors);
         assert_eq!(back.laps, r.laps);
         assert!(back.ticks[1234].energy > 0.0 && back.ticks[1234].wear[3] > 0.0);
+    }
+
+    #[test]
+    fn files_without_the_wheel_extension_still_open() {
+        use std::io::{Read, Write};
+        let r = record(1);
+        let mut raw = vec![];
+        flate2::read::GzDecoder::new(encode(&r).as_slice()).read_to_end(&mut raw).unwrap();
+        // Fichier d'Apex 0.31 à 0.35 : tout ce qui suit le marqueur EXT2 disparaît.
+        let cut = raw.windows(4).rposition(|w| w == EXT2).unwrap();
+        raw.truncate(cut);
+        let mut e = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        e.write_all(&raw).unwrap();
+        let back = decode(&e.finish().unwrap()).unwrap();
+        assert_eq!(back.ticks.len(), r.ticks.len());
+        assert!(back.wheels.is_empty() && back.ticks.iter().all(|t| t.ride_h_m == [0.0; 4]));
+        assert!(back.ticks.iter().any(|t| t.energy > 0.0), "l'extension 1 reste lue");
     }
 
     #[test]
