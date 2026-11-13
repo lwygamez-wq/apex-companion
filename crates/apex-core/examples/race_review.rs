@@ -146,7 +146,18 @@ fn main() {
         let fill_of = |x: &str| x.split("Règle l'énergie à ").nth(1).and_then(|r| r.split(' ').next()).and_then(|v| v.trim_end_matches('%').trim().replace(',', ".").parse::<f32>().ok());
         if let (Some(s), Some(ideal)) = (refuel, ideal) {
             let at = from + s.at as i64 + 90;
-            if let Some(fill) = cs.iter().rev().filter(|(t, _)| *t <= at).find_map(|(_, x)| fill_of(x)) {
+            if let Some((called, fill)) = cs.iter().rev().filter(|(t, _)| *t <= at).find_map(|(t, x)| fill_of(x).map(|f| (*t, f))) {
+                // Arrêt fait bien après l'annonce (pilote resté en piste) : le niveau annoncé valait pour un
+                // arrêt au moment de l'annonce. On le compare aux tours courus après le tour de rentrée d'alors.
+                let late = at - 90 - called;
+                let ideal = if late > 150 {
+                    let lt = (last.et - t[0].et) / laps_run.max(1) as f64;
+                    let after = starts.iter().filter(|k| (k.et - t[0].et) > (called - from) as f64 + lt).count().saturating_sub(1) as f32;
+                    println!("Arrêt fait {:.0} min après l'annonce : niveau comparé à un arrêt au moment de l'annonce ({after:.0} tours ensuite)", late as f64 / 60.0);
+                    (after + 0.5) * c
+                } else {
+                    ideal
+                };
                 println!("Ingénieur : {fill:.0} % demandés à cet arrêt, il fallait {ideal:.0} % ; réglé {:.0} %", s.e_out);
                 if (fill - ideal).abs() > 5.0 {
                     issues.push(format!("plein annoncé {fill:.0} % au lieu de {ideal:.0} %"));
