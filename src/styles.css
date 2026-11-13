@@ -725,3 +725,5 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .su-flag.unk { color: var(--muted); }
 .su-note { margin: 12px 0 0; font-size: 12px; }
 @media (max-width: 720px) { .su-picks { grid-template-columns: 1fr; } }
+
+.strategy-game { margin: 0 0 12px; font-size: 13px; }

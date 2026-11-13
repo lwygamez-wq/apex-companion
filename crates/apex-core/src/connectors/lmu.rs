@@ -160,6 +160,8 @@ pub struct LmuDriver {
     /// Adresse de l'API du jeu interrogée par la sonde (vide = API non lue).
     pub probe_api: String,
     probe: Option<Probe>,
+    /// Séance du jeu dont les estimations ont déjà été demandées (circuit, séance, voiture).
+    facts_key: Option<(String, i32, String)>,
 }
 
 type ApiResult = (Vec<super::lmu_probe::ApiRead>, super::lmu_probe::GarageSummary, Option<crate::ingest::lmu::SetupSnapshot>);
@@ -176,7 +178,7 @@ struct Probe {
 
 impl LmuDriver {
     pub fn new(dir: PathBuf, hz: f32) -> Self {
-        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default(), probe_dir: None, probe_api: super::lmu_probe::API_BASE.into(), probe: None }
+        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default(), probe_dir: None, probe_api: super::lmu_probe::API_BASE.into(), probe: None, facts_key: None }
     }
 
     fn save(&mut self, r: &Recording, done: bool) {
@@ -258,7 +260,30 @@ impl LmuDriver {
         }
     }
 
+    /// Dès qu'une voiture est chargée dans le jeu (au garage aussi) : ce que le jeu annonce pour elle.
+    fn read_facts(&mut self, f: &Frame, now_unix: i64) {
+        let (Some(dir), Some(t)) = (self.probe_dir.clone(), f.telem.as_ref()) else { return };
+        if self.probe_api.is_empty() {
+            return;
+        }
+        let key = (crate::ingest::lmu::track_name(f), f.info.mSession, crate::ingest::lmu::car_name(t));
+        if self.facts_key.as_ref() == Some(&key) {
+            return;
+        }
+        self.facts_key = Some(key.clone());
+        let class = f.scoring.as_ref().map(|s| crate::connectors::lmu_shm::cstr(&s.mVehicleClass)).filter(|c| !c.is_empty());
+        let minutes = Some((f.info.mEndET / 60.0) as f32).filter(|m| m.is_finite() && *m > 1.0 && *m < 100_000.0);
+        let facts = super::lmu_probe::GameFacts { track: key.0, car: key.2, car_class: class, session: key.1, at_unix: now_unix, minutes, ..Default::default() };
+        let base = self.probe_api.clone();
+        std::thread::spawn(move || {
+            if super::lmu_probe::read_game_facts(&base, &dir, facts).is_none() {
+                log::info!("jeu : estimations non lues (API du jeu injoignable)");
+            }
+        });
+    }
+
     pub fn step(&mut self, f: &Frame, now_unix: i64) -> LiveSnapshot {
+        self.read_facts(f, now_unix);
         let before = self.recorder.current().map(file_stem);
         let done = self.recorder.push(f, now_unix);
         let changed = before.is_some() && self.recorder.current().map(file_stem) != before;
@@ -557,7 +582,7 @@ mod tests {
         let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let base = format!("http://{}", server.local_addr().unwrap());
         std::thread::spawn(move || {
-            for mut c in server.incoming().flatten().take(4) {
+            for mut c in server.incoming().flatten().take(64) {
                 let mut buf = [0u8; 2048];
                 let n = c.read(&mut buf).unwrap_or(0);
                 let req = String::from_utf8_lossy(&buf[..n]).to_string();

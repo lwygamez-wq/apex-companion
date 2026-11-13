@@ -34,7 +34,7 @@ function PitConverter({ combo }: { combo: Combo }) {
     setPerTxt("");
   }, [keyOf(combo)]);
   const ratio = num(ratioTxt) ?? v?.fuel_ratio_suggested ?? null;
-  const per = num(perTxt) ?? (v?.unit === "energy" ? v.per_lap_measured : null) ?? null;
+  const per = num(perTxt) ?? (v?.unit === "energy" ? v.per_lap_measured ?? v.game_per_lap : null) ?? null;
   const tank = v?.fuel_tank_l ?? null;
   const r = ratio != null ? convert({ from, value: num(txt[from]) ?? 0, ratio, perLap: per, marginLaps: 0.5, tankL: tank }) : null;
   const shown = (f: ConvField) => {
@@ -78,7 +78,7 @@ function PitConverter({ combo }: { combo: Combo }) {
         <label>
           <span>Conso par tour</span>
           <div className="pc-in"><input inputMode="decimal" value={perTxt} placeholder={per != null && !perTxt ? n2(per) : "4,80"} onChange={(e) => setPerTxt(e.target.value)} aria-label="Consommation d'énergie par tour" /><i>%</i></div>
-          <small className="muted">{v?.unit === "energy" && v.per_lap_measured != null ? `mesuré sur ${v.laps_used} tours` : "pas encore mesuré"}</small>
+          <small className="muted">{v?.unit === "energy" && v.per_lap_measured != null ? `mesuré sur ${v.laps_used} tours` : v?.unit === "energy" && v.game_per_lap != null ? "estimation du jeu" : "pas encore mesuré"}</small>
         </label>
       </div>
       {ratio == null && <div className="muted" style={{ marginTop: 8 }}>Saisis le ratio réglé dans le jeu pour convertir.</div>}
@@ -97,15 +97,24 @@ export function StrategyPage() {
     list.sort((a, b) => Number(b.sim === "lmu") - Number(a.sim === "lmu") || b.last_unix - a.last_unix);
     return list;
   }, [circuits.data]);
+  // Voiture et circuit chargés dans le jeu : choisis d'office, même sans aucun tour roulé.
+  const facts = useAsync(() => api.gameFacts().catch(() => null), []);
+  const game: Combo | null = facts.data ? { sim: "lmu", track: facts.data.track, track_config: null, car: facts.data.car, setup: null } : null;
   const [sel, setSel] = useState<string | null>(null);
-  const combo: Combo = combos.find((c) => keyOf(c) === sel) ?? (sel === keyOf(FREE) ? FREE : combos[0] ?? FREE);
+  const known = combos.filter((c) => !game || keyOf(c) !== keyOf(game));
+  const combo: Combo = (game && (sel == null || sel === keyOf(game)) ? game : null) ?? combos.find((c) => keyOf(c) === sel) ?? (sel === keyOf(FREE) ? FREE : game ?? combos[0] ?? FREE);
 
   return (
     <div className="page strategy-page">
       <div className="page-title">
         <h1>Stratégie</h1>
         <select value={keyOf(combo)} onChange={(e) => setSel(e.target.value)} aria-label="Circuit et voiture" className="strategy-combo">
-          {combos.map((c) => (
+          {game && (
+            <option value={keyOf(game)}>
+              Dans le jeu · {game.track} · {game.car}
+            </option>
+          )}
+          {known.map((c) => (
             <option key={keyOf(c)} value={keyOf(c)}>
               {c.sim === "lmu" ? "LMU" : "iRacing"} · {c.track}{c.track_config ? ` ${c.track_config}` : ""} · {c.car}
             </option>
@@ -113,6 +122,13 @@ export function StrategyPage() {
           <option value={keyOf(FREE)}>Saisie libre (LMU, sans séance)</option>
         </select>
       </div>
+      {game && keyOf(combo) === keyOf(game) && facts.data && (
+        <p className="muted strategy-game">
+          Lu dans le jeu{facts.data.session >= 10 && facts.data.minutes != null ? ` : course de ${Math.round(facts.data.minutes)} min` : ""}
+          {facts.data.energy_per_lap_pct != null ? ` · ${n2(facts.data.energy_per_lap_pct)} % d'énergie par tour annoncés` : facts.data.fuel_per_lap_l != null ? ` · ${n2(facts.data.fuel_per_lap_l)} L par tour annoncés` : ""}
+          {facts.data.fuel_ratio != null ? ` · ratio réglé ${n2(facts.data.fuel_ratio)}` : ""}. Tes tours remplacent ces chiffres dès qu'ils sont mesurés.
+        </p>
+      )}
       <PitConverter combo={combo} />
       <FuelCalculator combo={combo} title="Plan de course" />
     </div>

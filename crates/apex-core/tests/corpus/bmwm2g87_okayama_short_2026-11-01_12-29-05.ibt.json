@@ -478,114 +478,14 @@
       "Coach prêt. Référence : ton meilleur tour ici, 59 secondes point 9."
     ],
     [
-      1,
-      "invalid",
-      "Tour de stand, non compté."
-    ],
-    [
       2,
-      "focus",
-      "Plus 1 seconde 1. Premier relevé, focus virage 3, secteur 2 : 4 dixièmes perdus. Relâche le frein plus tôt, garde 6 kilomètres heure de plus à la corde."
-    ],
-    [
-      3,
-      "callout",
-      "Virage 3, relâche le frein plus tôt."
-    ],
-    [
-      3,
-      "focus",
-      "Meilleur tour, 1 minute 0 point 0. Plus 1 dixième. Focus virage 3, secteur 2 : 4 dixièmes perdus. Tourne plus tard, attends la corde."
-    ],
-    [
-      4,
-      "callout",
-      "Virage 3, tourne plus tard."
-    ],
-    [
-      4,
-      "focus",
-      "Meilleur tour, 1 minute 0 point 0. Plus 1 dixième. Focus virage 3, secteur 2 : 3 dixièmes perdus. Relâche le frein plus tôt, garde 3 kilomètres heure de plus à la corde."
-    ],
-    [
-      5,
-      "callout",
-      "Virage 3, relâche le frein plus tôt."
-    ],
-    [
-      5,
-      "invalid",
-      "Tour non compté, sortie de piste au virage 3. Focus toujours virage 3."
-    ],
-    [
-      6,
-      "callout",
-      "Virage 3, relâche le frein plus tôt."
-    ],
-    [
-      6,
-      "invalid",
-      "Tour non compté, sortie de piste au virage 2. Focus toujours virage 3."
-    ],
-    [
-      7,
-      "callout",
-      "Virage 3, relâche le frein plus tôt."
-    ],
-    [
-      7,
-      "focus",
-      "Meilleur tour, 59 secondes point 9. À égalité avec la référence. Focus virage 3, secteur 2 : 1 dixième perdus. Tourne plus tard, attends la corde."
-    ],
-    [
-      8,
-      "callout",
-      "Virage 3, tourne plus tard."
-    ],
-    [
-      8,
-      "invalid",
-      "Tour non compté, incident. Focus toujours virage 3."
-    ],
-    [
-      9,
-      "callout",
-      "Virage 3, tourne plus tard."
-    ],
-    [
-      9,
-      "focus",
-      "Plus 1 seconde 1. Toujours virage 3 : tourne plus tard, attends la corde."
-    ],
-    [
-      10,
-      "callout",
-      "Virage 3, tourne plus tard."
-    ],
-    [
-      10,
-      "invalid",
-      "Tour non compté, incident. Focus toujours virage 3."
-    ],
-    [
-      11,
-      "callout",
-      "Virage 3, tourne plus tard."
+      "strategy",
+      "Course sans arrêt, 11 tours. Cible 2,51 litres par tour. Tu fais 0,86 litre, 21 tours de marge à l'arrivée : pas besoin d'économiser, roule à ton rythme."
     ],
     [
       11,
       "invalid",
-      "Tour non compté, deuxième sortie au virage 2. Garde de la marge ici. Focus toujours virage 3."
-    ],
-    [
-      12,
-      "callout",
-      "Virage 3, tourne plus tard."
-    ],
-    [
-      12,
-      "invalid",
-      "Tour non compté, incident. Focus toujours virage 3."
+      "Tour non compté, deuxième sortie au virage 2. Garde de la marge ici."
     ]
   ],
   "regularity": {

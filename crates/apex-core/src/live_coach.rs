@@ -367,6 +367,24 @@ fn meta_from(si: &SessionInfo) -> SessionMeta {
     }
 }
 
+/// Ce que le coach dit en course à la fin d'un tour. Le conseil virage par virage se tait : il compare
+/// à un tour d'essais (autre charge, pas de trafic) et pousse à freiner plus tard un pilote qui gère
+/// une course (Imola, 12 nov. : un conseil de freinage par tour pendant 90 min, 7 tours hors piste).
+/// Restent : les sorties répétées au même endroit, les changements de référence, et l'ingénieur.
+pub fn race_voice(mut m: CoachMessage) -> Option<CoachMessage> {
+    match m.kind {
+        CoachMessageKind::Focus => None,
+        CoachMessageKind::Invalid if m.text.contains("Garde de la marge") => {
+            if let Some(cut) = m.text.find(" Focus toujours") {
+                m.text.truncate(cut);
+            }
+            Some(m)
+        }
+        CoachMessageKind::Invalid => None,
+        _ => Some(m),
+    }
+}
+
 /// Tours restants d'une course au temps, tour en cours compté pour la part qui reste (`rem`).
 /// Être doublé ne retire pas de tour : tu finis toujours au premier passage après la fin du chrono.
 /// Le leader peut en ajouter un : s'il passe la ligne juste avant la fin, il repart pour un tour.
@@ -465,7 +483,9 @@ impl LiveCoach {
         // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
         let dist = row[1];
         let mut callout = None;
-        if let Some((trig, text)) = &self.callout {
+        // En course : pas de rappel de virage (voir `race_voice`).
+        let racing = self.current_kind() == SessionKind::Race;
+        if let Some((trig, text)) = self.callout.as_ref().filter(|_| !racing) {
             let t = *trig as f64;
             if !self.callout_done && self.last_dist < t && dist >= t && dist - self.last_dist < 100.0 {
                 self.callout_done = true;
@@ -551,13 +571,19 @@ impl LiveCoach {
                 }
                 let number = lap.meta.number;
                 let msg = self.on_lap(lap);
+                let msg = if self.current_kind() == SessionKind::Race { race_voice(msg) } else { Some(msg) };
                 // Ingénieur de course : consigne recalculée à chaque passage de la ligne, en course.
                 if let Some(st) = self.race_state(number) {
                     if let Some(text) = self.engineer.on_lap(&st) {
-                        self.pending = Some(CoachMessage { kind: CoachMessageKind::Strategy, lap: number, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
+                        let strategy = CoachMessage { kind: CoachMessageKind::Strategy, lap: number, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None };
+                        // Rien d'autre à dire sur ce tour : la consigne part tout de suite.
+                        if msg.is_none() {
+                            return Some(strategy);
+                        }
+                        self.pending = Some(strategy);
                     }
                 }
-                Some(msg)
+                msg
             }
             None => callout,
         }
@@ -1218,5 +1244,17 @@ mod tests {
         // Leader 35 s devant : il passe à 5 s puis toutes les 38 s, drapeau à 879 s ; tu finis à 880 s,
         // 22 tours comme sans leader. Le leader ne peut que rajouter un tour, jamais en retirer.
         assert_eq!(timed_laps_left(1.0, 40.0, 850.0, 35.0, 2.0), 22.0);
+    }
+
+    #[test]
+    fn race_voice_keeps_only_what_matters() {
+        let m = |kind, text: &str| CoachMessage { kind, lap: 3, text: text.into(), focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None };
+        assert!(race_voice(m(CoachMessageKind::Focus, "Plus 1 seconde 3. Focus Rivazza : freine 10 mètres plus tard.")).is_none());
+        assert!(race_voice(m(CoachMessageKind::Invalid, "Tour de stand, non compté.")).is_none());
+        assert!(race_voice(m(CoachMessageKind::Invalid, "Tour non compté, sortie de piste à Tosa. Focus toujours Rivazza.")).is_none());
+        let kept = race_voice(m(CoachMessageKind::Invalid, "Tour non compté, troisième sortie à Villeneuve. Garde de la marge ici. Focus toujours Rivazza.")).unwrap();
+        assert_eq!(kept.text, "Tour non compté, troisième sortie à Villeneuve. Garde de la marge ici.");
+        assert!(race_voice(m(CoachMessageKind::Strategy, "Box, box, ce tour.")).is_some());
+        assert!(race_voice(m(CoachMessageKind::Info, "Meilleur tour, 1 minute 32 point 9. Nouvelle référence.")).is_some());
     }
 }

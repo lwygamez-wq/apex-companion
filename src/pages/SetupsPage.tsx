@@ -2,7 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/hooks";
-import type { ProbeReport, SetupComparison, SetupEntry } from "../lib/types";
+import type { SetupComparison, SetupEntry } from "../lib/types";
 
 const DIR_KEY = "apex.setups.dir";
 const load = (k: string) => {
@@ -102,66 +102,10 @@ function ComparisonTable({ c }: { c: SetupComparison }) {
   );
 }
 
-/** Verdict de la sonde pour les conditions du Setup Builder. */
-function ProbeCard({ reports }: { reports: ProbeReport[] }) {
-  const r = reports[0];
-  if (!r) {
-    return (
-      <div className="card su-probe">
-        <h2>Sonde setup (lecture seule)</h2>
-        <p className="muted" style={{ margin: 0 }}>Pas encore de mesure. Roule 5 tours en LMU avec Apex ouvert : à la fin de la séance, Apex note ce que le jeu fournit (réglages, crans mini et maxi, setups du jeu, températures de pneus). Rien n'est écrit dans le jeu.</p>
-      </div>
-    );
-  }
-  const f = (n: string) => r.fields.find((x) => x.name === n);
-  const pct = (n: string) => f(n)?.filled_pct ?? 0;
-  const apiOk = r.api.some((a) => a.ok);
-  const rows: { label: string; ok: boolean | null; detail: string }[] = [
-    {
-      label: "Crans mini et maxi des réglages",
-      ok: apiOk ? r.garage.with_range > 0 : null,
-      detail: apiOk ? `${r.garage.with_range} réglages avec plage sur ${r.garage.settings}` : "API du jeu injoignable pendant la séance",
-    },
-    {
-      label: "Setups fournis par le jeu",
-      ok: apiOk ? (r.garage.presets ?? 0) > 0 : null,
-      detail: apiOk ? (r.garage.presets == null ? "champ absent" : `${r.garage.presets} setup(s)`) : "API du jeu injoignable",
-    },
-    {
-      label: "Température idéale des pneus",
-      ok: pct("pneu_temperature_optimale") > 0 || r.garage.optimal_conditions === true,
-      detail: pct("pneu_temperature_optimale") > 0 ? `fournie (${Math.round(f("pneu_temperature_optimale")!.mean)})` : r.garage.optimal_conditions ? "fournie par l'API" : "non fournie",
-    },
-    { label: "Températures pneus (3 zones)", ok: pct("pneu_surface_c") > 50, detail: `${pct("pneu_surface_c")} % des mesures` },
-    { label: "Hauteurs de caisse", ok: pct("caisse_hauteur_av_m") > 50, detail: `${pct("caisse_hauteur_av_m")} % des mesures` },
-    { label: "Appui aéro AV / AR", ok: pct("appui_av_n") > 50, detail: `${pct("appui_av_n")} % des mesures` },
-  ];
-  return (
-    <div className="card su-probe">
-      <h2>Sonde setup (lecture seule)</h2>
-      <div className="muted" style={{ marginBottom: 8 }}>
-        Dernière séance : {r.track} · {r.car} · {r.frames} mesures en piste
-      </div>
-      <table className="su-table">
-        <tbody>
-          {rows.map((x) => (
-            <tr key={x.label}>
-              <td className={`su-flag ${x.ok == null ? "unk" : x.ok ? "ok" : "ko"}`}>{x.ok == null ? "?" : x.ok ? "OUI" : "NON"}</td>
-              <td>{x.label}</td>
-              <td className="muted">{x.detail}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/** Onglet Setups : comparateur de setups LMU et sonde du Setup Builder. */
+/** Onglet Setups : comparateur de setups LMU. */
 export function SetupsPage() {
   const [dir, setDir] = useState<string | null>(() => load(DIR_KEY));
   const lib = useAsync(() => api.setupLibrary(dir), [dir ?? ""]);
-  const probe = useAsync(() => api.setupProbeReports().catch(() => [] as ProbeReport[]), []);
   const files = lib.data?.files ?? [];
   const [a, setA] = useState("");
   const [b, setB] = useState("");
@@ -228,7 +172,6 @@ export function SetupsPage() {
         {cmp && <ComparisonTable c={cmp} />}
         <p className="muted su-note">Apex lit les fichiers sans les modifier. Les valeurs viennent du jeu ; l'effet indiqué est le sens habituel, son ampleur dépend de la voiture et se vérifie en piste.</p>
       </div>
-      <ProbeCard reports={probe.data ?? []} />
     </div>
   );
 }

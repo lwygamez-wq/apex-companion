@@ -139,13 +139,16 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
               }}
             />
           </div>
-          <small className="muted">{len.kind === "minutes" ? `${duration(len.value * 60)} de course, + 1 tour compté` : " "}</small>
+          <small className="muted">
+            {len.kind === "minutes" ? `${duration(len.value * 60)} de course${v?.top_class ? "" : ", + 1 tour compté"}${v?.game_minutes != null && length == null ? " · durée lue dans le jeu" : ""}` : " "}
+          </small>
         </label>
         <label>
           <span>Conso par tour ({u === "energy" ? "%" : "L"})</span>
-          <input type="text" inputMode="decimal" value={perLapTxt} placeholder={v?.per_lap_measured != null ? n2(v.per_lap_measured) : "ex. 4,8"} onChange={(e) => setPerLapTxt(e.target.value)} />
+          <input type="text" inputMode="decimal" value={perLapTxt} placeholder={v?.per_lap_measured != null ? n2(v.per_lap_measured) : v?.game_per_lap != null ? n2(v.game_per_lap) : "ex. 4,8"} onChange={(e) => setPerLapTxt(e.target.value)} />
           <small className="muted">
-            {v?.per_lap_measured != null ? `mesuré ${n2(v.per_lap_measured)}${v.per_lap_max != null ? `, max ${n2(v.per_lap_max)}` : ""} ${u === "energy" ? "%" : "L"} sur ${v.laps_used} tours` : "pas encore mesuré ici"}
+            {v?.per_lap_measured != null ? `mesuré ${n2(v.per_lap_measured)}${v.per_lap_max != null ? `, max ${n2(v.per_lap_max)}` : ""} ${u === "energy" ? "%" : "L"} sur ${v.laps_used} tours` : v?.game_per_lap != null ? "pas encore mesuré : estimation du jeu" : "pas encore mesuré ici"}
+            {v?.per_lap_measured != null && v.game_per_lap != null ? ` · jeu ${n2(v.game_per_lap)}` : ""}
           </small>
         </label>
         <label>

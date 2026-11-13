@@ -8,6 +8,7 @@ import type {
   RaceLength,
   RaceStrategyView,
   SetupLibraryView,
+  GameFacts,
   SetupComparison,
   ProbeReport,
   StrategyOverrides,
@@ -73,6 +74,7 @@ export const api = {
     call<RaceStrategyView>("race_strategy", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, setup: c.setup, length, marginLaps, formationLaps, overrides }),
   setEngineerPlan: (c: Pick<CircuitOverview, "sim" | "track" | "track_config" | "car">, plan: EngineerPlan) =>
     call<void>("set_engineer_plan", { sim: c.sim, track: c.track, trackConfig: c.track_config, car: c.car, plan }),
+  gameFacts: () => call<GameFacts | null>("game_facts"),
   setupLibrary: (dir: string | null) => call<SetupLibraryView>("setup_library", { dir }),
   setupCompare: (a: string, b: string) => call<SetupComparison>("setup_compare", { a, b }),
   setupProbeReports: () => call<ProbeReport[]>("setup_probe_reports"),
