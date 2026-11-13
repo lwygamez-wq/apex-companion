@@ -679,64 +679,9 @@
       "Coach prêt. Référence : ton meilleur tour ici, 1 minute 1 point 5."
     ],
     [
-      1,
-      "invalid",
-      "Tour de stand, non compté."
-    ],
-    [
       2,
-      "invalid",
-      "Tour non compté, sortie de piste au virage 3."
-    ],
-    [
-      3,
-      "focus",
-      "Plus 6 dixièmes. Premier relevé, focus virage 1, secteur 1 : 3 dixièmes perdus. Freine 10 mètres plus tard."
-    ],
-    [
-      4,
-      "invalid",
-      "Tour non compté, incident. Focus toujours virage 1."
-    ],
-    [
-      5,
-      "focus",
-      "Plus 1 seconde 1. Toujours virage 1 : freine 10 mètres plus tard."
-    ],
-    [
-      6,
-      "focus",
-      "Meilleur tour, 1 minute 1 point 9. Plus 4 dixièmes. Toujours virage 1 : freine 10 mètres plus tard."
-    ],
-    [
-      7,
-      "focus",
-      "Meilleur tour, 1 minute 1 point 5. À égalité avec la référence. Toujours virage 1 : freine 5 mètres plus tard."
-    ],
-    [
-      8,
-      "invalid",
-      "Tour non compté, incident. Focus toujours virage 1."
-    ],
-    [
-      9,
-      "focus",
-      "Plus 8 dixièmes. Focus virage 1, secteur 1 : 2 dixièmes perdus. Vise la corde de la référence."
-    ],
-    [
-      10,
-      "focus",
-      "Plus 2 dixièmes. Focus virage 1, secteur 1 : 2 dixièmes perdus. Relâche le frein plus tôt, garde 3 kilomètres heure de plus à la corde."
-    ],
-    [
-      11,
-      "invalid",
-      "Tour non compté, incident. Focus toujours virage 1."
-    ],
-    [
-      12,
-      "focus",
-      "Plus 5 dixièmes. Focus virage 1, secteur 1 : 2 dixièmes perdus. Vise la corde de la référence."
+      "strategy",
+      "Course sans arrêt, 10 tours. Cible 2,25 litres par tour. Tu fais 0,45 litre, 40 tours de marge à l'arrivée : pas besoin d'économiser, roule à ton rythme."
     ]
   ],
   "regularity": {

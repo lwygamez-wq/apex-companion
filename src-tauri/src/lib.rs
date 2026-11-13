@@ -52,6 +52,7 @@ pub fn run() {
             commands::set_session_setup,
             commands::track_overlay,
             commands::race_strategy,
+            commands::game_facts,
             commands::setup_library,
             commands::setup_compare,
             commands::setup_probe_reports,

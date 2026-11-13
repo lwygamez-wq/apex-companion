@@ -572,148 +572,38 @@
     ],
     [
       2,
-      "invalid",
-      "Tour non compté, incident."
-    ],
-    [
-      3,
-      "focus",
-      "Plus 1 seconde 6. Premier relevé, focus Virage 1, secteur 1 : 5 dixièmes perdus. Relâche le frein plus tôt, garde 15 kilomètres heure de plus à la corde."
-    ],
-    [
-      4,
-      "callout",
-      "Virage 1, relâche le frein plus tôt."
-    ],
-    [
-      4,
-      "invalid",
-      "Tour non compté, sortie de piste à Virage 1. Focus toujours Virage 1."
+      "strategy",
+      "Course sans arrêt, 32 tours. Cible 1,68 litre par tour. Tu es dans la cible."
     ],
     [
       5,
-      "callout",
-      "Virage 1, relâche le frein plus tôt."
-    ],
-    [
-      5,
-      "focus",
-      "Meilleur tour, 1 minute 5 point 8. Plus 1 seconde 3. Virage 1 : c'est mieux. Focus Virage 10a, secteur 3 : 4 dixièmes perdus. Commence à tourner plus tôt."
+      "strategy",
+      "Carburant : tu fais 1,70 litre, cible 1,68 litre. Lift and coast, 0,01 litre de moins par tour."
     ],
     [
       6,
-      "callout",
-      "Virage 10a, tourne plus tôt."
-    ],
-    [
-      6,
-      "focus",
-      "Plus 1 seconde 7. Toujours Virage 10a : commence à tourner plus tôt."
-    ],
-    [
-      7,
-      "callout",
-      "Virage 10a, tourne plus tôt."
+      "strategy",
+      "Carburant : dans la cible, 1,68 litre par tour."
     ],
     [
       7,
       "invalid",
-      "Tour non compté, deuxième sortie à Virage 1. Garde de la marge ici. Focus toujours Virage 10a."
-    ],
-    [
-      8,
-      "callout",
-      "Virage 10a, tourne plus tôt."
-    ],
-    [
-      8,
-      "invalid",
-      "Tour de stand, non compté."
-    ],
-    [
-      9,
-      "callout",
-      "Virage 10a, tourne plus tôt."
-    ],
-    [
-      9,
-      "invalid",
-      "Tour de stand, non compté."
+      "Tour non compté, deuxième sortie à Virage 1. Garde de la marge ici."
     ],
     [
       10,
-      "callout",
-      "Virage 10a, tourne plus tôt."
-    ],
-    [
-      10,
-      "focus",
-      "Meilleur tour, 1 minute 4 point 8. Plus 3 dixièmes. Focus Virage 10a, secteur 3 : 3 dixièmes perdus. Relâche le frein plus tôt, garde 5 kilomètres heure de plus à la corde."
-    ],
-    [
-      11,
-      "callout",
-      "Virage 10a, relâche le frein plus tôt."
-    ],
-    [
-      11,
-      "focus",
-      "Plus 8 dixièmes. Toujours Virage 10a : relâche le frein plus tôt, garde 4 kilomètres heure de plus à la corde."
-    ],
-    [
-      12,
-      "callout",
-      "Virage 10a, relâche le frein plus tôt."
-    ],
-    [
-      12,
-      "focus",
-      "Meilleur tour, 1 minute 4 point 5. À égalité avec la référence. Toujours Virage 10a : relâche le frein plus tôt, garde 6 kilomètres heure de plus à la corde."
-    ],
-    [
-      13,
-      "callout",
-      "Virage 10a, relâche le frein plus tôt."
+      "strategy",
+      "Toujours lift and coast : 1,70 litre pour une cible de 1,68 litre."
     ],
     [
       13,
       "invalid",
-      "Tour non compté, troisième sortie à Virage 1. Garde de la marge ici. Focus toujours Virage 10a."
-    ],
-    [
-      14,
-      "callout",
-      "Virage 10a, relâche le frein plus tôt."
-    ],
-    [
-      14,
-      "focus",
-      "Plus 5 dixièmes. Toujours Virage 10a : relâche le frein plus tôt, garde 5 kilomètres heure de plus à la corde."
+      "Tour non compté, troisième sortie à Virage 1. Garde de la marge ici."
     ],
     [
       15,
-      "callout",
-      "Virage 10a, relâche le frein plus tôt."
-    ],
-    [
-      15,
-      "invalid",
-      "Tour non compté, sortie de piste à Virage 12. Focus toujours Virage 10a."
-    ],
-    [
-      16,
-      "callout",
-      "Virage 10a, relâche le frein plus tôt."
-    ],
-    [
-      16,
-      "focus",
-      "Plus 1 seconde 7. Virage 10a : c'est mieux. Focus Virage 1, secteur 1 : 2 dixièmes perdus. Relâche le frein plus tôt, garde 17 kilomètres heure de plus à la corde."
-    ],
-    [
-      17,
-      "callout",
-      "Virage 1, relâche le frein plus tôt."
+      "strategy",
+      "Carburant : cible 1,77 litre. Tu fais 1,70 litre, 0 tour de marge à l'arrivée : pas besoin d'économiser, roule à ton rythme."
     ]
   ],
   "regularity": {

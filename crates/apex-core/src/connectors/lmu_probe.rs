@@ -20,12 +20,75 @@ use std::time::Duration;
 pub const API_BASE: &str = "http://127.0.0.1:6397";
 
 /// Lectures de l'API (GET seulement) : nom du fichier, chemin.
-pub const API_READS: [(&str, &str); 4] = [
+pub const API_READS: [(&str, &str); 10] = [
     ("garage", "/rest/garage/getPlayerGarageData"),
     ("setup-overview", "/rest/garage/UIScreen/CarSetupOverview"),
     ("tyres", "/rest/garage/UIScreen/TireManagement"),
     ("swagger", "/swagger-schema.json"),
+    // Stratégie et classement vus par le jeu (contenu à étudier : audit du 13 nov.).
+    ("strategy-overall", "/rest/strategy/overall"),
+    ("strategy-usage", "/rest/strategy/usage"),
+    ("strategy-pitstop", "/rest/strategy/pitstop-estimate"),
+    ("standings", "/rest/watch/standings"),
+    ("session-info", "/rest/watch/sessionInfo"),
+    ("event-sessions", "/rest/sessions/GetSessionsInfoForEvent"),
 ];
+
+/// Ce que le jeu annonce pour la voiture et le circuit chargés, avant même le premier tour.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct GameFacts {
+    pub track: String,
+    pub car: String,
+    pub car_class: Option<String>,
+    /// Numéro de séance du jeu (10 et plus : course).
+    pub session: i32,
+    pub at_unix: i64,
+    /// Durée de la séance (min), si elle est au temps.
+    pub minutes: Option<f32>,
+    /// Énergie virtuelle par tour estimée par le jeu (%).
+    pub energy_per_lap_pct: Option<f32>,
+    /// Carburant par tour estimé par le jeu (l).
+    pub fuel_per_lap_l: Option<f32>,
+    /// Ratio carburant réglé dans le garage (l par 1 % d'énergie).
+    pub fuel_ratio: Option<f32>,
+}
+
+/// Consommations estimées par le jeu (`TireManagement.expectedUsage`) et ratio réglé (`VM_FUEL_LEVEL`).
+pub fn game_usage(overview: Option<&str>, tyres: Option<&str>) -> (Option<f32>, Option<f32>, Option<f32>) {
+    let pos = |v: Option<f64>| v.filter(|x| x.is_finite() && *x > 0.0).map(|x| x as f32);
+    let usage = tyres.and_then(|t| serde_json::from_str::<Value>(t).ok()).and_then(|t| find_key(&t, "expectedUsage").cloned());
+    let energy = pos(usage.as_ref().and_then(|u| u.get("virtualEnergyFractionPerLap")).and_then(Value::as_f64)).map(|f| f * 100.0);
+    let fuel = pos(usage.as_ref().and_then(|u| u.get("fuelConsumption")).and_then(Value::as_f64));
+    // Hypercar et GT3 : le réglage « carburant » affiche le ratio (« 0.73 ») ; ailleurs des litres (« 75.0l »).
+    let ratio = overview
+        .and_then(|o| serde_json::from_str::<Value>(o).ok())
+        .and_then(|o| find_key(&o, "VM_FUEL_LEVEL").and_then(|v| v.get("stringValue")).and_then(Value::as_str).map(str::to_string))
+        .and_then(|s| s.trim().replace(',', ".").parse::<f32>().ok())
+        .filter(|r| energy.is_some() && *r > 0.05 && *r < 3.0);
+    (energy, fuel, ratio)
+}
+
+/// Lit dans le jeu ce qu'il annonce pour la séance chargée (deux GET), et le garde dans `jeu.json`.
+pub fn read_game_facts(base: &str, dir: &Path, mut facts: GameFacts) -> Option<GameFacts> {
+    let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(4))).proxy(None).build().into();
+    let get = |path: &str| -> Option<String> {
+        let mut resp = agent.get(format!("{base}{path}")).call().ok()?;
+        let b = resp.body_mut().with_config().limit(20 * 1024 * 1024).read_to_vec().ok()?;
+        Some(String::from_utf8(b.clone()).unwrap_or_else(|_| b.iter().map(|&c| c as char).collect()))
+    };
+    let tyres = get("/rest/garage/UIScreen/TireManagement")?;
+    let overview = get("/rest/garage/UIScreen/CarSetupOverview");
+    (facts.energy_per_lap_pct, facts.fuel_per_lap_l, facts.fuel_ratio) = game_usage(overview.as_deref(), Some(&tyres));
+    std::fs::create_dir_all(dir).ok()?;
+    std::fs::write(dir.join("jeu.json"), serde_json::to_string_pretty(&facts).ok()?).ok()?;
+    Some(facts)
+}
+
+/// Dernière séance vue dans le jeu (`jeu.json`).
+pub fn load_game_facts(dir: &Path) -> Option<GameFacts> {
+    serde_json::from_str(&std::fs::read_to_string(dir.join("jeu.json")).ok()?).ok()
+}
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
 pub struct FieldStat {
@@ -367,5 +430,21 @@ mod tests {
         assert_eq!(s.optimal_temp_c, [("Medium".to_string(), 92.0)]);
         assert_eq!(summarize(None, Some(overview), None).presets, Some(2));
         assert!(setup_snapshot("{}", None).is_none());
+    }
+
+    #[test]
+    fn reads_what_the_game_expects_before_the_first_lap() {
+        // Forme des réponses de LMU ; chiffres de la Cadillac à Bahreïn (12 nov. 2026).
+        let tyres = r#"{"expectedUsage":{"fuelConsumption":4.6135,"fuelFractionPerLap":0.0419,"virtualEnergyFractionPerLap":0.0443}}"#;
+        let overview = r#"{"carSetup":{"garageValues":{"VM_FUEL_LEVEL":{"value":60,"stringValue":"0.73"}}}}"#;
+        let (e, f, r) = game_usage(Some(overview), Some(tyres));
+        assert!((e.unwrap() - 4.43).abs() < 1e-3 && (f.unwrap() - 4.6135).abs() < 1e-4);
+        assert_eq!(r, Some(0.73));
+        // Voiture sans énergie virtuelle : le réglage affiche des litres, pas un ratio.
+        let (e, _, r) = game_usage(Some(r#"{"VM_FUEL_LEVEL":{"stringValue":"75.0l"}}"#), Some(r#"{"expectedUsage":{"fuelConsumption":2.9,"virtualEnergyFractionPerLap":0.0}}"#));
+        assert_eq!((e, r), (None, None));
+        let d = tempfile::tempdir().unwrap();
+        assert!(load_game_facts(d.path()).is_none());
+        assert!(read_game_facts("http://127.0.0.1:9", d.path(), GameFacts::default()).is_none());
     }
 }

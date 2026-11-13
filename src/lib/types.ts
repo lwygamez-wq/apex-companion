@@ -182,6 +182,15 @@ export interface RaceStrategyView {
   fuel_ratio: number | null;
   fuel_tank_l: number | null;
   engineer: EngineerPlan;
+  /** Catégorie la plus rapide : pas de tour en plus en fin de course au temps. */
+  top_class: boolean;
+  /** Temps perdu par arrêt mesuré (s) et nombre d'arrêts mesurés sur ce circuit. */
+  pit_loss_s: number | null;
+  pit_stops_measured: number;
+  /** Consommation par tour annoncée par le jeu (même unité que per_lap). */
+  game_per_lap: number | null;
+  /** Durée de la course chargée dans le jeu (min). */
+  game_minutes: number | null;
 }
 
 export interface StrategyOverrides {
@@ -836,4 +845,17 @@ export interface ProbeReport {
   fields: ProbeField[];
   api: ProbeApiRead[];
   garage: { settings: number; with_range: number; presets: number | null; optimal_conditions: boolean | null };
+}
+
+/** Dernière séance vue dans le jeu (lmu_probe.rs). */
+export interface GameFacts {
+  track: string;
+  car: string;
+  car_class: string | null;
+  session: number;
+  at_unix: number;
+  minutes: number | null;
+  energy_per_lap_pct: number | null;
+  fuel_per_lap_l: number | null;
+  fuel_ratio: number | null;
 }

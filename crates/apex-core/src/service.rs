@@ -368,6 +368,10 @@ pub struct RaceStrategyView {
     /// Temps perdu par arrêt mesuré sur tes courses (médiane), et nombre d'arrêts mesurés.
     pub pit_loss_s: Option<f32>,
     pub pit_stops_measured: usize,
+    /// Consommation par tour annoncée par le jeu pour cette voiture ici (même unité que `per_lap`).
+    pub game_per_lap: Option<f32>,
+    /// Durée de la course chargée dans le jeu (min).
+    pub game_minutes: Option<f32>,
 }
 
 /// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
@@ -1512,6 +1516,12 @@ impl AppService {
         Ok(self.import_paths(&files))
     }
 
+    /// Dernière séance vue dans le jeu (LMU) : voiture, circuit, durée, consommations annoncées.
+    pub fn game_facts(&self) -> Option<crate::connectors::lmu_probe::GameFacts> {
+        let dir = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("sonde-lmu"))?;
+        crate::connectors::lmu_probe::load_game_facts(&dir)
+    }
+
     /// Bibliothèque des setups LMU (`.svm`) : dossier choisi par le pilote, sinon trouvé dans Steam.
     pub fn setup_library(&self, dir: Option<&str>) -> SetupLibraryView {
         let found: Vec<String> = crate::setup::find_settings_dirs().into_iter().map(|p| p.display().to_string()).collect();
@@ -2186,14 +2196,22 @@ impl AppService {
         let avg = |v: &[f32]| (!v.is_empty()).then(|| v.iter().sum::<f32>() / v.len() as f32);
         let max = |v: &[f32]| (!v.is_empty()).then(|| v.iter().copied().fold(0.0, f32::max));
         // Énergie virtuelle mesurée (≥ 3 tours) : c'est elle qui limite le relais (Hypercar, LMGT3).
+        // Ce que le jeu annonce pour cette voiture ici (lu au garage) : sert tant que rien n'est mesuré,
+        // et s'affiche à côté de ta mesure ensuite.
+        let facts = self.game_facts().filter(|g| sim == SimId::Lmu && g.track == track && g.car == car);
+        let game_energy = facts.as_ref().and_then(|g| g.energy_per_lap_pct);
         // Énergie virtuelle mesurée, même sur un seul tour : c'est elle qui limite le relais (Hypercar, LMGT3).
-        let measured_unit = if energy.is_empty() { Unit::Litres } else { Unit::Energy };
+        let measured_unit = if energy.is_empty() && game_energy.is_none() { Unit::Litres } else { Unit::Energy };
         let unit = o.unit.unwrap_or(measured_unit);
         let (measured, measured_max) = match unit {
             Unit::Energy => (avg(&energy), max(&energy)),
             Unit::Litres => (avg(&fuel), max(&fuel)),
         };
-        let per = o.per_lap.filter(|v| *v > 0.0).or(measured);
+        let game_per = match unit {
+            Unit::Energy => game_energy,
+            Unit::Litres => facts.as_ref().and_then(|g| g.fuel_per_lap_l),
+        };
+        let per = o.per_lap.filter(|v| *v > 0.0).or(measured).or(game_per);
         times.sort_by(|a, b| a.total_cmp(b));
         let lap_time = o.lap_time_s.filter(|v| *v > 1.0).or_else(|| times.get(times.len() / 2).copied());
         let (Some(per), Some(lap_time)) = (per, lap_time) else {
@@ -2201,14 +2219,18 @@ impl AppService {
             let msg = if unit == Unit::Energy && per.is_none() && !times.is_empty() {
                 "pas encore de consommation d'énergie mesurée ici (séances roulées avant la mesure de l'énergie) : saisis ta conso par tour en %, ou roule quelques tours"
             } else {
+if per.is_some() {
+                "le jeu donne la consommation, pas le temps au tour : saisis ton temps au tour, ou roule un tour lancé"
+            } else {
                 "pas encore de tour propre mesuré ici avec cette voiture : roule quelques tours, ou saisis la consommation et le temps au tour"
+            }
             };
             return Err(ServiceError::User(msg.into()));
         };
         let profile = db.latest_profile(track, car)?.or(db.latest_car_profile(car)?);
         let fuel_tank = profile.as_ref().and_then(|p| p.usable_tank_l());
         // Catégorie la plus rapide (Hypercar en LMU) : pas de tour en plus à la fin d'une course au temps.
-        let top_class = crate::analysis::strategy::is_top_class(sim, profile.as_ref().and_then(|p| p.car.class.as_deref()));
+        let top_class = crate::analysis::strategy::is_top_class(sim, profile.as_ref().and_then(|p| p.car.class.as_deref()).or(facts.as_ref().and_then(|g| g.car_class.as_deref())));
         // Temps perdu par arrêt, mesuré sur tes courses ici : tour de rentrée + tour de sortie, moins
         // deux tours normaux de la même course. Médiane des arrêts.
         // Sans course avec cette voiture ici, les courses d'autres voitures sur le même circuit : la voie
@@ -2235,7 +2257,28 @@ impl AppService {
             }
         }
         losses.sort_by(|a, b| a.total_cmp(b));
-        let pit_loss_s = losses.get(losses.len() / 2).copied();
+        let mut pit_loss_s = losses.get(losses.len() / 2).copied();
+        // Circuit jamais couru : médiane de tes arrêts sur les autres circuits du même simulateur. Moins
+        // juste qu'une mesure ici, mais compter zéro seconde faisait prévoir un tour de trop (Bahreïn, 12 nov.).
+        if pit_loss_s.is_none() {
+            let mut all: Vec<f32> = vec![];
+            for s in db.list_sessions(&SessionFilter { sim: Some(sim), ..Default::default() })?.iter().filter(|s| s.kind == SessionKind::Race) {
+                let laps = db.laps(s.id)?;
+                let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
+                normal.sort_by(|a, b| a.total_cmp(b));
+                let Some(&med) = normal.get(normal.len() / 2) else { continue };
+                for w in laps.windows(2) {
+                    if let (LapKind::InLap, LapKind::OutLap, Some(a), Some(b)) = (w[0].meta.kind, w[1].meta.kind, w[0].meta.lap_time_s, w[1].meta.lap_time_s) {
+                        let loss = (a + b - 2.0 * med) as f32;
+                        if (5.0..600.0).contains(&loss) {
+                            all.push(loss);
+                        }
+                    }
+                }
+            }
+            all.sort_by(|a, b| a.total_cmp(b));
+            pit_loss_s = all.get(all.len() / 2).copied();
+        }
         let measured_tank = match unit {
             Unit::Energy => Some(100.0),
             Unit::Litres => fuel_tank,
@@ -2243,9 +2286,11 @@ impl AppService {
         let tank = o.tank.filter(|v| *v > 0.0).or(measured_tank);
         let ratio = crate::analysis::strategy::fuel_ratio(&pairs);
         let fuel_ratio = match unit {
-            Unit::Energy => o.fuel_ratio.filter(|r| *r > 0.0).or(ratio.map(|r| r.1)),
+            Unit::Energy => o.fuel_ratio.filter(|r| *r > 0.0).or(ratio.map(|r| r.1)).or(facts.as_ref().and_then(|g| g.fuel_ratio)),
             Unit::Litres => None,
         };
+        // Course chargée dans le jeu (séance 10 et plus) : sa durée, sans rien saisir.
+        let game_minutes = facts.as_ref().filter(|g| g.session >= 10).and_then(|g| g.minutes);
         let default_length = sessions
             .iter()
             .filter(|s| s.kind == SessionKind::Race)
@@ -2254,6 +2299,7 @@ impl AppService {
             .filter(|n| *n >= 3)
             .map(RaceLength::Laps)
             .unwrap_or(RaceLength::Minutes(30.0));
+        let default_length = game_minutes.map(RaceLength::Minutes).unwrap_or(default_length);
         let strategy = plan(&StrategyInput {
             length: length.unwrap_or(default_length),
             unit,
@@ -2296,6 +2342,8 @@ impl AppService {
             top_class,
             pit_loss_s,
             pit_stops_measured: losses.len(),
+            game_per_lap: game_per,
+            game_minutes,
             // Même verrou que ci-dessus : `engineer_plan_for` le reprendrait (blocage).
             engineer: db.get_setting(&engineer_key(sim, track, track_config, car)).ok().flatten().and_then(|j| serde_json::from_str(&j).ok()).unwrap_or_default(),
         })
@@ -3669,5 +3717,34 @@ mod zone_tests {
         crate::connectors::lmu_probe::write_report(&dir.path().join("sonde-lmu"), &r).unwrap();
         let got = svc.setup_probe_reports();
         assert_eq!((got.len(), got[0].stem.as_str(), got[0].frames), (1, "lmu_x", 10));
+    }
+
+    /// Voiture jamais roulée : la stratégie part de ce que le jeu annonce (Cadillac à Bahreïn, 12 nov. :
+    /// 4,43 % par tour, ratio 0,73, course de 60 min), il ne manque que le temps au tour.
+    #[test]
+    fn strategy_starts_from_the_game_for_a_car_never_driven() {
+        use crate::analysis::strategy::{RaceLength, Unit};
+        use crate::model::SimId;
+        use crate::service::StrategyOverrides;
+        let dir = tempfile::tempdir().unwrap();
+        let svc = crate::service::AppService::open(&dir.path().join("apex.db")).unwrap();
+        let ask = |o: &StrategyOverrides| svc.race_strategy(SimId::Lmu, "Bahrain International Circuit", None, "Cadillac V-Series.R", None, None, 0.5, 0.5, o);
+        assert!(ask(&StrategyOverrides::default()).is_err());
+        let facts = crate::connectors::lmu_probe::GameFacts { track: "Bahrain International Circuit".into(), car: "Cadillac V-Series.R".into(), car_class: Some("Hyper".into()), session: 10, minutes: Some(60.0), energy_per_lap_pct: Some(4.43), fuel_per_lap_l: Some(4.61), fuel_ratio: Some(0.73), ..Default::default() };
+        std::fs::create_dir_all(dir.path().join("sonde-lmu")).unwrap();
+        std::fs::write(dir.path().join("sonde-lmu").join("jeu.json"), serde_json::to_string(&facts).unwrap()).unwrap();
+        // Le jeu ne donne pas le temps au tour : message clair tant qu'il manque.
+        let e = ask(&StrategyOverrides::default()).unwrap_err().to_string();
+        assert!(e.contains("temps au tour"), "{e}");
+        let v = ask(&StrategyOverrides { lap_time_s: Some(108.0), ..Default::default() }).unwrap();
+        assert_eq!(v.unit, Unit::Energy);
+        assert!((v.per_lap - 4.43).abs() < 1e-6 && v.per_lap_measured.is_none() && v.game_per_lap == Some(4.43));
+        assert_eq!(v.fuel_ratio, Some(0.73));
+        assert!(v.top_class);
+        assert!(matches!(v.default_length, RaceLength::Minutes(m) if m == 60.0));
+        // 60 min à 1:48 : 34 tours, 150,6 % d'énergie, donc un arrêt.
+        assert_eq!((v.strategy.laps, v.strategy.stops), (34, 1));
+        // Une autre voiture sur ce circuit n'hérite pas de ces chiffres.
+        assert!(svc.race_strategy(SimId::Lmu, "Bahrain International Circuit", None, "Peugeot 9x8", None, None, 0.5, 0.5, &StrategyOverrides { lap_time_s: Some(108.0), ..Default::default() }).is_err());
     }
 }

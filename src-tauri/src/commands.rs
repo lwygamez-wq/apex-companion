@@ -168,6 +168,12 @@ pub async fn race_strategy(
     blocking(state.svc.clone(), move |s| s.race_strategy(sim, &track, track_config.as_deref(), &car, setup, length, margin_laps, formation_laps, &overrides.unwrap_or_default())).await
 }
 
+/// Dernière séance vue dans le jeu (LMU) : voiture, circuit, durée, consommations annoncées.
+#[tauri::command]
+pub async fn game_facts(state: State<'_, AppState>) -> R<Option<apex_core::connectors::lmu_probe::GameFacts>> {
+    blocking(state.svc.clone(), move |s| Ok(s.game_facts())).await
+}
+
 /// Bibliothèque des setups LMU (`.svm`) : dossier choisi, sinon trouvé dans Steam.
 #[tauri::command]
 pub async fn setup_library(state: State<'_, AppState>, dir: Option<String>) -> R<apex_core::service::SetupLibraryView> {
