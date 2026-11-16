@@ -372,6 +372,8 @@ pub struct RaceStrategyView {
     pub game_per_lap: Option<f32>,
     /// Durée de la course chargée dans le jeu (min).
     pub game_minutes: Option<f32>,
+    /// Le temps au tour utilisé est l'estimation du jeu (aucun tour mesuré, rien de saisi).
+    pub lap_time_from_game: bool,
 }
 
 /// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
@@ -2230,7 +2232,12 @@ impl AppService {
         };
         let per = o.per_lap.filter(|v| *v > 0.0).or(measured).or(game_per);
         times.sort_by(|a, b| a.total_cmp(b));
-        let lap_time = o.lap_time_s.filter(|v| *v > 1.0).or_else(|| times.get(times.len() / 2).copied());
+        // Sans tour mesuré : le temps au tour estimé par le jeu (un peu optimiste : il compte plutôt un tour
+        // de trop que pas assez).
+        let game_lap = facts.as_ref().and_then(|g| g.est_lap_s);
+        let measured_lap = times.get(times.len() / 2).copied();
+        let lap_time = o.lap_time_s.filter(|v| *v > 1.0).or(measured_lap).or(game_lap);
+        let lap_time_from_game = o.lap_time_s.filter(|v| *v > 1.0).is_none() && measured_lap.is_none() && game_lap.is_some();
         let (Some(per), Some(lap_time)) = (per, lap_time) else {
             // Énergie demandée mais seulement des tours sans énergie mesurée (avant la v0.31) : le dire.
             let msg = if unit == Unit::Energy && per.is_none() && !times.is_empty() {
@@ -2361,6 +2368,7 @@ if per.is_some() {
             pit_stops_measured: losses.len(),
             game_per_lap: game_per,
             game_minutes,
+            lap_time_from_game,
             // Même verrou que ci-dessus : `engineer_plan_for` le reprendrait (blocage).
             engineer: db.get_setting(&engineer_key(sim, track, track_config, car)).ok().flatten().and_then(|j| serde_json::from_str(&j).ok()).unwrap_or_default(),
         })
@@ -3761,6 +3769,13 @@ mod zone_tests {
         assert!(matches!(v.default_length, RaceLength::Minutes(m) if m == 60.0));
         // 60 min à 1:48 : 34 tours, 150,6 % d'énergie, donc un arrêt.
         assert_eq!((v.strategy.laps, v.strategy.stops), (34, 1));
+        // Avec le temps au tour estimé par le jeu (108,2 s à Bahreïn) : plus rien à saisir.
+        let ready = crate::connectors::lmu_probe::GameFacts { est_lap_s: Some(108.2), ..facts.clone() };
+        std::fs::write(dir.path().join("sonde-lmu").join("jeu.json"), serde_json::to_string(&ready).unwrap()).unwrap();
+        let v = ask(&StrategyOverrides::default()).unwrap();
+        assert!(v.lap_time_from_game && (v.lap_time_s - 108.2).abs() < 1e-3);
+        assert_eq!((v.strategy.laps, v.strategy.stops), (34, 1));
+        assert!(!ask(&StrategyOverrides { lap_time_s: Some(110.0), ..Default::default() }).unwrap().lap_time_from_game);
         // Une autre voiture sur ce circuit n'hérite pas de ces chiffres.
         assert!(svc.race_strategy(SimId::Lmu, "Bahrain International Circuit", None, "Peugeot 9x8", None, None, 0.5, 0.5, &StrategyOverrides { lap_time_s: Some(108.0), ..Default::default() }).is_err());
     }

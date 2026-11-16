@@ -153,8 +153,8 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
         </label>
         <label>
           <span>Temps au tour</span>
-          <input type="text" value={lapTxt} placeholder={v?.lap_time_measured != null ? lapTime(v.lap_time_measured) : "ex. 3:31.4"} onChange={(e) => setLapTxt(e.target.value)} />
-          <small className="muted">{v?.lap_time_measured != null ? `médiane de tes tours propres` : "pas encore mesuré ici"}</small>
+          <input type="text" value={lapTxt} placeholder={v?.lap_time_measured != null ? lapTime(v.lap_time_measured) : v?.lap_time_from_game ? lapTime(v.lap_time_s) : "ex. 3:31.4"} onChange={(e) => setLapTxt(e.target.value)} />
+          <small className="muted">{v?.lap_time_measured != null ? `médiane de tes tours propres` : v?.lap_time_from_game ? "pas encore mesuré : estimation du jeu" : "pas encore mesuré ici"}</small>
         </label>
         {u === "energy" ? (
           <label>

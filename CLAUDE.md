@@ -106,7 +106,7 @@ Chaque changement, même petit :
 
 ## Version et feuille de route
 
-- Version en attente de validation : **v0.38.0** (16 nov. 2026, PR « Apex Next Level ») : débrief de course (pertes mesurées, priorités). Version publiée : v0.37.0 (stratégie qui suit le jeu, coach silencieux en course).
+- Version en attente de validation : **v0.38.1** (16 nov. 2026) : calculateur prêt sans historique en LMU (temps au tour estimé par le jeu, `GameFacts.est_lap_s`). Version publiée : v0.38.0 (16 nov. : débrief de course, pertes mesurées, priorités).
 - Suivant, par priorité : recouper les tours restants de l'ingénieur avec les pages de stratégie du jeu et `time_remain_s` (banc de rejeu des courses réelles) ; rythme face aux autres voitures (classement du jeu) ; limites de piste LMU (compteur lu à 0) ; Setup Builder étape 2 ; ménage (relecture en boucle de 3 tours Garage 61 illisibles au démarrage). iRacing et Garage 61 : gelés, maintenance seule.
 - Setup Builder : **go** (sonde du 12 nov.), plan dans le projet claude.ai (`claude/plan-setup-builder.md`). Étape 1 faite (v0.36.0). Suivant : étape 2, diagnostic sans conseil (pneus, freins, hauteurs, équilibre), validé sur ≥ 2 séances même voiture avec setups différents.
 - À valider sur le PC d'Alex : lectures LMU (limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.
