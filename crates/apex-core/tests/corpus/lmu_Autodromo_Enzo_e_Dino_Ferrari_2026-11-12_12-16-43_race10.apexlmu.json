@@ -778,6 +778,80 @@
     "mean_s": 94.497,
     "stddev_s": 0.935
   },
+  "debrief": {
+    "actions": [
+      {
+        "detail": "6 tours ratés t'ont coûté 37,2 s, soit 39 % d'un tour. 2 sorties à Acque Minerali : c'est là qu'il faut garder de la marge.",
+        "seconds": 37.249,
+        "title": "Finir tous les tours"
+      },
+      {
+        "detail": "12 % d'énergie en trop à l'arrêt (96 % réglés pour 84 % nécessaires) : au plus 4,9 s d'arrêt évitables.",
+        "seconds": 4.893,
+        "title": "Régler un plein plus juste"
+      }
+    ],
+    "clean_laps": 45,
+    "energy_finish": 14.382,
+    "energy_per_lap": 3.174,
+    "fill_needed": 84.106,
+    "fill_set": 96.0,
+    "losses": [
+      {
+        "detail": "1 arrêt : tour de rentrée et tour de sortie comparés à deux tours à ta médiane. Voie des stands 74,5 s, dont 38,9 s à l'arrêt.",
+        "kind": "stops",
+        "seconds": 71.896,
+        "title": "Arrêts : 71,9 s"
+      },
+      {
+        "detail": "6 tours à plus de 2,0 s de ta médiane (1:34.4). Les plus coûteux : tour 35 (+12,4 s), tour 51 (+12,3 s), tour 32 (+4,8 s). 4 avec sortie de piste, dont 2 à Acque Minerali.",
+        "kind": "errors",
+        "seconds": 37.249,
+        "title": "Tours ratés : 37,2 s"
+      },
+      {
+        "detail": "Arrivée avec 14,4 % d'énergie, soit 4,5 tours. Réglé 96 %, il fallait 84 % (26 tours courus ensuite et une demi-tour de marge). Ton plein a pris 38,9 s pour 94 % : les 12 % en trop valent au plus 4,9 s, moins si l'arrêt comptait aussi un changement de pneus.",
+        "kind": "overfill",
+        "seconds": 4.893,
+        "title": "Plein trop généreux : au plus 4,9 s"
+      }
+    ],
+    "median_s": 94.354,
+    "missing": [
+      "Écart au leader : non enregistré sur cette course (versions avant la 0.35, ou leader à plus d'un tour)."
+    ],
+    "race_laps": 57,
+    "spare_laps": 4.531,
+    "stints": [
+      {
+        "first_half_s": 94.884,
+        "from_lap": 1,
+        "laps": 29,
+        "median_s": 94.354,
+        "second_half_s": 93.955,
+        "to_lap": 29
+      },
+      {
+        "first_half_s": 94.256,
+        "from_lap": 32,
+        "laps": 25,
+        "median_s": 94.256,
+        "second_half_s": 93.852,
+        "to_lap": 56
+      }
+    ],
+    "stops": [
+      {
+        "energy_in": 1.534,
+        "energy_out": 96.0,
+        "fuel_in_l": 5.202,
+        "fuel_out_l": 78.611,
+        "lane_s": 74.55,
+        "lap": 30,
+        "still_s": 38.86
+      }
+    ]
+  },
   "fastest": 26,
   "lap_2": true,
   "laps": [

@@ -358,6 +358,42 @@
     "mean_s": 65.542,
     "stddev_s": 0.692
   },
+  "debrief": {
+    "actions": [
+      {
+        "detail": "2 tours ratés t'ont coûté 43,5 s, soit 66 % d'un tour. 2 sorties à Virage 1 : c'est là qu'il faut garder de la marge.",
+        "seconds": 43.491,
+        "title": "Finir tous les tours"
+      }
+    ],
+    "clean_laps": 8,
+    "energy_finish": null,
+    "energy_per_lap": null,
+    "fill_needed": null,
+    "fill_set": null,
+    "losses": [
+      {
+        "detail": "2 tours à plus de 2,0 s de ta médiane (1:05.9). Les plus coûteux : tour 15 (+41,4 s), tour 4 (+2,1 s). 2 avec sortie de piste, dont 2 à Virage 1.",
+        "kind": "errors",
+        "seconds": 43.491,
+        "title": "Tours ratés : 43,5 s"
+      },
+      {
+        "detail": "1 arrêt : tour de rentrée et tour de sortie comparés à deux tours à ta médiane.",
+        "kind": "stops",
+        "seconds": 35.829,
+        "title": "Arrêts : 35,8 s"
+      }
+    ],
+    "median_s": 65.864,
+    "missing": [
+      "Arrêts détaillés et énergie : enregistrement d'origine introuvable ou hors Le Mans Ultimate."
+    ],
+    "race_laps": 15,
+    "spare_laps": null,
+    "stints": [],
+    "stops": []
+  },
   "fastest": 12,
   "lap_2": true,
   "laps": [

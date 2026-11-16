@@ -112,6 +112,12 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         }));
     }
 
+    for a in d.debrief.iter().flat_map(|x| &x.actions) {
+        if !has_digit(&a.detail) {
+            rule.push(format!("{} débrief « {} » : aucun chiffre", file.display(), a.title));
+        }
+    }
+
     let strategy = svc
         .race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, None, 0.5, 0.5, &StrategyOverrides::default())
         .ok()
@@ -151,6 +157,8 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "regularity": d.regularity,
         // Pas d'iRating dans l'instantané (dépôt public).
         "race": d.race.as_ref().map(|r| json!({ "field": r.field_size, "start": r.start_position, "finish": r.finish_position, "incidents": r.incident_total, "pace": r.pace, "headline": r.headline, "insights": r.insights })),
+        // Débrief de course : pertes mesurées, priorités (chiffres et textes).
+        "debrief": d.debrief,
         "comparisons": comparisons,
         "ai_context": svc.ai_context(id).ok(),
         "strategy": strategy,
