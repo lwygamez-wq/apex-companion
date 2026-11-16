@@ -273,7 +273,8 @@ impl LmuDriver {
         self.facts_key = Some(key.clone());
         let class = f.scoring.as_ref().map(|s| crate::connectors::lmu_shm::cstr(&s.mVehicleClass)).filter(|c| !c.is_empty());
         let minutes = Some((f.info.mEndET / 60.0) as f32).filter(|m| m.is_finite() && *m > 1.0 && *m < 100_000.0);
-        let facts = super::lmu_probe::GameFacts { track: key.0, car: key.2, car_class: class, session: key.1, at_unix: now_unix, minutes, ..Default::default() };
+        let est_lap_s = f.scoring.as_ref().map(|s| s.mEstimatedLapTime as f32).filter(|l| l.is_finite() && *l > 20.0 && *l < 1800.0);
+        let facts = super::lmu_probe::GameFacts { track: key.0, car: key.2, car_class: class, session: key.1, at_unix: now_unix, minutes, est_lap_s, ..Default::default() };
         let base = self.probe_api.clone();
         std::thread::spawn(move || {
             if super::lmu_probe::read_game_facts(&base, &dir, facts).is_none() {

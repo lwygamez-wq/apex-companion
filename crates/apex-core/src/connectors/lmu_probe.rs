@@ -52,6 +52,8 @@ pub struct GameFacts {
     pub fuel_per_lap_l: Option<f32>,
     /// Ratio carburant réglé dans le garage (l par 1 % d'énergie).
     pub fuel_ratio: Option<f32>,
+    /// Temps au tour estimé par le jeu pour cette voiture ici (s) : sert tant qu'aucun tour n'est mesuré.
+    pub est_lap_s: Option<f32>,
 }
 
 /// Consommations estimées par le jeu (`TireManagement.expectedUsage`) et ratio réglé (`VM_FUEL_LEVEL`).

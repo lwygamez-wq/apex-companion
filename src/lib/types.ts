@@ -191,6 +191,8 @@ export interface RaceStrategyView {
   game_per_lap: number | null;
   /** Durée de la course chargée dans le jeu (min). */
   game_minutes: number | null;
+  /** Temps au tour pris dans l'estimation du jeu (aucun tour mesuré). */
+  lap_time_from_game: boolean;
 }
 
 export interface StrategyOverrides {
@@ -908,4 +910,5 @@ export interface GameFacts {
   energy_per_lap_pct: number | null;
   fuel_per_lap_l: number | null;
   fuel_ratio: number | null;
+  est_lap_s: number | null;
 }
