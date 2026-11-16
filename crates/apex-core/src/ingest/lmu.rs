@@ -82,6 +82,10 @@ pub struct LapEvent {
     pub laps_behind_leader: i32,
     #[serde(default)]
     pub time_behind_leader: f64,
+    /// Temps de séance restant annoncé par le jeu à ce passage (s) ; absent (None) avant la 0.38 ou en
+    /// course au nombre de tours. Sert à vérifier après coup les tours restants annoncés par l'ingénieur.
+    #[serde(default)]
+    pub time_remain_s: Option<f64>,
 }
 
 /// Un échantillon de la voiture du pilote.
@@ -385,7 +389,7 @@ impl Recorder {
             let total = s.mTotalLaps as i32;
             if self.last_total_laps != Some(total) {
                 if self.last_total_laps.is_some_and(|p| total > p) {
-                    rec.laps.push(LapEvent { et: f.info.mCurrentET, total_laps: total, lap_time: s.mLastLapTime, s1: s.mLastSector1, s2: s.mLastSector2, place: s.mPlace, laps_behind_leader: s.mLapsBehindLeader.max(0), time_behind_leader: s.mTimeBehindLeader.max(0.0) });
+                    rec.laps.push(LapEvent { et: f.info.mCurrentET, total_laps: total, lap_time: s.mLastLapTime, s1: s.mLastSector1, s2: s.mLastSector2, place: s.mPlace, laps_behind_leader: s.mLapsBehindLeader.max(0), time_behind_leader: s.mTimeBehindLeader.max(0.0), time_remain_s: (f.info.mEndET > 0.0).then_some(f.info.mEndET - f.info.mCurrentET) });
                 }
                 self.last_total_laps = Some(total);
             }

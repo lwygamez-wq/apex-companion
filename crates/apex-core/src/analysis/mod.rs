@@ -2,6 +2,7 @@
 
 pub mod compare;
 pub mod corners;
+pub mod debrief;
 pub mod goals;
 pub mod insights;
 pub mod offtrack;

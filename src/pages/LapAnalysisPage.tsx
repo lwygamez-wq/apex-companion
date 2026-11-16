@@ -6,6 +6,7 @@ import { OffTrackCard } from "../components/OffTrackCard";
 import { RiskCard } from "../components/RiskCard";
 import { DebriefChat } from "../components/DebriefChat";
 import { RaceCard } from "../components/RaceCard";
+import { RaceDebriefCard } from "../components/RaceDebriefCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap, type MapSize } from "../components/TrackMap";
 import { ReplayStudio } from "../components/ReplayStudio";
@@ -294,6 +295,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 ))}
               </div>
 
+              {/* Le débrief de course ne dépend pas de la comparaison de tours : il s'affiche d'abord. */}
+              {d.debrief && current === "summary" && (
+                <div style={{ marginBottom: 14 }}>
+                  <RaceDebriefCard d={d.debrief} />
+                </div>
+              )}
               {!c && !cmp.error && refId !== cmpId && <div className="card muted">Comparaison des deux tours en cours…</div>}
 
               {c && store && current === "summary" && (

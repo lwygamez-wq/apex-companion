@@ -492,6 +492,39 @@
     "mean_s": 62.069,
     "stddev_s": 0.372
   },
+  "debrief": {
+    "actions": [],
+    "clean_laps": 7,
+    "energy_finish": null,
+    "energy_per_lap": null,
+    "fill_needed": null,
+    "fill_set": null,
+    "losses": [
+      {
+        "detail": "1 tour à plus de 2,0 s de ta médiane (1:02.1). Les plus coûteux : tour 2 (+2,3 s). 1 avec sortie de piste.",
+        "kind": "errors",
+        "seconds": 2.316,
+        "title": "Tours ratés : 2,3 s"
+      }
+    ],
+    "median_s": 62.063,
+    "missing": [
+      "Arrêts détaillés et énergie : enregistrement d'origine introuvable ou hors Le Mans Ultimate."
+    ],
+    "race_laps": 12,
+    "spare_laps": null,
+    "stints": [
+      {
+        "first_half_s": 62.104,
+        "from_lap": 2,
+        "laps": 8,
+        "median_s": 62.063,
+        "second_half_s": 62.063,
+        "to_lap": 12
+      }
+    ],
+    "stops": []
+  },
   "fastest": 7,
   "lap_2": true,
   "laps": [

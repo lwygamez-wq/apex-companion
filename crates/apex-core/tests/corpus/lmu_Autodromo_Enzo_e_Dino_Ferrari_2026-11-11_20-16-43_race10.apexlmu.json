@@ -578,6 +578,79 @@
     "mean_s": 95.331,
     "stddev_s": 1.024
   },
+  "debrief": {
+    "actions": [
+      {
+        "detail": "8 tours ratés t'ont coûté 55,5 s, soit 58 % d'un tour. 3 avec sortie de piste.",
+        "seconds": 55.495,
+        "title": "Finir tous les tours"
+      }
+    ],
+    "clean_laps": 45,
+    "energy_finish": null,
+    "energy_per_lap": null,
+    "fill_needed": null,
+    "fill_set": null,
+    "losses": [
+      {
+        "detail": "1 arrêt : tour de rentrée et tour de sortie comparés à deux tours à ta médiane. Voie des stands 65,7 s, dont 29,7 s à l'arrêt.",
+        "kind": "stops",
+        "seconds": 95.532,
+        "title": "Arrêts : 95,5 s"
+      },
+      {
+        "detail": "8 tours à plus de 2,0 s de ta médiane (1:35.2). Les plus coûteux : tour 15 (+18,6 s), tour 2 (+16,1 s), tour 3 (+7,9 s). 3 avec sortie de piste.",
+        "kind": "errors",
+        "seconds": 55.495,
+        "title": "Tours ratés : 55,5 s"
+      }
+    ],
+    "median_s": 95.17,
+    "missing": [
+      "Énergie : non enregistrée sur cette course (version d'Apex trop ancienne, ou voiture sans énergie virtuelle).",
+      "Écart au leader : non enregistré sur cette course (versions avant la 0.35, ou leader à plus d'un tour)."
+    ],
+    "race_laps": 56,
+    "spare_laps": null,
+    "stints": [
+      {
+        "first_half_s": 95.359,
+        "from_lap": 1,
+        "laps": 30,
+        "median_s": 95.196,
+        "second_half_s": 95.076,
+        "to_lap": 30
+      },
+      {
+        "first_half_s": 95.235,
+        "from_lap": 34,
+        "laps": 22,
+        "median_s": 94.875,
+        "second_half_s": 94.872,
+        "to_lap": 55
+      }
+    ],
+    "stops": [
+      {
+        "energy_in": 0.0,
+        "energy_out": 0.0,
+        "fuel_in_l": 3.263,
+        "fuel_out_l": 62.154,
+        "lane_s": 65.71,
+        "lap": 31,
+        "still_s": 29.72
+      },
+      {
+        "energy_in": 0.0,
+        "energy_out": 0.0,
+        "fuel_in_l": 59.818,
+        "fuel_out_l": 59.649,
+        "lane_s": 45.74,
+        "lap": 32,
+        "still_s": 9.88
+      }
+    ]
+  },
   "fastest": 43,
   "lap_2": true,
   "laps": [

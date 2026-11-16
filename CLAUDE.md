@@ -6,7 +6,7 @@ Instructions pour les sessions de développement. Ce que fait l'app : `README.md
 
 | Dossier | Rôle |
 |---|---|
-| `crates/apex-core` | Toute la logique, testable sans WebView : ingestion (`ingest/` : .ibt, .apexlmu, Garage 61), connecteurs live (`connectors/`), analyse (`analysis/`), coach en direct (`live_coach.rs`), ingénieur de course (`race_engineer.rs`), setups LMU `.svm` (`setup.rs`), sonde setup LMU (`connectors/lmu_probe.rs`), stockage SQLite (`storage.rs`), commandes UI (`service.rs`). Outils de vérification dans `examples/` (ex. `strategy_check`, `dump_all` sur une copie de base) |
+| `crates/apex-core` | Toute la logique, testable sans WebView : ingestion (`ingest/` : .ibt, .apexlmu, Garage 61), connecteurs live (`connectors/`), analyse (`analysis/`, dont le débrief de course `analysis/debrief.rs`), coach en direct (`live_coach.rs`), ingénieur de course (`race_engineer.rs`), setups LMU `.svm` (`setup.rs`), sonde setup LMU (`connectors/lmu_probe.rs`), stockage SQLite (`storage.rs`), commandes UI (`service.rs`). Outils de vérification dans `examples/` (ex. `strategy_check`, `dump_all` sur une copie de base) |
 | `src-tauri` | Coque Tauri 2 : commandes IPC (`commands.rs`), fil de surveillance et radio (`monitor.rs`), bouton radio (`ptt_loop.rs`), mise à jour signée (`updater.rs`) |
 | `src` | UI React/TS. `lib/types.ts` = contrat IPC (miroir des structs Rust sérialisées) ; `src/mobile/` = app iPhone |
 | `mobile` | Point d'entrée de l'app mobile (page installable, GitHub Pages), construite par `vite.mobile.config.ts` à partir de `src/mobile/` |
@@ -81,6 +81,8 @@ Chaque changement, même petit :
 - Être doublé ne retire pas de tour : on finit au premier passage après la fin du chrono. Le leader peut en ajouter un (il passe juste avant la fin et repart) : `timed_laps_left` en tient compte avec l'écart au leader (`ApexLapsBehindLeader`, `ApexTimeBehindLeader`).
 - Stratégie : ne pas recalculer ce que le jeu donne. `GameFacts` (`sonde-lmu/jeu.json`, lu dès qu'une voiture est chargée) fournit consommation annoncée, ratio réglé et durée de course ; tes tours les remplacent une fois mesurés. Sur 3 courses (11–12 nov.), l'ingénieur a demandé trop d'énergie 3 fois : audit dans le projet claude.ai (`claude/audit-refonte.md`). Suite : lire `/rest/strategy/*` et `/rest/watch/standings` (réponses brutes gardées dans `sonde-lmu/<séance>/`) pour recouper les tours restants.
 - Coach en course : `race_voice` ne laisse passer que l'ingénieur, les sorties répétées et les changements de référence (pas de conseil de freinage contre un tour d'essais).
+- Débrief de course (`analysis/debrief.rs`) : déterministe, chaque perte est mesurée contre la médiane des tours de course sans incident (seuil d'un tour raté : 2 s ou 2 %). Arrêts, énergie et écart au leader viennent de l'enregistrement `.apexlmu` d'origine (`race_extras`) ; sans lui, c'est dit dans `missing`. Aucune priorité sans chiffre (vérifié par `real_corpus`). Le « plein en trop » est un maximum : le temps à l'arrêt peut inclure des pneus.
+- Fin de course au temps : `mEndET` n'était pas enregistré avant la 0.38 (`LapEvent.time_remain_s`), donc impossible de rejouer hors ligne les tours restants des courses des 11–12 nov. à moins d'un tour près.
 - Ce que l'ingénieur a dit : journal d'Apex (`%LOCALAPPDATA%\app.apexcompanion.desktop\logs`, lignes `coach :`).
 - Tours invalidés par le jeu (limites de piste) : `clean` est faux, mais la consommation reste valable. La stratégie filtre sur les drapeaux (stand, sortie, incident, jaune, coupure), pas sur `clean`.
 
@@ -104,7 +106,7 @@ Chaque changement, même petit :
 
 ## Version et feuille de route
 
-- Version publiée : **v0.37.0** (13 nov. 2026) : stratégie qui suit le jeu (voiture, circuit, durée et consommation annoncée lus dans LMU dès le garage, sans historique), coach silencieux en course hors ingénieur, carte Sonde retirée. Avant : v0.36.0, Setup Builder étape 1.
-- Suivant, par priorité (audit du 13 nov.) : recouper les tours restants avec les pages de stratégie du jeu ; bilan de course dans l'app (arrêts, plein, énergie à l'arrivée, écart au leader, rythme face aux autres) ; limites de piste LMU (compteur lu à 0) ; Setup Builder étape 2 ; ménage (relecture en boucle de 3 tours Garage 61 illisibles au démarrage). iRacing et Garage 61 : gelés, maintenance seule.
+- Version en attente de validation : **v0.38.0** (16 nov. 2026, PR « Apex Next Level ») : débrief de course (pertes mesurées, priorités). Version publiée : v0.37.0 (stratégie qui suit le jeu, coach silencieux en course).
+- Suivant, par priorité : recouper les tours restants de l'ingénieur avec les pages de stratégie du jeu et `time_remain_s` (banc de rejeu des courses réelles) ; rythme face aux autres voitures (classement du jeu) ; limites de piste LMU (compteur lu à 0) ; Setup Builder étape 2 ; ménage (relecture en boucle de 3 tours Garage 61 illisibles au démarrage). iRacing et Garage 61 : gelés, maintenance seule.
 - Setup Builder : **go** (sonde du 12 nov.), plan dans le projet claude.ai (`claude/plan-setup-builder.md`). Étape 1 faite (v0.36.0). Suivant : étape 2, diagnostic sans conseil (pneus, freins, hauteurs, équilibre), validé sur ≥ 2 séances même voiture avec setups différents.
 - À valider sur le PC d'Alex : lectures LMU (limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.

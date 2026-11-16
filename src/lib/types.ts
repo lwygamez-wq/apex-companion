@@ -297,6 +297,7 @@ export interface SessionDetail {
   risk_headline: string | null;
   /** Coach de course (courses iRacing). */
   race: RaceReport | null;
+  debrief: RaceDebrief | null;
   regularity: RegularityReport | null;
 }
 
@@ -845,6 +846,55 @@ export interface ProbeReport {
   fields: ProbeField[];
   api: ProbeApiRead[];
   garage: { settings: number; with_range: number; presets: number | null; optimal_conditions: boolean | null };
+}
+
+/** Débrief de course (analysis/debrief.rs). */
+export interface StopFact {
+  lap: number;
+  lane_s: number;
+  still_s: number;
+  energy_in: number;
+  energy_out: number;
+  fuel_in_l: number;
+  fuel_out_l: number;
+}
+
+export interface TimeLoss {
+  kind: "errors" | "stops" | "overfill" | "pace";
+  seconds: number;
+  title: string;
+  detail: string;
+}
+
+export interface DebriefAction {
+  title: string;
+  detail: string;
+  seconds: number | null;
+}
+
+export interface StintPace {
+  from_lap: number;
+  to_lap: number;
+  laps: number;
+  median_s: number;
+  first_half_s: number;
+  second_half_s: number;
+}
+
+export interface RaceDebrief {
+  median_s: number;
+  clean_laps: number;
+  race_laps: number;
+  losses: TimeLoss[];
+  stints: StintPace[];
+  stops: StopFact[];
+  energy_per_lap: number | null;
+  energy_finish: number | null;
+  spare_laps: number | null;
+  fill_needed: number | null;
+  fill_set: number | null;
+  actions: DebriefAction[];
+  missing: string[];
 }
 
 /** Dernière séance vue dans le jeu (lmu_probe.rs). */

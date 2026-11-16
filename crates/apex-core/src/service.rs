@@ -497,6 +497,8 @@ pub struct SessionDetail {
     pub risk_headline: Option<String>,
     /// Coach de course (courses iRacing) : grille, positions, incidents, points à travailler.
     pub race: Option<crate::analysis::race::RaceReport>,
+    /// Débrief de course : où est parti le temps, priorités pour la prochaine course.
+    pub debrief: Option<crate::analysis::debrief::RaceDebrief>,
     /// Régularité par virage sur tes tours propres de la session (5 au moins).
     pub regularity: Option<crate::analysis::regularity::RegularityReport>,
 }
@@ -1878,6 +1880,20 @@ impl AppService {
             let spots: Vec<(f32, String)> = windows.iter().map(|(n, _, a, _)| (*a, n.clone())).collect();
             crate::analysis::race::race_report(&rd, &metas, &spots, length.unwrap_or(0.0))
         });
+        // Débrief de course : pertes mesurées et priorités. Arrêts, énergie et écart au leader viennent de
+        // l'enregistrement d'origine (LMU) quand il est encore sur le disque.
+        let debrief = (meta.kind == SessionKind::Race)
+            .then(|| {
+                let extras = meta
+                    .source_path
+                    .as_deref()
+                    .filter(|p| meta.sim == SimId::Lmu && p.to_ascii_lowercase().ends_with(".apexlmu"))
+                    .and_then(|p| std::fs::read(p).ok())
+                    .and_then(|b| crate::ingest::lmu::decode(&b).ok())
+                    .map(|r| crate::analysis::debrief::race_extras(&r));
+                crate::analysis::debrief::race_debrief(&metas, &off_tracks, extras.as_ref())
+            })
+            .flatten();
         let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
             Some(p) => {
                 let l = db.lap(p)?;
@@ -1913,6 +1929,7 @@ impl AppService {
             untyped_references,
             profile,
             race,
+            debrief,
             regularity,
             reference_label,
             risk,
