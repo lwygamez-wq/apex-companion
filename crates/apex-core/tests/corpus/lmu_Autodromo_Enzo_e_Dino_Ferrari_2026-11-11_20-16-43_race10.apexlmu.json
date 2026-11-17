@@ -586,6 +586,7 @@
         "title": "Finir tous les tours"
       }
     ],
+    "class_pace": null,
     "clean_laps": 45,
     "energy_finish": null,
     "energy_per_lap": null,
@@ -608,6 +609,7 @@
     "median_s": 95.17,
     "missing": [
       "Énergie : non enregistrée sur cette course (version d'Apex trop ancienne, ou voiture sans énergie virtuelle).",
+      "Rythme face à ta catégorie : non enregistré sur cette course (enregistré depuis Apex 0.39).",
       "Écart au leader : non enregistré sur cette course (versions avant la 0.35, ou leader à plus d'un tour)."
     ],
     "race_laps": 56,

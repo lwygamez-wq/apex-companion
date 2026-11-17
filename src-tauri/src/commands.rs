@@ -186,6 +186,15 @@ pub async fn setup_compare(state: State<'_, AppState>, a: String, b: String) -> 
     blocking(state.svc.clone(), move |s| s.setup_compare(&a, &b)).await
 }
 
+/// Retour testeur : archive .zip écrite là où le pilote l'a choisi (rien n'est envoyé).
+#[tauri::command]
+pub async fn export_feedback(app: tauri::AppHandle, state: State<'_, AppState>, path: String, note: String) -> R<apex_core::feedback::FeedbackSummary> {
+    use tauri::Manager;
+    let logs = app.path().app_log_dir().ok();
+    let version = app.package_info().version.to_string();
+    blocking(state.svc.clone(), move |s| s.export_feedback(std::path::Path::new(&path), &note, logs.as_deref(), &version)).await
+}
+
 /// Rapports de la sonde setup LMU.
 #[tauri::command]
 pub async fn setup_probe_reports(state: State<'_, AppState>) -> R<Vec<apex_core::connectors::lmu_probe::ProbeReport>> {

@@ -86,6 +86,14 @@ pub struct LapEvent {
     /// course au nombre de tours. Sert à vérifier après coup les tours restants annoncés par l'ingénieur.
     #[serde(default)]
     pub time_remain_s: Option<f64>,
+    /// Rythme des autres voitures de la catégorie à ce passage (Apex 0.39) : voitures comptées, médiane et
+    /// meilleur de leurs derniers tours (s). Absent des anciens fichiers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class_median_s: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class_best_s: Option<f64>,
+    #[serde(default)]
+    pub class_cars: u8,
 }
 
 /// Un échantillon de la voiture du pilote.
@@ -389,7 +397,7 @@ impl Recorder {
             let total = s.mTotalLaps as i32;
             if self.last_total_laps != Some(total) {
                 if self.last_total_laps.is_some_and(|p| total > p) {
-                    rec.laps.push(LapEvent { et: f.info.mCurrentET, total_laps: total, lap_time: s.mLastLapTime, s1: s.mLastSector1, s2: s.mLastSector2, place: s.mPlace, laps_behind_leader: s.mLapsBehindLeader.max(0), time_behind_leader: s.mTimeBehindLeader.max(0.0), time_remain_s: (f.info.mEndET > 0.0).then_some(f.info.mEndET - f.info.mCurrentET) });
+                    rec.laps.push(LapEvent { et: f.info.mCurrentET, total_laps: total, lap_time: s.mLastLapTime, s1: s.mLastSector1, s2: s.mLastSector2, place: s.mPlace, laps_behind_leader: s.mLapsBehindLeader.max(0), time_behind_leader: s.mTimeBehindLeader.max(0.0), time_remain_s: (f.info.mEndET > 0.0).then_some(f.info.mEndET - f.info.mCurrentET), class_median_s: (f.class_pace.cars > 0).then_some(f.class_pace.median_last_s), class_best_s: (f.class_pace.cars > 0).then_some(f.class_pace.best_last_s), class_cars: f.class_pace.cars });
                 }
                 self.last_total_laps = Some(total);
             }
@@ -944,6 +952,9 @@ impl LiveState {
             i.mTrackLimitsStepsPerPenalty as f64,
             s.map_or(0.0, |s| s.mLapsBehindLeader.max(0) as f64),
             s.map_or(0.0, |s| s.mTimeBehindLeader.max(0.0)),
+            // MFD du jeu : rempli par le connecteur (API locale), pas par la mémoire partagée.
+            0.0,
+            0.0,
         ])
     }
 }
@@ -1036,7 +1047,7 @@ pub(crate) mod testkit {
         if t.mLapNumber == 2 && ld > 1500.0 {
             t.mLapInvalidated = 1;
         }
-        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t) }
+        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t), class_pace: Default::default() }
     }
 
     /// 4 tours et demi enregistrés à 50 Hz ; le classement n'est relevé qu'à 5 Hz.

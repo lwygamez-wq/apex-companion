@@ -366,6 +366,7 @@
         "title": "Finir tous les tours"
       }
     ],
+    "class_pace": null,
     "clean_laps": 8,
     "energy_finish": null,
     "energy_per_lap": null,

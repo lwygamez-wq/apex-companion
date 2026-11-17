@@ -160,6 +160,10 @@ export interface EngineerCall {
   fuel_limits: boolean;
   finish_spare_laps: number | null;
   laps_left: number;
+  /** MFD du jeu (LMU) : énergie réglée pour le prochain arrêt (%), tours que le jeu compte avec le niveau conseillé. */
+  mfd_energy: number | null;
+  game_laps_for_fill: number | null;
+  laps_after_stop: number | null;
 }
 
 export interface RaceStrategyView {
@@ -862,7 +866,7 @@ export interface StopFact {
 }
 
 export interface TimeLoss {
-  kind: "errors" | "stops" | "overfill" | "pace";
+  kind: "errors" | "stops" | "overfill" | "pace" | "class_pace";
   seconds: number;
   title: string;
   detail: string;
@@ -897,6 +901,27 @@ export interface RaceDebrief {
   fill_set: number | null;
   actions: DebriefAction[];
   missing: string[];
+  /** Rythme face à ta catégorie (courses enregistrées depuis Apex 0.39). */
+  class_pace: ClassPaceView | null;
+}
+
+export interface ClassPaceView {
+  laps: number;
+  cars: number;
+  /** Écart médian par tour avec la médiane de la catégorie (s ; positif = plus lent). */
+  gap_s: number;
+  faster_laps: number;
+  class_median_s: number;
+  class_best_s: number;
+  first_half_gap_s: number;
+  second_half_gap_s: number;
+}
+
+/** Retour testeur exporté (feedback.rs). */
+export interface FeedbackSummary {
+  path: string;
+  files: string[];
+  bytes: number;
 }
 
 /** Dernière séance vue dans le jeu (lmu_probe.rs). */

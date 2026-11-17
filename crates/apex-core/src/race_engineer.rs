@@ -88,6 +88,9 @@ pub struct RaceState {
     /// Énergie : tours possibles avec le carburant à bord et avec l'énergie.
     pub fuel_laps: Option<f32>,
     pub energy_laps: Option<f32>,
+    /// MFD du jeu (LMU) : énergie réglée pour le prochain arrêt (%) et tours que le jeu annonce pour ce niveau.
+    pub mfd_energy: Option<f32>,
+    pub mfd_laps: Option<f32>,
 }
 
 /// Dernière consigne calculée (écran « Au volant », commande « stratégie »).
@@ -114,6 +117,11 @@ pub struct EngineerCall {
     pub finish_spare_laps: Option<f32>,
     /// Tours restant à couvrir.
     pub laps_left: u32,
+    /// MFD du jeu : énergie réglée (%), et tours que le jeu compte avec le niveau conseillé.
+    pub mfd_energy: Option<f32>,
+    pub game_laps_for_fill: Option<f32>,
+    /// Tours à couvrir après le prochain arrêt.
+    pub laps_after_stop: Option<u32>,
 }
 
 #[derive(Debug, Default)]
@@ -289,6 +297,13 @@ impl Engineer {
         let fill_fuel_l = fill.zip(s.fuel_ratio).filter(|_| u == Unit::Energy).map(|(f, r)| f * r);
         let fuel_limits = u == Unit::Energy && matches!((s.fuel_laps, s.energy_laps), (Some(f), Some(e)) if f + 0.3 < e);
         let finish_spare = (r == 0).then(|| (s.level - reserve) / s.per_lap - n as f32);
+        let laps_after_stop = laps_to_box.map(|b| n.saturating_sub(b));
+        let mfd_energy = s.mfd_energy.filter(|_| u == Unit::Energy);
+        // Le jeu annonce des tours pour le niveau réglé au MFD : même rendement pour le niveau conseillé.
+        let game_laps_for_fill = match (fill, mfd_energy, s.mfd_laps) {
+            (Some(f), Some(m), Some(l)) if m >= 5.0 && l > 0.0 => Some(l * up(f) / m),
+            _ => None,
+        };
         let call = EngineerCall {
             mode: self.plan.mode,
             stops_left: r,
@@ -305,6 +320,9 @@ impl Engineer {
             fuel_limits,
             finish_spare_laps: finish_spare,
             laps_left: n,
+            mfd_energy,
+            game_laps_for_fill,
+            laps_after_stop,
         };
         let tgt = per(u, tg.per_lap);
         let avg = per(u, s.per_lap);
@@ -340,7 +358,11 @@ impl Engineer {
         self.last_verdict = Some(verdict);
         match laps_to_box {
             Some(2) if self.box_calls < 1 => {
-                parts.push("Box à la fin du prochain tour.".into());
+                let prep = match (fill, mfd_energy) {
+                    (Some(f), Some(m)) if (m - up(f)).abs() >= 1.5 => format!(" Prépare le MFD : énergie {:.0} %, il est à {m:.0} %.", up(f)),
+                    _ => String::new(),
+                };
+                parts.push(format!("Box à la fin du prochain tour.{prep}"));
                 self.box_calls = 1;
             }
             Some(1) if self.box_calls < 2 => {
@@ -350,7 +372,17 @@ impl Engineer {
                     (Unit::Litres, Some(f), _, _) => format!(" Mets {:.0} litres.", up(f)),
                     _ => String::new(),
                 };
-                parts.push(format!("Box, box, ce tour.{set}"));
+                // Recoupement avec le MFD du jeu : réglage actuel et tours que le jeu compte pour ce niveau.
+                let mfd = match (fill, mfd_energy) {
+                    (Some(f), Some(m)) if (m - up(f)).abs() < 1.5 => " Ton MFD est déjà bon.".to_string(),
+                    (Some(_), Some(m)) => format!(" Ton MFD est à {m:.0} %, change-le."),
+                    _ => String::new(),
+                };
+                let game = match (game_laps_for_fill, laps_after_stop) {
+                    (Some(g), Some(need)) if g + 0.5 < need as f32 => format!(" Attention, le jeu ne compte que {} avec ce niveau, il en faut {need}.", plural((g + 1e-3).floor() as u32, "tour")),
+                    _ => String::new(),
+                };
+                parts.push(format!("Box, box, ce tour.{set}{mfd}{game}"));
                 self.box_calls = 2;
             }
             Some(b) if b > 2 => self.box_calls = 0,
@@ -408,7 +440,43 @@ mod tests {
     use super::*;
 
     fn state(level: f32, per_lap: f32, laps_left: u32, lap: i32) -> RaceState {
-        RaceState { unit: Unit::Energy, level, cap: 100.0, per_lap, laps_left, lap, fuel_ratio: Some(0.86), fuel_laps: None, energy_laps: None }
+        RaceState { unit: Unit::Energy, level, cap: 100.0, per_lap, laps_left, lap, fuel_ratio: Some(0.86), fuel_laps: None, energy_laps: None, mfd_energy: None, mfd_laps: None }
+    }
+
+    /// Données synthétiques. Fin de relais avec le MFD lu dans le jeu : l'ingénieur dit s'il est bon,
+    /// et prévient quand le jeu compte moins de tours que nécessaire avec le niveau conseillé.
+    #[test]
+    fn checks_the_game_mfd_before_the_stop() {
+        let run = |mfd: f32, mfd_laps: f32| {
+            let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
+            let mut said = vec![];
+            // 40 tours à 3,2 % : un arrêt, box quand le niveau ne couvre plus le tour suivant.
+            for lap in 1..=40 {
+                let st = RaceState { mfd_energy: Some(mfd), mfd_laps: Some(mfd_laps), ..state(98.0 - 3.2 * lap as f32, 3.2, (41 - lap) as u32, lap) };
+                if let Some(m) = e.on_lap(&st) {
+                    said.push(m);
+                }
+                if said.last().is_some_and(|m| m.contains("Box, box")) {
+                    break;
+                }
+            }
+            (said, e.last().cloned().unwrap())
+        };
+        // MFD laissé à 100 % (26 tours selon le jeu, soit 3,85 % par tour) : à changer, mais le jeu compte assez de tours.
+        let (said, call) = run(100.0, 26.0);
+        let fill = up(call.fill.unwrap());
+        let need = call.laps_after_stop.unwrap();
+        assert!(said.iter().any(|m| m.contains(&format!("Box à la fin du prochain tour. Prépare le MFD : énergie {fill:.0} %, il est à 100 %."))), "{said:?}");
+        let last = said.last().unwrap();
+        assert!(last.contains("Ton MFD est à 100 %, change-le."), "{last}");
+        let g = call.game_laps_for_fill.unwrap();
+        assert!((g - 26.0 * fill / 100.0).abs() < 1e-3, "{g}");
+        // MFD déjà au bon niveau ; le jeu compte moins de tours qu'il n'en faut : alerte chiffrée.
+        let (said, call) = run(fill, need as f32 - 2.0);
+        let last = said.last().unwrap();
+        assert!(last.contains("Ton MFD est déjà bon."), "{last}");
+        assert!(last.contains(&format!("Attention, le jeu ne compte que {} tours avec ce niveau, il en faut {need}.", need - 2)), "{last}");
+        assert_eq!(call.mfd_energy, Some(fill));
     }
 
     /// Course de 6 h à Spa, 4,8 % par tour : l'ingénieur annonce le relais, puis appelle au stand.

@@ -162,6 +162,10 @@ pub struct LmuDriver {
     probe: Option<Probe>,
     /// Séance du jeu dont les estimations ont déjà été demandées (circuit, séance, voiture).
     facts_key: Option<(String, i32, String)>,
+    /// MFD du jeu, relu toutes les 5 s en piste (dernière lecture réussie et son instant).
+    mfd: Arc<std::sync::Mutex<Option<(Instant, super::lmu_probe::PitMenu)>>>,
+    mfd_busy: Arc<AtomicBool>,
+    mfd_asked: Option<Instant>,
 }
 
 type ApiResult = (Vec<super::lmu_probe::ApiRead>, super::lmu_probe::GarageSummary, Option<crate::ingest::lmu::SetupSnapshot>);
@@ -178,7 +182,7 @@ struct Probe {
 
 impl LmuDriver {
     pub fn new(dir: PathBuf, hz: f32) -> Self {
-        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default(), probe_dir: None, probe_api: super::lmu_probe::API_BASE.into(), probe: None, facts_key: None }
+        Self { dir, recorder: Recorder::new(hz), live: LiveState::default(), yaml_key: None, last_part: Instant::now(), tick: 0, out_since: None, idle_after: Duration::from_secs(30), written: vec![], write_lock: Default::default(), part_busy: Default::default(), probe_dir: None, probe_api: super::lmu_probe::API_BASE.into(), probe: None, facts_key: None, mfd: Default::default(), mfd_busy: Default::default(), mfd_asked: None }
     }
 
     fn save(&mut self, r: &Recording, done: bool) {
@@ -283,6 +287,33 @@ impl LmuDriver {
         });
     }
 
+    /// MFD du jeu : relu toutes les 5 s voiture en piste (un GET de quelques ms, dans un autre fil),
+    /// et recopié dans les canaux `ApexMfdEnergy` / `ApexMfdLaps` tant que la lecture a moins de 30 s.
+    fn feed_mfd(&mut self, row: &mut [f64; crate::ingest::ibt::LIVE_N]) {
+        if self.probe_api.is_empty() {
+            return;
+        }
+        if self.mfd_asked.is_none_or(|t| t.elapsed() >= Duration::from_secs(5)) && !self.mfd_busy.swap(true, Ordering::SeqCst) {
+            self.mfd_asked = Some(Instant::now());
+            let (base, slot, busy) = (self.probe_api.clone(), self.mfd.clone(), self.mfd_busy.clone());
+            std::thread::spawn(move || {
+                if let Some(m) = super::lmu_probe::read_pit_menu(&base) {
+                    let mut g = slot.lock().unwrap_or_else(|p| p.into_inner());
+                    if g.as_ref().map(|(_, o)| o.energy_pct) != Some(m.energy_pct) {
+                        log::info!("jeu : MFD énergie {:?} % ({:?} tours selon le jeu), ratio {:?}", m.energy_pct, m.energy_laps, m.fuel_ratio);
+                    }
+                    *g = Some((Instant::now(), m));
+                }
+                busy.store(false, Ordering::SeqCst);
+            });
+        }
+        let g = self.mfd.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some((_, m)) = g.as_ref().filter(|(at, _)| at.elapsed() < Duration::from_secs(30)) {
+            row[27] = m.energy_pct.unwrap_or(0.0) as f64;
+            row[28] = m.energy_laps.unwrap_or(0.0) as f64;
+        }
+    }
+
     pub fn step(&mut self, f: &Frame, now_unix: i64) -> LiveSnapshot {
         self.read_facts(f, now_unix);
         let before = self.recorder.current().map(file_stem);
@@ -324,7 +355,10 @@ impl LmuDriver {
             }
         }
         self.tick += 1;
-        let row = self.live.row(f);
+        let mut row = self.live.row(f);
+        if let Some(r) = row.as_mut() {
+            self.feed_mfd(r);
+        }
         self.feed_probe(f, row.is_some());
         let session_info = row.and_then(|_| {
             let y = rec::live_yaml(f)?;
@@ -438,7 +472,7 @@ mod tests {
         t.mElapsedTime = et;
         t.mLocalVel.z = 60.0;
         t.mVehicleModel[..9].copy_from_slice(b"Ferrari 4");
-        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t) }
+        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t), class_pace: Default::default() }
     }
 
     #[test]
