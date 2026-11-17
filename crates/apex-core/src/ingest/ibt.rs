@@ -628,9 +628,11 @@ pub const LIVE_CHANNELS: [&str; LIVE_N] = [
     "ApexVirtualEnergy", "ApexTrackLimitSteps", "ApexTrackLimitStepsPerPenalty",
     // Le Mans Ultimate : tours et temps de retard sur le leader (fin de course au temps).
     "ApexLapsBehindLeader", "ApexTimeBehindLeader",
+    // Le Mans Ultimate : MFD du jeu (API locale), énergie réglée pour le prochain arrêt (%) et tours annoncés.
+    "ApexMfdEnergy", "ApexMfdLaps",
 ];
 /// Nombre de canaux lus en direct.
-pub const LIVE_N: usize = 27;
+pub const LIVE_N: usize = 29;
 
 /// Reconstitution des tours en direct : on empile les échantillons et, à chaque passage de la
 /// ligne, le tour qui vient de se terminer est découpé par le même code que les fichiers .ibt.

@@ -33,6 +33,17 @@ function EngineerBlock({ e, u }: { e: EngineerCall; u: FuelUnit }) {
         <div className="lf-pit">
           Au stand : <b className="mono">{setting(u, e.fill)}</b>
           {u === "energy" && e.fuel_ratio != null && <> · ratio <b className="mono">{n2(e.fuel_ratio)}</b>{e.fill_fuel_l != null && <span className="muted"> ({Math.round(e.fill_fuel_l)} L)</span>}</>}
+          {u === "energy" && e.mfd_energy != null && (
+            <span className={`lf-mfd ${Math.abs(e.mfd_energy - Math.ceil(e.fill - 0.05)) < 1.5 ? "ok" : "warn"}`}>
+              {" "}· MFD du jeu <b className="mono">{Math.round(e.mfd_energy)} %</b>
+              {Math.abs(e.mfd_energy - Math.ceil(e.fill - 0.05)) < 1.5 ? " (bon)" : " (à changer)"}
+            </span>
+          )}
+        </div>
+      )}
+      {e.game_laps_for_fill != null && e.laps_after_stop != null && (
+        <div className={`lf-verdict ${e.game_laps_for_fill + 0.5 < e.laps_after_stop ? "warn" : ""}`}>
+          Le jeu compte {n1(e.game_laps_for_fill)} tours avec ce niveau, il en faut {e.laps_after_stop}.
         </div>
       )}
       {e.fuel_limits && <div className="lf-verdict warn">Le carburant lâchera avant l'énergie : ratio trop bas. Au prochain arrêt, ratio {e.fuel_ratio != null ? n2(e.fuel_ratio) : "plus haut"}.</div>}

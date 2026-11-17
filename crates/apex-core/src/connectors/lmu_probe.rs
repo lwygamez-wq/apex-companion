@@ -20,7 +20,7 @@ use std::time::Duration;
 pub const API_BASE: &str = "http://127.0.0.1:6397";
 
 /// Lectures de l'API (GET seulement) : nom du fichier, chemin.
-pub const API_READS: [(&str, &str); 10] = [
+pub const API_READS: [(&str, &str); 11] = [
     ("garage", "/rest/garage/getPlayerGarageData"),
     ("setup-overview", "/rest/garage/UIScreen/CarSetupOverview"),
     ("tyres", "/rest/garage/UIScreen/TireManagement"),
@@ -32,7 +32,79 @@ pub const API_READS: [(&str, &str); 10] = [
     ("standings", "/rest/watch/standings"),
     ("session-info", "/rest/watch/sessionInfo"),
     ("event-sessions", "/rest/sessions/GetSessionsInfoForEvent"),
+    // Le MFD du prochain arrêt (énergie, ratio) : réponse brute gardée pour vérifier le décodage.
+    ("pit-menu", PIT_MENU_PATH),
 ];
+
+/// Le MFD du jeu (menu des stands) pour le prochain arrêt.
+pub const PIT_MENU_PATH: &str = "/rest/garage/PitMenu/receivePitMenu";
+
+/// Réglages du MFD lus dans le jeu.
+#[derive(Debug, Clone, Copy, Default, Serialize, PartialEq)]
+pub struct PitMenu {
+    /// Énergie virtuelle réglée pour le prochain arrêt (%).
+    pub energy_pct: Option<f32>,
+    /// Tours que le jeu annonce pour ce niveau (« 50% 20 laps »).
+    pub energy_laps: Option<f32>,
+    /// Ratio carburant réglé (litres par 1 % d'énergie).
+    pub fuel_ratio: Option<f32>,
+    /// Carburant réglé (voitures sans énergie), litres ajoutés.
+    pub fuel_l: Option<f32>,
+}
+
+/// Premier nombre d'un texte du jeu (« 78% 25 laps » → 78 ; virgule acceptée).
+fn first_num(s: &str) -> Option<f32> {
+    let s = s.replace(',', ".");
+    let start = s.find(|c: char| c.is_ascii_digit())?;
+    let end = s[start..].find(|c: char| !(c.is_ascii_digit() || c == '.')).map_or(s.len(), |e| start + e);
+    s[start..end].trim_end_matches('.').parse().ok()
+}
+
+/// Nombre juste avant « lap » (« 78% 25 laps » → 25).
+fn laps_in(s: &str) -> Option<f32> {
+    let low = s.to_lowercase();
+    let at = low.find("lap")?;
+    let before = low[..at].trim_end();
+    let start = before.rfind(|c: char| !(c.is_ascii_digit() || c == '.' || c == ',')).map_or(0, |i| i + 1);
+    before[start..].replace(',', ".").parse().ok().filter(|v: &f32| v.is_finite() && *v >= 0.0)
+}
+
+/// Décode `receivePitMenu` (ou le `pitMenu` de `RepairAndRefuel`) : lignes `{name, currentSetting,
+/// settings[{text}]}`. Le texte du réglage courant porte la valeur affichée au MFD ; à défaut,
+/// `currentSetting` est pris tel quel pour l'énergie (0–100 %).
+pub fn parse_pit_menu(body: &str) -> Option<PitMenu> {
+    let v: Value = serde_json::from_str(body).ok()?;
+    let lines = match &v {
+        Value::Array(a) => a.clone(),
+        _ => find_key(&v, "pitMenu").map(|p| match p {
+            Value::Array(a) => a.clone(),
+            o => o.get("pitMenu").and_then(Value::as_array).cloned().unwrap_or_default(),
+        })?,
+    };
+    let mut m = PitMenu::default();
+    for l in &lines {
+        let name = l.get("name").and_then(Value::as_str).unwrap_or_default().to_uppercase();
+        let cur = l.get("currentSetting").and_then(Value::as_f64);
+        let text = cur.and_then(|c| l.get("settings")?.as_array()?.get(c as usize)?.get("text")?.as_str().map(str::to_string));
+        if name.starts_with("VIRTUAL ENERGY") {
+            m.energy_pct = text.as_deref().and_then(first_num).or(cur.map(|c| c as f32)).filter(|v| (0.0..=100.5).contains(v));
+            m.energy_laps = text.as_deref().and_then(laps_in);
+        } else if name.starts_with("FUEL RATIO") {
+            m.fuel_ratio = text.as_deref().and_then(first_num).filter(|r| *r > 0.05 && *r < 3.0);
+        } else if name.starts_with("FUEL") {
+            m.fuel_l = text.as_deref().and_then(first_num).filter(|v| v.is_finite() && *v >= 0.0);
+        }
+    }
+    (m != PitMenu::default()).then_some(m)
+}
+
+/// Lit le MFD dans le jeu (un GET, réponse en quelques millisecondes).
+pub fn read_pit_menu(base: &str) -> Option<PitMenu> {
+    let agent: ureq::Agent = ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(2))).proxy(None).build().into();
+    let mut resp = agent.get(format!("{base}{PIT_MENU_PATH}")).call().ok()?;
+    let b = resp.body_mut().with_config().limit(4 * 1024 * 1024).read_to_vec().ok()?;
+    parse_pit_menu(&String::from_utf8_lossy(&b))
+}
 
 /// Ce que le jeu annonce pour la voiture et le circuit chargés, avant même le premier tour.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -366,6 +438,26 @@ pub fn write_report(dir: &Path, r: &ProbeReport) -> std::io::Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    /// Données synthétiques : forme du MFD documentée par des lectures publiées du jeu (build 14200 :
+    /// lignes `{name, currentSetting, settings[{text}]}`, texte « 50% 20 laps »), valeurs inventées.
+    #[test]
+    fn reads_the_pit_menu_energy_ratio_and_laps() {
+        let body = r#"[
+            {"name":"DAMAGE:","currentSetting":0,"settings":[{"text":"N/A"}]},
+            {"name":"VIRTUAL ENERGY:","currentSetting":2,"settings":[{"text":"0% 0 laps"},{"text":"1% 0 laps"},{"text":"64% 21 laps"}]},
+            {"name":"FUEL RATIO:","currentSetting":1,"settings":[{"text":"0.83"},{"text":"0.86"}]},
+            {"name":"TIRES:","currentSetting":0,"settings":[{"text":"No Change"}]}
+        ]"#;
+        let m = super::parse_pit_menu(body).unwrap();
+        assert_eq!((m.energy_pct, m.energy_laps, m.fuel_ratio), (Some(64.0), Some(21.0), Some(0.86)));
+        // Ligne sans textes (forme vue dans RepairAndRefuel) : le réglage vaut le pourcentage.
+        let repair = r#"{"pitMenu":{"pitMenu":[{"name":"VIRTUAL ENERGY:","currentSetting":78,"settings":[]},{"name":"FUEL:","currentSetting":1,"settings":[{"text":"+0 L"},{"text":"+30 L"}]}]}}"#;
+        let m = super::parse_pit_menu(repair).unwrap();
+        assert_eq!((m.energy_pct, m.energy_laps, m.fuel_l), (Some(78.0), None, Some(30.0)));
+        assert_eq!(super::parse_pit_menu("{}"), None);
+        assert_eq!(super::parse_pit_menu("pas du json"), None);
+    }
+
     use super::*;
     use crate::connectors::lmu_shm::zeroed;
 
@@ -389,7 +481,7 @@ mod tests {
         assert!((s.fields["pneu_ecart_int_ext_c"].max - 10.0).abs() < 1e-9);
         assert_eq!(s.fields["pneu_temperature_optimale"].filled, 0);
         assert_eq!(s.fields["appui_av_n"].filled, 5);
-        let mut f: Frame = Frame { game_version: 1, info: zeroed(), scoring: None, telem: Some(t) };
+        let mut f: Frame = Frame { game_version: 1, info: zeroed(), scoring: None, telem: Some(t), class_pace: Default::default() };
         f.game_version = 14000;
         let r = ProbeReport::new("x", &f, &s);
         let pct = |n: &str| r.fields.iter().find(|x| x.name == n).unwrap().filled_pct;

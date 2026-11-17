@@ -692,6 +692,9 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .lf-eng-main span { font-size: 13px; color: var(--muted); font-weight: 700; }
 .lf-eng-main b { font-family: var(--big); font-stretch: 110%; font-size: 30px; font-weight: 900; line-height: 1.1; }
 .lf-pit { margin-top: 8px; font-size: 18px; font-weight: 650; }
+.fb-note { width: 100%; box-sizing: border-box; resize: vertical; background: var(--panel-2); color: inherit; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; font: inherit; }
+.lf-mfd.ok b { color: var(--green, #3ad17a); }
+.lf-mfd.warn b { color: var(--red); }
 .lf-bar { height: 10px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 12px; }
 .lf-bar i { display: block; height: 100%; background: var(--cmp); border-radius: 999px; }
 .consumption .strategy-facts { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
@@ -745,7 +748,13 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .rd-bar { height: 4px; background: rgba(255, 255, 255, 0.07); border-radius: 2px; margin: 6px 0; }
 .rd-bar i { display: block; height: 100%; border-radius: 2px; background: var(--muted); }
 .rd-loss.errors .rd-bar i { background: var(--red); }
-.rd-loss.overfill .rd-bar i, .rd-loss.pace .rd-bar i { background: var(--accent); }
+.rd-loss.overfill .rd-bar i, .rd-loss.pace .rd-bar i, .rd-loss.class_pace .rd-bar i { background: var(--accent); }
 .rd-loss p { margin: 0; font-size: 12.5px; color: var(--muted); }
 .rd-energy { margin: 12px 0 0; font-size: 13px; }
 .rd-missing { margin: 8px 0 0; font-size: 12px; }
+.rd-class-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.rd-class-grid div { display: flex; flex-direction: column; gap: 2px; background: var(--panel-2); border-radius: var(--radius); padding: 9px 12px; }
+.rd-class-grid span { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.rd-class-grid b { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rd-class-grid b.slow { color: var(--red); }
+.rd-class-grid b.fast { color: var(--green, #3ad17a); }

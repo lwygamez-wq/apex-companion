@@ -294,6 +294,8 @@ pub struct LiveCoach {
     lap_pct: f64,
     /// Énergie virtuelle (Le Mans Ultimate) : niveau (%) et consommation des derniers tours (%).
     ve_now: f64,
+    mfd_energy: Option<f32>,
+    mfd_laps: Option<f32>,
     ve_laps: VecDeque<f64>,
     /// Limites de piste (Le Mans Ultimate) : avertissements en cours et nombre par pénalité.
     tl_steps: f64,
@@ -422,7 +424,7 @@ impl LiveCoach {
         // Catégorie lue dans la séance elle-même : valable même sans historique sur ce circuit.
         let top_class = crate::analysis::strategy::is_top_class(meta.sim, builder.session_info().profile.car.class.as_deref());
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -518,6 +520,9 @@ impl LiveCoach {
         }
         if row[22] > 0.0 {
             self.ve_now = row[22];
+            // MFD du jeu (LMU), lu par l'API : 0 = inconnu.
+            self.mfd_energy = Some(row[27] as f32).filter(|v| *v > 0.0);
+            self.mfd_laps = Some(row[28] as f32).filter(|v| *v > 0.0);
         }
         // Ravitaillement : le niveau qui limite le relais remonte.
         self.engineer.observe(if self.ve_now > 0.0 { self.ve_now } else { self.fuel_now });
@@ -687,6 +692,8 @@ impl LiveCoach {
                 fuel_ratio: ratio_set,
                 fuel_laps: fuel_per.filter(|f| *f > 0.0 && self.fuel_now > 0.0).map(|f| self.fuel_now as f32 / f),
                 energy_laps: Some(self.ve_now as f32 / per),
+                mfd_energy: self.mfd_energy,
+                mfd_laps: self.mfd_laps,
             })
         } else if self.fuel_now > 0.0 {
             let per = fuel_per.or(hint(Unit::Litres))?;
@@ -700,6 +707,8 @@ impl LiveCoach {
                 fuel_ratio: None,
                 fuel_laps: None,
                 energy_laps: None,
+                mfd_energy: None,
+                mfd_laps: None,
             })
         } else {
             None

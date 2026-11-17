@@ -402,6 +402,33 @@ pub const OFF_PLAYER_HAS_VEHICLE: usize = offset_of!(ObjectOut, telemetry) + off
 pub const OFF_TELEM_INFO: usize = offset_of!(ObjectOut, telemetry) + offset_of!(TelemetryData, telemInfo);
 const OFF_VEH_ELAPSED: usize = offset_of!(VehicleTelemetry, mElapsedTime);
 const OFF_IS_PLAYER: usize = offset_of!(VehicleScoring, mIsPlayer);
+const OFF_VEH_CLASS: usize = offset_of!(VehicleScoring, mVehicleClass);
+const OFF_VEH_LAST_LAP: usize = offset_of!(VehicleScoring, mLastLapTime);
+const OFF_VEH_IN_PITS: usize = offset_of!(VehicleScoring, mInPits);
+
+/// Rythme des autres voitures de la catégorie du pilote, d'après leur dernier tour au classement.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct ClassPace {
+    /// Voitures comptées (autres que le pilote, hors stand, dernier tour chronométré et normal).
+    pub cars: u8,
+    /// Médiane et meilleur de leurs derniers tours (s) ; 0 si aucune voiture comptée.
+    pub median_last_s: f64,
+    pub best_last_s: f64,
+}
+
+impl ClassPace {
+    /// Derniers tours des autres voitures : ceux de plus de 15 % au-dessus du plus rapide (tour de stand,
+    /// incident) sont écartés.
+    pub fn from_laps(mut laps: Vec<f64>) -> Self {
+        laps.retain(|l| l.is_finite() && *l > 20.0 && *l < 1800.0);
+        let Some(min) = laps.iter().copied().reduce(f64::min) else { return Self::default() };
+        laps.retain(|l| *l <= min * 1.15);
+        laps.sort_by(f64::total_cmp);
+        let n = laps.len();
+        let median = if n % 2 == 1 { laps[n / 2] } else { (laps[n / 2 - 1] + laps[n / 2]) / 2.0 };
+        Self { cars: n.min(255) as u8, median_last_s: median, best_last_s: min }
+    }
+}
 
 /// Copie cohérente des données utiles au pilote : séance, sa ligne de classement, sa télémétrie.
 #[derive(Clone, Copy)]
@@ -410,6 +437,8 @@ pub struct Frame {
     pub info: ScoringInfo,
     pub scoring: Option<VehicleScoring>,
     pub telem: Option<VehicleTelemetry>,
+    /// Rythme des autres voitures de la même catégorie (vide hors course ou seul en piste).
+    pub class_pace: ClassPace,
 }
 
 /// Texte C (terminé par 0) → `String`.
@@ -446,12 +475,22 @@ pub unsafe fn read_frame_ptr(base: *const u8) -> Option<Frame> {
                 .find(|o| rd_u8(o + OFF_IS_PLAYER) != 0)
                 .map(|o| std::ptr::read_unaligned(at(o) as *const VehicleScoring));
             let telem = telem_off.map(|o| std::ptr::read_unaligned(at(o) as *const VehicleTelemetry));
+            // Autres voitures de la catégorie du pilote : seulement les champs utiles (pas la ligne entière).
+            let class_pace = scoring.as_ref().map_or_else(ClassPace::default, |me| {
+                let laps = (0..n)
+                    .map(|i| OFF_VEH_SCORING + i * size_of::<VehicleScoring>())
+                    .filter(|o| rd_u8(o + OFF_IS_PLAYER) == 0 && rd_u8(o + OFF_VEH_IN_PITS) == 0)
+                    .filter(|o| std::ptr::read_unaligned(at(o + OFF_VEH_CLASS) as *const [u8; 32]) == me.mVehicleClass)
+                    .map(|o| std::ptr::read_unaligned(at(o + OFF_VEH_LAST_LAP) as *const f64))
+                    .collect();
+                ClassPace::from_laps(laps)
+            });
             if witness(telem_off) != before {
                 std::hint::spin_loop();
                 continue;
             }
             let game_version = std::ptr::read_unaligned(at(OFF_GAME_VERSION) as *const i32);
-            return Some(Frame { game_version, info, scoring, telem });
+            return Some(Frame { game_version, info, scoring, telem, class_pace });
         }
         None
     }
@@ -507,7 +546,17 @@ mod tests {
         me.mIsPlayer = 1;
         me.mPlace = 4;
         me.mLapDist = 1234.5;
+        me.mVehicleClass[..8].copy_from_slice(b"Hypercar");
         put(&mut mem, OFF_VEH_SCORING + 2 * size_of::<VehicleScoring>(), me);
+        // Données synthétiques : deux autres voitures, une de la même catégorie, une LMGT3.
+        let mut a: VehicleScoring = zeroed();
+        a.mVehicleClass[..8].copy_from_slice(b"Hypercar");
+        a.mLastLapTime = 93.4;
+        put(&mut mem, OFF_VEH_SCORING, a);
+        let mut b: VehicleScoring = zeroed();
+        b.mVehicleClass[..5].copy_from_slice(b"LMGT3");
+        b.mLastLapTime = 101.2;
+        put(&mut mem, OFF_VEH_SCORING + size_of::<VehicleScoring>(), b);
         let mut t: VehicleTelemetry = zeroed();
         t.mElapsedTime = 42.0;
         t.mFuel = 61.5;
@@ -527,6 +576,15 @@ mod tests {
         let t = f.telem.unwrap();
         assert_eq!({ t.mFuel }, 61.5);
         assert_eq!({ t.mWheels[3].mSurfaceType }, 5);
+        assert_eq!(f.class_pace, ClassPace { cars: 1, median_last_s: 93.4, best_last_s: 93.4 });
+    }
+
+    /// Données synthétiques : tour de stand écarté, médiane d'un nombre pair de tours.
+    #[test]
+    fn class_pace_drops_pit_laps() {
+        let p = ClassPace::from_laps(vec![93.0, 94.0, 0.0, -1.0, 150.0, 95.0, 96.0]);
+        assert_eq!(p, ClassPace { cars: 4, median_last_s: 94.5, best_last_s: 93.0 });
+        assert_eq!(ClassPace::from_laps(vec![]), ClassPace::default());
     }
 
     #[test]

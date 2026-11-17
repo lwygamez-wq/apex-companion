@@ -36,8 +36,7 @@ import type {
   SessionDetail,
   SessionFilter,
   SessionSummary,
-  StatusPayload,
-} from "./types";
+  StatusPayload, FeedbackSummary } from "./types";
 
 export const isTauri = (): boolean => typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -78,6 +77,7 @@ export const api = {
   setupLibrary: (dir: string | null) => call<SetupLibraryView>("setup_library", { dir }),
   setupCompare: (a: string, b: string) => call<SetupComparison>("setup_compare", { a, b }),
   setupProbeReports: () => call<ProbeReport[]>("setup_probe_reports"),
+  exportFeedback: (path: string, note: string) => call<FeedbackSummary>("export_feedback", { path, note }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),
   deleteAll: () => call<void>("delete_all_data"),
   exportData: (path: string) => call<number>("export_data", { path }),

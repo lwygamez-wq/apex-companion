@@ -63,10 +63,11 @@ Chaque changement, même petit :
 
 ## Autonomie de Claude
 
-- **Décide et fusionne seul** quand la CI est verte : corrections, améliorations internes, tests, outillage, découpage du code, montée de dépendances sans effet visible.
-- **Ouvre la PR et attend la fusion d'Alex** : nouvelle fonctionnalité ou changement visible, migration qui modifie ou supprime des données, toute publication de version (la fusion de la PR de version vaut validation, voir la skill `apex-release`).
-- **Demande avant d'agir** : direction visuelle, périmètre d'une fonction, clés, comptes ou secrets, tout ce qui coûte de l'argent.
-- Ne jamais désactiver une vérification, un test ou une règle de `main` pour faire passer une PR.
+Consigne d'Alex (17 nov. 2026) : Claude agit en dirigeant exécutif de l'app, Alex en investisseur. Claude décide, développe, fusionne et publie sans attendre de validation dès que toutes les vérifications et la CI sont vertes, puis rend compte.
+
+- **Décide, fusionne et publie seul** : corrections, nouvelles fonctions, changements visibles, versions (procédure de la skill `apex-release`, PR fusionnée par Claude une fois la CI verte).
+- **Demande avant d'agir** : dépense ou service payant, clés, comptes, secrets ou permissions, migration qui supprime des données, changement de direction visuelle.
+- Ne jamais désactiver une vérification, un test ou une règle de `main` pour faire passer une PR. Ne jamais présenter comme vérifié en jeu ce qui ne l'a été que sur données synthétiques ou anciennes courses.
 
 ## Pièges déjà rencontrés
 
@@ -85,6 +86,8 @@ Chaque changement, même petit :
 - Fin de course au temps : `mEndET` n'était pas enregistré avant la 0.38 (`LapEvent.time_remain_s`), donc impossible de rejouer hors ligne les tours restants des courses des 11–12 nov. à moins d'un tour près.
 - Ce que l'ingénieur a dit : journal d'Apex (`%LOCALAPPDATA%\app.apexcompanion.desktop\logs`, lignes `coach :`).
 - Tours invalidés par le jeu (limites de piste) : `clean` est faux, mais la consommation reste valable. La stratégie filtre sur les drapeaux (stand, sortie, incident, jaune, coupure), pas sur `clean`.
+- MFD du jeu (0.39) : `GET /rest/garage/PitMenu/receivePitMenu`, lignes `{name, currentSetting, settings[{text}]}`, « VIRTUAL ENERGY: » au texte « 64% 21 laps » (forme tirée de lectures publiées, build 14200 : à confirmer sur la réponse brute gardée dans `sonde-lmu/<séance>/pit-menu.json`). Relu toutes les 5 s en piste, canaux `ApexMfdEnergy` / `ApexMfdLaps`, journal « jeu : MFD énergie ». `/rest/strategy/overall` répond 400 (paramètre inconnu) : ne pas compter dessus.
+- Rythme face à la catégorie (0.39) : à chaque tour du pilote, médiane et meilleur des derniers tours des autres voitures de sa catégorie (mémoire partagée, hors stand, tours > +15 % écartés) dans `LapEvent.class_*`. Le débrief l'utilise à la place de l'écart au leader quand il existe.
 
 ## Sécurité et données
 
@@ -106,7 +109,7 @@ Chaque changement, même petit :
 
 ## Version et feuille de route
 
-- Version en attente de validation : **v0.38.1** (16 nov. 2026) : calculateur prêt sans historique en LMU (temps au tour estimé par le jeu, `GameFacts.est_lap_s`). Version publiée : v0.38.0 (16 nov. : débrief de course, pertes mesurées, priorités).
-- Suivant, par priorité : recouper les tours restants de l'ingénieur avec les pages de stratégie du jeu et `time_remain_s` (banc de rejeu des courses réelles) ; rythme face aux autres voitures (classement du jeu) ; limites de piste LMU (compteur lu à 0) ; Setup Builder étape 2 ; ménage (relecture en boucle de 3 tours Garage 61 illisibles au démarrage). iRacing et Garage 61 : gelés, maintenance seule.
+- Version publiée : **v0.39.0** (17 nov. 2026) : l'ingénieur lit le MFD du jeu, rythme face à ta catégorie dans le débrief, export « retour testeur ».
+- Suivant, par priorité : valider en course le MFD lu (réponse brute `pit-menu.json`) et le rythme catégorie ; recouper les tours restants de l'ingénieur avec `time_remain_s` (banc de rejeu des courses enregistrées en 0.38+) ; limites de piste LMU (compteur lu à 0) ; Setup Builder étape 2 ; ménage (relecture en boucle de 3 tours Garage 61 illisibles au démarrage). iRacing et Garage 61 : gelés, maintenance seule.
 - Setup Builder : **go** (sonde du 12 nov.), plan dans le projet claude.ai (`claude/plan-setup-builder.md`). Étape 1 faite (v0.36.0). Suivant : étape 2, diagnostic sans conseil (pneus, freins, hauteurs, équilibre), validé sur ≥ 2 séances même voiture avec setups différents.
 - À valider sur le PC d'Alex : lectures LMU (limites de piste), annonces de l'ingénieur en course, débrief Gemini gratuit, plugin SimHub.

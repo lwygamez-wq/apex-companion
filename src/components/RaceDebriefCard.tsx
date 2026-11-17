@@ -2,7 +2,8 @@ import { lapTime } from "../lib/format";
 import type { RaceDebrief } from "../lib/types";
 
 const n1 = (v: number) => v.toFixed(1).replace(".", ",");
-const KIND_LABEL: Record<RaceDebrief["losses"][number]["kind"], string> = { errors: "Tours ratés", stops: "Arrêts", overfill: "Plein", pace: "Rythme" };
+const KIND_LABEL: Record<RaceDebrief["losses"][number]["kind"], string> = { errors: "Tours ratés", stops: "Arrêts", overfill: "Plein", pace: "Rythme", class_pace: "Rythme catégorie" };
+const signed = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${n1(Math.abs(v))} s`;
 
 /**
  * Débrief de course : où est parti le temps (pertes mesurées contre ta médiane de course), puis au
@@ -57,6 +58,19 @@ export function RaceDebriefCard({ d }: { d: RaceDebrief }) {
           {d.spare_laps != null ? ` (${n1(d.spare_laps)} tours)` : ""}
           {d.fill_set != null && d.fill_needed != null ? ` · dernier plein réglé ${Math.round(d.fill_set)} %, nécessaire ${Math.round(d.fill_needed)} %` : ""}
         </p>
+      )}
+
+      {d.class_pace && (
+        <div className="rd-class">
+          <h3 className="rd-title">Face à ta catégorie</h3>
+          <div className="rd-class-grid">
+            <div><span>Écart par tour</span><b className={`mono ${d.class_pace.gap_s > 0.05 ? "slow" : "fast"}`}>{signed(d.class_pace.gap_s)}</b><small className="muted">contre la médiane</small></div>
+            <div><span>Médiane catégorie</span><b className="mono">{lapTime(d.class_pace.class_median_s)}</b><small className="muted">jusqu'à {d.class_pace.cars} voitures</small></div>
+            <div><span>Meilleur vu</span><b className="mono">{d.class_pace.class_best_s < 1e8 ? lapTime(d.class_pace.class_best_s) : "—"}</b><small className="muted">dans la catégorie</small></div>
+            <div><span>Tours plus rapides</span><b className="mono">{d.class_pace.faster_laps} / {d.class_pace.laps}</b><small className="muted">que la médiane</small></div>
+          </div>
+          <p className="rd-energy muted" style={{ marginTop: 8 }}>Première moitié {signed(d.class_pace.first_half_gap_s)} par tour, seconde moitié {signed(d.class_pace.second_half_gap_s)}.</p>
+        </div>
       )}
 
       {d.stints.length > 1 && (

@@ -1546,6 +1546,12 @@ impl AppService {
         Ok(crate::setup::compare(&read(a)?, &read(b)?))
     }
 
+    /// Retour testeur : archive .zip (note, journal masqué, 3 derniers enregistrements LMU, sonde du jeu).
+    pub fn export_feedback(&self, out: &Path, note: &str, logs_dir: Option<&Path>, version: &str) -> Result<crate::feedback::FeedbackSummary> {
+        let data = self.lmu_dir.as_ref().and_then(|d| d.parent());
+        crate::feedback::export_feedback(out, &crate::feedback::FeedbackInput { version, note, logs_dir, data_dir: data, recordings: 3 }).map_err(ServiceError::User)
+    }
+
     /// Rapports de la sonde setup LMU, du plus récent au plus ancien.
     pub fn setup_probe_reports(&self) -> Vec<crate::connectors::lmu_probe::ProbeReport> {
         let Some(dir) = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("sonde-lmu")) else { return vec![] };

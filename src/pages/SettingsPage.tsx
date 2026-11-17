@@ -30,6 +30,8 @@ const PROVIDERS: { id: string; label: string; models: string[]; hint: string; ke
 ];
 
 export function SettingsPage() {
+  const [fbNote, setFbNote] = useState("");
+  const [fbMsg, setFbMsg] = useState<string | null>(null);
   const settings = useAsync(() => api.settings(), []);
   const connectors = useAsync(() => api.connectors(), []);
   const autolog = useAsync(() => api.iracingAutolog(), []);
@@ -368,6 +370,24 @@ export function SettingsPage() {
           </div>
         </div>
       )}
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <h2>Retour testeur</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Un fichier .zip à envoyer au développeur : ta note, le journal d'Apex (clés et jetons masqués), tes 3 dernières séances Le Mans Ultimate et ce que le jeu a annoncé. Ni base de données, ni réglages. Rien n'est envoyé : tu choisis où l'enregistrer.
+        </p>
+        <textarea className="fb-note" rows={3} value={fbNote} placeholder="Ce qui s'est passé, ce que tu attendais (circuit, voiture, tour…)" onChange={(e) => setFbNote(e.target.value)} />
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="btn primary" onClick={() => void save({ defaultPath: `apex-retour-${new Date().toISOString().slice(0, 10)}.zip`, filters: [{ name: "Archive", extensions: ["zip"] }] })
+            .then(async (p) => {
+              if (!p) return;
+              const r = await api.exportFeedback(p, fbNote);
+              setFbMsg(`Retour enregistré : ${r.files.length} fichiers, ${(r.bytes / 1e6).toFixed(1).replace(".", ",")} Mo.`);
+            })
+            .catch((e: unknown) => setFbMsg(`Export impossible : ${e instanceof Error ? e.message : String(e)}`))}>Exporter un retour</button>
+          {fbMsg && <span className="muted">{fbMsg}</span>}
+        </div>
+      </div>
 
       <div className="card">
         <h2>Confidentialité et données</h2>

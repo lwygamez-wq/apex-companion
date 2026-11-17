@@ -740,6 +740,7 @@
   },
   "debrief": {
     "actions": [],
+    "class_pace": null,
     "clean_laps": 27,
     "energy_finish": 2.064,
     "energy_per_lap": 4.055,
@@ -766,7 +767,9 @@
       }
     ],
     "median_s": 109.551,
-    "missing": [],
+    "missing": [
+      "Rythme face à ta catégorie : non enregistré sur cette course (enregistré depuis Apex 0.39)."
+    ],
     "race_laps": 32,
     "spare_laps": 0.509,
     "stints": [

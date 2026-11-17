@@ -294,6 +294,7 @@
   },
   "debrief": {
     "actions": [],
+    "class_pace": null,
     "clean_laps": 5,
     "energy_finish": null,
     "energy_per_lap": null,

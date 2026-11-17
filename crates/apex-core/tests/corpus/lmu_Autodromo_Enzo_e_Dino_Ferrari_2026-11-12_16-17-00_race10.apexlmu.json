@@ -536,6 +536,7 @@
         "title": "Finir tous les tours"
       }
     ],
+    "class_pace": null,
     "clean_laps": 45,
     "energy_finish": 6.722,
     "energy_per_lap": 2.824,
@@ -563,6 +564,7 @@
     ],
     "median_s": 93.556,
     "missing": [
+      "Rythme face à ta catégorie : non enregistré sur cette course (enregistré depuis Apex 0.39).",
       "Écart au leader : non enregistré sur cette course (versions avant la 0.35, ou leader à plus d'un tour)."
     ],
     "race_laps": 55,

@@ -39,6 +39,9 @@ pub struct RaceExtras {
     pub laps_after_last_fill: Option<u32>,
     /// (tour bouclé, retard sur le leader en s) quand il est enregistré et dans le même tour.
     pub gaps: Vec<(i32, f64)>,
+    /// (tour bouclé, médiane des derniers tours des autres voitures de la catégorie en s, voitures
+    /// comptées, meilleur de ces tours en s) : enregistré depuis Apex 0.39.
+    pub class_laps: Vec<(i32, f64, u8, f64)>,
 }
 
 /// Lit arrêts, énergie et écarts dans un enregistrement LMU.
@@ -85,7 +88,8 @@ pub fn race_extras(r: &Recording) -> RaceExtras {
     let energy_finish = (energy_per_lap.is_some() && low != f32::MAX).then_some(low);
     let laps_after_last_fill = stops.iter().rev().find(|s| s.energy_out > s.energy_in + 2.0 || s.fuel_out_l > s.fuel_in_l + 1.0).map(|s| starts.iter().filter(|k| k.lap > s.lap).count().saturating_sub(1) as u32);
     let gaps = r.laps.iter().filter(|e| e.laps_behind_leader == 0 && e.time_behind_leader > 0.0).map(|e| (e.total_laps, e.time_behind_leader)).collect();
-    RaceExtras { stops, energy_per_lap, energy_finish, laps_after_last_fill, gaps }
+    let class_laps = r.laps.iter().filter_map(|e| Some((e.total_laps, e.class_median_s?, e.class_cars, e.class_best_s.unwrap_or(0.0)))).filter(|c| c.2 > 0).collect();
+    RaceExtras { stops, energy_per_lap, energy_finish, laps_after_last_fill, gaps, class_laps }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -99,6 +103,26 @@ pub enum LossKind {
     Overfill,
     /// Rythme de course face au leader (écart enregistré).
     Pace,
+    /// Rythme de course face aux autres voitures de ta catégorie (Apex 0.39).
+    ClassPace,
+}
+
+/// Ton rythme face aux autres voitures de ta catégorie, tour par tour.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ClassPaceView {
+    /// Tours comparés (tours normaux, hors stand et tours ratés) et voitures comptées au plus.
+    pub laps: usize,
+    pub cars: u8,
+    /// Écart médian par tour avec la médiane de la catégorie (s ; positif = tu es plus lent).
+    pub gap_s: f64,
+    /// Tes tours plus rapides que la médiane de la catégorie.
+    pub faster_laps: usize,
+    /// Médiane de la catégorie sur ces tours et meilleur tour vu dans la catégorie (s).
+    pub class_median_s: f64,
+    pub class_best_s: f64,
+    /// Écart médian sur la première et la seconde moitié de ces tours (s).
+    pub first_half_gap_s: f64,
+    pub second_half_gap_s: f64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -149,6 +173,8 @@ pub struct RaceDebrief {
     pub actions: Vec<DebriefAction>,
     /// Ce qui n'a pas pu être mesuré, et pourquoi.
     pub missing: Vec<String>,
+    /// Rythme face à ta catégorie (courses enregistrées depuis Apex 0.39).
+    pub class_pace: Option<ClassPaceView>,
 }
 
 fn median(v: &mut [f64]) -> Option<f64> {
@@ -281,8 +307,51 @@ pub fn race_debrief(laps: &[LapMeta], off_tracks: &[OffTrackZone], extras: Optio
         d.missing.push("Arrêts détaillés et énergie : enregistrement d'origine introuvable ou hors Le Mans Ultimate.".into());
     }
 
+    // --- Rythme face à la catégorie -----------------------------------------------------------------
+    // Chaque tour normal comparé à la médiane des derniers tours des autres voitures de ta catégorie au
+    // même passage. Il remplace l'écart au leader quand il existe : le leader est un cas à part.
+    if let Some(cl) = extras.map(|x| &x.class_laps).filter(|c| !c.is_empty()) {
+        let bad_laps: Vec<i32> = bad.iter().map(|b| b.0).collect();
+        let pairs: Vec<(f64, f64, u8, f64)> = racing
+            .iter()
+            .filter(|l| !bad_laps.contains(&l.number) && !l.flags.off_track && !l.flags.incident)
+            .filter_map(|l| cl.iter().find(|c| c.0 == l.number).map(|c| (l.lap_time_s.unwrap_or(0.0), c.1, c.2, c.3)))
+            .collect();
+        if pairs.len() >= 5 {
+            let mut diffs: Vec<f64> = pairs.iter().map(|p| p.0 - p.1).collect();
+            let half = diffs.len() / 2;
+            let first_half_gap_s = median(&mut diffs[..half].to_vec()).unwrap_or(0.0);
+            let second_half_gap_s = median(&mut diffs[half..].to_vec()).unwrap_or(0.0);
+            let gap_s = median(&mut diffs).unwrap_or(0.0);
+            let view = ClassPaceView {
+                laps: pairs.len(),
+                cars: pairs.iter().map(|p| p.2).max().unwrap_or(0),
+                gap_s,
+                faster_laps: pairs.iter().filter(|p| p.0 < p.1).count(),
+                class_median_s: median(&mut pairs.iter().map(|p| p.1).collect::<Vec<_>>()).unwrap_or(0.0),
+                class_best_s: pairs.iter().map(|p| p.3).filter(|b| *b > 0.0).fold(f64::MAX, f64::min).min(1e9),
+                first_half_gap_s,
+                second_half_gap_s,
+            };
+            if gap_s > 0.05 {
+                let total = gap_s * racing.len() as f64;
+                d.losses.push(TimeLoss {
+                    kind: LossKind::ClassPace,
+                    seconds: total,
+                    title: format!("Rythme face à ta catégorie : {} s", secs(total)),
+                    detail: format!("Sur un tour normal, tu es {} s plus lent que la médiane des autres voitures de ta catégorie ({} tours comparés, jusqu'à {} voitures), soit {} s sur {} tours de course.", secs(gap_s), view.laps, view.cars, secs(total), racing.len()),
+                });
+            }
+            d.class_pace = Some(view);
+        } else {
+            d.missing.push(format!("Rythme face à ta catégorie : seulement {} tours comparables (il en faut 5).", pairs.len()));
+        }
+    } else if extras.is_some() {
+        d.missing.push("Rythme face à ta catégorie : non enregistré sur cette course (enregistré depuis Apex 0.39).".into());
+    }
+
     // --- Rythme face au leader -------------------------------------------------------------------
-    match extras.map(|x| &x.gaps) {
+    match extras.filter(|_| d.class_pace.is_none()).map(|x| &x.gaps) {
         Some(g) if g.len() >= 8 => {
             let bad_laps: Vec<i32> = bad.iter().map(|b| b.0).collect();
             let pit: Vec<i32> = timed.iter().filter(|l| l.flags.pit || l.kind != LapKind::Flying).map(|l| l.number).collect();
@@ -354,6 +423,19 @@ pub fn race_debrief(laps: &[LapMeta], off_tracks: &[OffTrackZone], extras: Optio
             seconds: Some(drop * (s.laps / 2) as f64),
         });
     }
+    // Rythme : priorité à partir d'une demi-seconde par tour, avec la moitié de course où tu perds le plus.
+    if let Some(c) = d.class_pace.as_ref().filter(|c| c.gap_s >= 0.5) {
+        let where_ = if c.second_half_gap_s - c.first_half_gap_s > 0.3 {
+            format!(" L'écart grandit en fin de course : {} s puis {} s par tour.", secs(c.first_half_gap_s), secs(c.second_half_gap_s))
+        } else {
+            String::new()
+        };
+        d.actions.push(DebriefAction {
+            title: "Gagner du rythme sur ta catégorie".into(),
+            detail: format!("{} s par tour de retard sur la médiane de ta catégorie ({} tours sur {} plus rapides qu'elle).{where_} Compare ton meilleur tour au tour de référence pour voir où.", secs(c.gap_s), c.faster_laps, c.laps),
+            seconds: Some(c.gap_s * racing.len() as f64),
+        });
+    }
     d.actions.sort_by(|a, b| b.seconds.unwrap_or(0.0).total_cmp(&a.seconds.unwrap_or(0.0)));
     d.actions.truncate(3);
     Some(d)
@@ -404,6 +486,7 @@ mod tests {
             energy_finish: Some(14.0),
             laps_after_last_fill: Some(12),
             gaps: vec![],
+            class_laps: vec![],
         };
         let d = race_debrief(&race(), &zones, Some(&extras)).unwrap();
         // Médiane des tours sans incident ; seuil d'un tour raté : 2 s (2 % de 100 s).
@@ -450,5 +533,28 @@ mod tests {
         let d = race_debrief(&race(), &[], Some(&RaceExtras::default())).unwrap();
         assert!(d.losses.iter().all(|l| l.kind != LossKind::Pace));
         assert!(d.missing.iter().any(|m| m.contains("Écart au leader")));
+    }
+
+    #[test]
+    fn pace_against_the_class_replaces_the_leader_gap() {
+        // Catégorie synthétique : médiane à 99,4 s sur les 12 premiers tours, 99,0 s ensuite (tes tours
+        // normaux : 100,0 s et 100,6 s). Leader enregistré aussi : il ne compte plus.
+        let class_laps: Vec<(i32, f64, u8, f64)> = (2..=27).map(|n| (n, if n <= 13 { 99.4 } else { 99.0 }, 7, 98.1)).collect();
+        let gaps: Vec<(i32, f64)> = (1..=27).map(|n| (n, 2.0 * n as f64)).collect();
+        let d = race_debrief(&race(), &[], Some(&RaceExtras { class_laps, gaps, ..Default::default() })).unwrap();
+        let c = d.class_pace.clone().unwrap();
+        // Tours comparés : 2 à 13 et 16 à 27, sans les tours 6 et 9 (ratés) = 22.
+        assert_eq!((c.laps, c.cars, c.faster_laps), (22, 7, 0));
+        // Écarts : tours 2-7 (5 tours, 0,6 s), tours 8-13 (4 tours, 1,2 s), tours 16-27 (12 tours, 1,0 s) → médiane 1,0 s.
+        assert!((c.gap_s - 1.0).abs() < 1e-9, "{c:?}");
+        assert_eq!(c.class_best_s, 98.1);
+        let p = d.losses.iter().find(|l| l.kind == LossKind::ClassPace).unwrap();
+        assert!((p.seconds - 24.0).abs() < 1e-6, "{p:?}");
+        assert!(d.losses.iter().all(|l| l.kind != LossKind::Pace));
+        assert!(d.actions.iter().any(|a| a.title == "Gagner du rythme sur ta catégorie" && a.detail.starts_with("1,0 s par tour")), "{:?}", d.actions);
+        // Course enregistrée avant la 0.39 : c'est dit, rien n'est deviné.
+        let d = race_debrief(&race(), &[], Some(&RaceExtras::default())).unwrap();
+        assert!(d.class_pace.is_none());
+        assert!(d.missing.iter().any(|m| m.contains("enregistré depuis Apex 0.39")));
     }
 }
