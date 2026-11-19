@@ -91,6 +91,11 @@ pub struct RaceState {
     /// MFD du jeu (LMU) : énergie réglée pour le prochain arrêt (%) et tours que le jeu annonce pour ce niveau.
     pub mfd_energy: Option<f32>,
     pub mfd_laps: Option<f32>,
+    /// Voiture dans la voie des stands.
+    pub in_pits: bool,
+    /// Distance de course restante en tours, fraction du tour en cours comprise (course au temps : fin du
+    /// chrono et passage du leader pris en compte). Exacte à l'entrée des stands, où que soit la ligne.
+    pub laps_exact: Option<f32>,
 }
 
 /// Dernière consigne calculée (écran « Au volant », commande « stratégie »).
@@ -141,6 +146,20 @@ pub struct Engineer {
     committed_box: Option<i32>,
     fuel_warned: bool,
     last: Option<EngineerCall>,
+    /// Consigne déjà donnée à l'entrée des stands pour l'arrêt en cours.
+    pit_entry_done: bool,
+}
+
+/// Le MFD du jeu face au niveau conseillé : bon, trop haut ou trop bas (le cas qui fait tomber en panne).
+fn mfd_say(fill: f32, m: f32) -> String {
+    let f = up(fill);
+    if (m - f).abs() < 1.5 {
+        " Ton MFD est déjà bon.".to_string()
+    } else if m > f {
+        format!(" Ton MFD est à {m:.0} %, {:.0} de trop : baisse à {f:.0}.", m - f)
+    } else {
+        format!(" Ton MFD est à {m:.0} %, il manque {:.0} : monte à {f:.0}, sinon panne avant l'arrivée.", f - m)
+    }
 }
 
 /// « 4,82 % », « 0,15 % », « 2,35 litres » : deux décimales, l'écart à la cible se joue au centième.
@@ -211,6 +230,7 @@ impl Engineer {
             if level > self.low + 2.0 {
                 self.filling = true;
                 self.stops_done += 1;
+                self.pit_entry_done = false;
                 self.stops_left = self.stops_left.map(|s| s.saturating_sub(1));
                 self.stint_announced = false;
                 self.box_calls = 0;
@@ -219,6 +239,51 @@ impl Engineer {
             }
         }
         self.prev = level;
+    }
+
+    /// Entrée dans la voie des stands avec un arrêt prévu : niveau à régler calculé sur la distance de course
+    /// exacte qui reste depuis l'arrêt (fraction du tour en cours comprise). Les annonces aux passages de
+    /// ligne comptent en tours entiers ; selon que l'arrêt est avant ou après la ligne, elles peuvent avoir
+    /// un tour de moins (Monza, 18 nov. : 54 % annoncés pour 58 % nécessaires).
+    pub fn on_pit_entry(&mut self, s: &RaceState) -> Option<String> {
+        let r = self.stops_left.filter(|r| *r > 0)?;
+        let x = s.laps_exact.filter(|x| *x > 0.0)?;
+        if self.pit_entry_done || s.per_lap <= 0.0 || s.cap <= 0.0 {
+            return None;
+        }
+        self.pit_entry_done = true;
+        let reserve = self.plan.margin_laps.max(0.0) * s.per_lap;
+        // Relais restants équilibrés, comme `pit_fill`, mais sur la distance exacte.
+        let fill = (x / r as f32 * s.per_lap + reserve).min(s.cap);
+        let u = s.unit;
+        let ratio = s.fuel_ratio.filter(|_| u == Unit::Energy);
+        let fill_fuel_l = ratio.map(|rt| fill * rt);
+        let mfd_energy = s.mfd_energy.filter(|_| u == Unit::Energy);
+        let game_laps_for_fill = match (mfd_energy, s.mfd_laps) {
+            (Some(m), Some(l)) if m >= 5.0 && l > 0.0 => Some(l * up(fill) / m),
+            _ => None,
+        };
+        let need = (x / r as f32 - 0.05).ceil().max(0.0) as u32;
+        let set = match (u, fill_fuel_l, ratio) {
+            (Unit::Energy, Some(l), Some(rt)) => format!("Dans la voie : règle l'énergie à {:.0} %, ratio {}, soit {:.0} litres.", up(fill), format!("{rt:.2}").replace('.', ","), l.round()),
+            (Unit::Energy, _, _) => format!("Dans la voie : règle l'énergie à {:.0} %.", up(fill)),
+            (Unit::Litres, _, _) => format!("Dans la voie : mets {:.0} litres.", up(fill)),
+        };
+        let mfd = mfd_energy.map(|m| mfd_say(fill, m)).unwrap_or_default();
+        let game = match game_laps_for_fill {
+            Some(g) if g + 0.5 < x / r as f32 => format!(" Attention, le jeu ne compte que {} avec ce niveau, il en faut {need}.", plural((g + 1e-3).floor() as u32, "tour")),
+            _ => String::new(),
+        };
+        if let Some(c) = self.last.as_mut() {
+            c.fill = Some(fill);
+            c.fill_fuel_l = fill_fuel_l;
+            c.laps_after_stop = Some(need);
+            c.mfd_energy = mfd_energy;
+            c.game_laps_for_fill = game_laps_for_fill;
+            c.laps_to_box = Some(1);
+        }
+        self.box_calls = 2;
+        Some(format!("{set}{mfd}{game}"))
     }
 
     /// Passage de la ligne en course : met à jour la consigne et renvoie le message radio s'il y a lieu.
@@ -356,6 +421,11 @@ impl Engineer {
             self.last_lift_lap = s.lap;
         }
         self.last_verdict = Some(verdict);
+        // Déjà dans la voie (ligne placée dans la voie des stands) : la consigne d'entrée des stands,
+        // calculée sur la distance exacte, a été donnée ; pas de second « box » sur un tour faux d'un tour.
+        if s.in_pits && self.pit_entry_done {
+            self.box_calls = 2;
+        }
         match laps_to_box {
             Some(2) if self.box_calls < 1 => {
                 let prep = match (fill, mfd_energy) {
@@ -374,8 +444,7 @@ impl Engineer {
                 };
                 // Recoupement avec le MFD du jeu : réglage actuel et tours que le jeu compte pour ce niveau.
                 let mfd = match (fill, mfd_energy) {
-                    (Some(f), Some(m)) if (m - up(f)).abs() < 1.5 => " Ton MFD est déjà bon.".to_string(),
-                    (Some(_), Some(m)) => format!(" Ton MFD est à {m:.0} %, change-le."),
+                    (Some(f), Some(m)) => mfd_say(f, m),
                     _ => String::new(),
                 };
                 let game = match (game_laps_for_fill, laps_after_stop) {
@@ -440,7 +509,33 @@ mod tests {
     use super::*;
 
     fn state(level: f32, per_lap: f32, laps_left: u32, lap: i32) -> RaceState {
-        RaceState { unit: Unit::Energy, level, cap: 100.0, per_lap, laps_left, lap, fuel_ratio: Some(0.86), fuel_laps: None, energy_laps: None, mfd_energy: None, mfd_laps: None }
+        RaceState { unit: Unit::Energy, level, cap: 100.0, per_lap, laps_left, lap, fuel_ratio: Some(0.86), fuel_laps: None, energy_laps: None, mfd_energy: None, mfd_laps: None, in_pits: false, laps_exact: None }
+    }
+
+    /// Chiffres relevés sur la course de Monza du 18 nov. (Cadillac, 60 min) : ligne d'arrivée dans la voie
+    /// des stands, arrêt après la ligne. À la ligne, l'ingénieur comptait 12 tours après l'arrêt et demandait
+    /// 54 % ; il en restait 13 (4,29 % par tour). À l'entrée des stands, la distance exacte donne 58 %.
+    #[test]
+    fn pit_entry_uses_the_exact_distance_left() {
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
+        // Fin de relais : 9 % pour 15 tours, un arrêt prévu.
+        let st = RaceState { mfd_energy: Some(63.0), mfd_laps: Some(14.0), ..state(9.0, 4.29, 15, 21) };
+        e.on_lap(&st);
+        assert_eq!(e.stops_left(), Some(1));
+        // Entrée des stands à 3 % de la ligne : 13,03 tours de course restent depuis l'arrêt.
+        let pit = RaceState { in_pits: true, laps_exact: Some(13.03), laps_left: 14, lap: 23, ..st };
+        let said = e.on_pit_entry(&pit).unwrap();
+        assert_eq!(said, "Dans la voie : règle l'énergie à 58 %, ratio 0,86, soit 50 litres. Ton MFD est à 63 %, 5 de trop : baisse à 58.");
+        assert_eq!(e.last().unwrap().laps_after_stop, Some(13));
+        // Une seule fois par arrêt, et pas de second « box » au passage de la ligne dans la voie.
+        assert_eq!(e.on_pit_entry(&pit), None);
+        let at_line = RaceState { in_pits: true, laps_left: 13, lap: 23, level: 2.0, ..st };
+        assert!(e.on_lap(&at_line).is_none_or(|m| !m.contains("Box")));
+        // MFD trop bas : le risque de panne est dit.
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
+        e.on_lap(&st);
+        let low = RaceState { mfd_energy: Some(54.0), ..pit };
+        assert!(e.on_pit_entry(&low).unwrap().ends_with("Ton MFD est à 54 %, il manque 4 : monte à 58, sinon panne avant l'arrivée."));
     }
 
     /// Données synthétiques. Fin de relais avec le MFD lu dans le jeu : l'ingénieur dit s'il est bon,
@@ -468,7 +563,7 @@ mod tests {
         let need = call.laps_after_stop.unwrap();
         assert!(said.iter().any(|m| m.contains(&format!("Box à la fin du prochain tour. Prépare le MFD : énergie {fill:.0} %, il est à 100 %."))), "{said:?}");
         let last = said.last().unwrap();
-        assert!(last.contains("Ton MFD est à 100 %, change-le."), "{last}");
+        assert!(last.contains(&format!("Ton MFD est à 100 %, {:.0} de trop : baisse à {fill:.0}.", 100.0 - fill)), "{last}");
         let g = call.game_laps_for_fill.unwrap();
         assert!((g - 26.0 * fill / 100.0).abs() < 1e-3, "{g}");
         // MFD déjà au bon niveau ; le jeu compte moins de tours qu'il n'en faut : alerte chiffrée.

@@ -296,6 +296,8 @@ pub struct LiveCoach {
     ve_now: f64,
     mfd_energy: Option<f32>,
     mfd_laps: Option<f32>,
+    /// Dans la voie des stands (canal `OnPitRoad`).
+    on_pit_road: bool,
     ve_laps: VecDeque<f64>,
     /// Limites de piste (Le Mans Ultimate) : avertissements en cours et nombre par pénalité.
     tl_steps: f64,
@@ -424,7 +426,7 @@ impl LiveCoach {
         // Catégorie lue dans la séance elle-même : valable même sans historique sur ce circuit.
         let top_class = crate::analysis::strategy::is_top_class(meta.sim, builder.session_info().profile.car.class.as_deref());
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, on_pit_road: false, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -544,6 +546,17 @@ impl LiveCoach {
         self.laps_remain = row[21];
         self.lap_pct = row[2].clamp(0.0, 1.0);
         self.gap_now = (row[25], row[26]);
+        // Entrée des stands en course : niveau à régler sur la distance exacte qui reste.
+        let pit_now = row[13] > 0.5;
+        let entering = pit_now && !self.on_pit_road;
+        self.on_pit_road = pit_now;
+        if entering && callout.is_none() && self.current_kind() == SessionKind::Race {
+            if let Some(st) = self.race_state(row[6] as i32) {
+                if let Some(text) = self.engineer.on_pit_entry(&st) {
+                    callout = Some(CoachMessage { kind: CoachMessageKind::Strategy, lap: row[6] as i32, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None });
+                }
+            }
+        }
         match self.builder.push(row) {
             Some(lap) => {
                 // Écart au leader relevé à chaque passage de ligne : son évolution donne le rythme du leader.
@@ -694,6 +707,8 @@ impl LiveCoach {
                 energy_laps: Some(self.ve_now as f32 / per),
                 mfd_energy: self.mfd_energy,
                 mfd_laps: self.mfd_laps,
+                in_pits: self.on_pit_road,
+                laps_exact: self.race_laps_left().map(|x| x as f32),
             })
         } else if self.fuel_now > 0.0 {
             let per = fuel_per.or(hint(Unit::Litres))?;
@@ -709,6 +724,8 @@ impl LiveCoach {
                 energy_laps: None,
                 mfd_energy: None,
                 mfd_laps: None,
+                in_pits: self.on_pit_road,
+                laps_exact: self.race_laps_left().map(|x| x as f32),
             })
         } else {
             None

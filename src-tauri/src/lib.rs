@@ -17,6 +17,17 @@ pub struct AppState {
 
 pub fn run() {
     tauri::Builder::default()
+        // Une seule instance : relancer Apex ramène la fenêtre ouverte. Deux instances lisaient le jeu en
+        // même temps (Monza, 18 nov. : chaque annonce dite deux fois, même fichier d'enregistrement).
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            use tauri::Manager;
+            if let Some(w) = app.webview_windows().values().next() {
+                let _ = w.unminimize();
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+            log::info!("deuxième lancement d'Apex : fenêtre existante ramenée");
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             // Journal local uniquement (dossier de logs de l'appli), jamais envoyé.
