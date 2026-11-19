@@ -16,6 +16,7 @@ tauri-build = { version = "2", features = [] }
 apex-core = { path = "../crates/apex-core" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
 tauri-plugin-log = "2"
 ureq = "3"
 minisign-verify = "0.2"
