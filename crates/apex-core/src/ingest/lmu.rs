@@ -173,6 +173,29 @@ pub struct SetupSnapshot {
     pub optimal_temp_c: Vec<(String, f32)>,
 }
 
+/// Voiture de référence de la catégorie (meilleur tour au classement), relevée quand sa position change
+/// (Apex 0.45, extension `EXT4`) : de quoi mesurer à quelle fréquence le jeu publie les autres voitures.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct RivalTick {
+    /// Horloge de la voiture du pilote (s), comme `Tick::et`.
+    pub et: f64,
+    pub id: i32,
+    pub best_lap_s: f32,
+    /// Classement : distance depuis la ligne (m), tours bouclés, au stand.
+    pub lap_dist: f32,
+    pub total_laps: i16,
+    pub in_pits: bool,
+    /// Télémétrie publiée par le jeu pour cette voiture : son horloge (0 si absente), position, vitesse,
+    /// pédales (souvent 0 pour les autres voitures).
+    pub has_telem: bool,
+    pub telem_et: f64,
+    pub x: f32,
+    pub z: f32,
+    pub speed: f32,
+    pub throttle: f32,
+    pub brake: f32,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Recording {
     pub header: Header,
@@ -183,6 +206,8 @@ pub struct Recording {
     pub wheels: Vec<WheelSample>,
     /// Setup de la séance (absent si l'API du jeu n'a pas répondu, ou fichier ancien).
     pub setup: Option<SetupSnapshot>,
+    /// Voiture de référence de la catégorie (fichiers 0.45 et plus).
+    pub rival: Vec<RivalTick>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -428,6 +453,13 @@ impl Recorder {
             self.last_wheel_et = t.mElapsedTime;
             rec.wheels.push(wheel_from(t));
         }
+        // Voiture de référence : un relevé quand le jeu change sa position (classement ou télémétrie).
+        if let Some(v) = f.rival {
+            let changed = rec.rival.last().is_none_or(|p| p.id != v.id || p.telem_et != v.telem_et || p.lap_dist != v.lap_dist as f32);
+            if changed && rec.rival.last().is_none_or(|p| t.mElapsedTime - p.et >= min_dt * 0.5) {
+                rec.rival.push(RivalTick { et: t.mElapsedTime, id: v.id, best_lap_s: v.best_lap_s as f32, lap_dist: v.lap_dist as f32, total_laps: v.total_laps, in_pits: v.in_pits, has_telem: v.has_telem, telem_et: v.telem_et, x: v.x, z: v.z, speed: v.speed, throttle: v.throttle, brake: v.brake });
+            }
+        }
         done
     }
 
@@ -536,6 +568,19 @@ pub fn encode(r: &Recording) -> Vec<u8> {
             i16s(&mut raw, &mut r.wheels.iter().map(|w| w.inner_c[k][z]), 10.0);
         }
     }
+    // Extension 4 (Apex 0.45) : voiture de référence de la catégorie.
+    raw.extend_from_slice(EXT4);
+    raw.extend_from_slice(&(r.rival.len() as u32).to_le_bytes());
+    for v in &r.rival {
+        raw.extend_from_slice(&v.et.to_le_bytes());
+        raw.extend_from_slice(&v.telem_et.to_le_bytes());
+        raw.extend_from_slice(&v.id.to_le_bytes());
+        raw.extend_from_slice(&v.total_laps.to_le_bytes());
+        raw.push(v.in_pits as u8 | (v.has_telem as u8) << 1);
+        for x in [v.best_lap_s, v.lap_dist, v.x, v.z, v.speed, v.throttle, v.brake] {
+            raw.extend_from_slice(&x.to_le_bytes());
+        }
+    }
     let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     let _ = gz.write_all(&raw);
     gz.finish().unwrap_or_default()
@@ -547,6 +592,10 @@ const EXT1: &[u8; 4] = b"EXT1";
 const EXT2: &[u8; 4] = b"EXT2";
 /// Marqueur de l'extension 3 (accélérations, rotation des roues, couche interne des pneus).
 const EXT3: &[u8; 4] = b"EXT3";
+/// Marqueur de l'extension 4 (voiture de référence de la catégorie).
+const EXT4: &[u8; 4] = b"EXT4";
+/// Octets par relevé de la voiture de référence (8 + 8 + 4 + 2 + 1 + 7 × 4).
+const RIVAL_BYTES: usize = 51;
 
 /// Taille décompressée maximale d'un enregistrement (une séance de 24 h à 60 Hz en fait ≈ 400 Mo).
 const MAX_RAW_BYTES: u64 = 512 * 1024 * 1024;
@@ -691,7 +740,33 @@ pub fn decode(bytes: &[u8]) -> Result<Recording, String> {
             }
         }
     }
-    Ok(Recording { header: meta.header, ticks, anchors: meta.anchors, laps: meta.laps, wheels, setup: meta.setup })
+    let mut rival = vec![];
+    if raw.get(o..o + 4) == Some(EXT4.as_slice()) {
+        o += 4;
+        let m = u32::from_le_bytes(take(&mut o, 4)?.try_into().unwrap()) as usize;
+        if m.checked_mul(RIVAL_BYTES).is_none_or(|need| need > raw.len().saturating_sub(o)) {
+            return Err("fichier LMU tronqué".into());
+        }
+        for c in take(&mut o, m * RIVAL_BYTES)?.chunks_exact(RIVAL_BYTES) {
+            let f = |i: usize| f32::from_le_bytes(c[23 + 4 * i..27 + 4 * i].try_into().unwrap());
+            rival.push(RivalTick {
+                et: f64::from_le_bytes(c[0..8].try_into().unwrap()),
+                telem_et: f64::from_le_bytes(c[8..16].try_into().unwrap()),
+                id: i32::from_le_bytes(c[16..20].try_into().unwrap()),
+                total_laps: i16::from_le_bytes(c[20..22].try_into().unwrap()),
+                in_pits: c[22] & 1 != 0,
+                has_telem: c[22] & 2 != 0,
+                best_lap_s: f(0),
+                lap_dist: f(1),
+                x: f(2),
+                z: f(3),
+                speed: f(4),
+                throttle: f(5),
+                brake: f(6),
+            });
+        }
+    }
+    Ok(Recording { header: meta.header, ticks, anchors: meta.anchors, laps: meta.laps, wheels, setup: meta.setup, rival })
 }
 
 // --- Distance depuis la ligne ---------------------------------------------------------------------
@@ -1124,7 +1199,7 @@ pub(crate) mod testkit {
         if t.mLapNumber == 2 && ld > 1500.0 {
             t.mLapInvalidated = 1;
         }
-        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t), class_pace: Default::default() }
+        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t), class_pace: Default::default(), rival: None }
     }
 
     /// 4 tours et demi enregistrés à 50 Hz ; le classement n'est relevé qu'à 5 Hz.
@@ -1182,10 +1257,12 @@ mod tests {
         r.ticks[1234].accel_long = 30.05;
         r.ticks[1234].wheel_rot = [-150.3, -150.4, -149.9, 0.0];
         r.ticks[1234].wheel_vlong = [55.21, 55.22, 55.19, 55.2];
+        r.rival = vec![RivalTick { et: 12.5, id: 7, best_lap_s: 92.8, lap_dist: 2100.5, total_laps: 3, in_pits: false, has_telem: true, telem_et: 12.48, x: 10.0, z: -20.0, speed: 60.0, throttle: 0.0, brake: 0.0 }, RivalTick { et: 12.7, id: 7, in_pits: true, ..Default::default() }];
         r.setup = Some(SetupSnapshot { values: vec![SetupValue { key: "WM_CAMBER-W_FL".into(), value: 27, display: "-1.3 deg".into(), min: 0, max: 31 }], presets: vec!["fast".into()], optimal_temp_c: vec![("Medium".into(), 92.0)] });
         let back = decode(&encode(&r)).unwrap();
         assert_eq!(back.wheels, r.wheels);
         assert_eq!(back.setup, r.setup);
+        assert_eq!(back.rival, r.rival);
         for k in 0..4 {
             assert!((back.ticks[1234].ride_h_m[k] - r.ticks[1234].ride_h_m[k]).abs() < 1e-4);
             r.ticks[1234].ride_h_m[k] = back.ticks[1234].ride_h_m[k];
@@ -1214,6 +1291,42 @@ mod tests {
         for n in flying.iter().skip(1) {
             assert_eq!(get(*n).meta.validity, Validity::Valid, "tour {n}");
         }
+    }
+
+    /// Données synthétiques : la télémétrie de la voiture de référence change 10 fois par seconde alors que
+    /// le pilote est lu à 100 Hz : un relevé par changement, pas par image.
+    #[test]
+    fn rival_is_recorded_only_when_its_position_changes() {
+        let mut rec = Recorder::new(50.0);
+        let mut et = 0.0f64;
+        while et < 5.0 {
+            let mut f = frame(100.0 + et, 1500.0 + et * 50.0, 100.0 + et, 1500.0 + et * 50.0, 10);
+            let r_et = 100.0 + (et * 10.0).floor() / 10.0;
+            f.rival = Some(crate::connectors::lmu_shm::RivalSample { id: 4, best_lap_s: 92.0, lap_dist: 800.0, has_telem: true, telem_et: r_et, speed: 60.0, ..Default::default() });
+            rec.push(&f, 1_790_000_000);
+            et += 0.01;
+        }
+        let r = rec.current().unwrap();
+        assert!((48..=51).contains(&r.rival.len()), "{}", r.rival.len());
+        assert!(r.rival.windows(2).all(|w| w[1].telem_et > w[0].telem_et));
+    }
+
+    #[test]
+    fn files_without_the_rival_extension_still_open() {
+        use std::io::{Read, Write};
+        let mut r = record(1);
+        r.rival = vec![RivalTick { et: 1.0, id: 3, ..Default::default() }];
+        r.ticks[10].wheel_rot = [-100.0; 4];
+        let mut raw = vec![];
+        flate2::read::GzDecoder::new(encode(&r).as_slice()).read_to_end(&mut raw).unwrap();
+        // Fichier d'Apex 0.41 à 0.44 : tout ce qui suit le marqueur EXT4 disparaît.
+        let cut = raw.windows(4).rposition(|w| w == EXT4).unwrap();
+        raw.truncate(cut);
+        let mut e = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        e.write_all(&raw).unwrap();
+        let back = decode(&e.finish().unwrap()).unwrap();
+        assert!(back.rival.is_empty());
+        assert_eq!(back.ticks[10].wheel_rot, [-100.0; 4], "l'extension 3 reste lue");
     }
 
     #[test]

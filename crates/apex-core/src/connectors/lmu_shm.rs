@@ -405,6 +405,28 @@ const OFF_IS_PLAYER: usize = offset_of!(VehicleScoring, mIsPlayer);
 const OFF_VEH_CLASS: usize = offset_of!(VehicleScoring, mVehicleClass);
 const OFF_VEH_LAST_LAP: usize = offset_of!(VehicleScoring, mLastLapTime);
 const OFF_VEH_IN_PITS: usize = offset_of!(VehicleScoring, mInPits);
+const OFF_VEH_BEST_LAP: usize = offset_of!(VehicleScoring, mBestLapTime);
+const OFF_TELEM_ID: usize = offset_of!(VehicleTelemetry, mID);
+
+/// Voiture de référence de la catégorie : l'autre voiture de la catégorie du pilote qui a le meilleur
+/// tour au classement, avec sa télémétrie quand le jeu la publie (même `mID`). Lecture seule.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct RivalSample {
+    pub id: i32,
+    pub best_lap_s: f64,
+    /// Classement (≈ 5 Hz) : distance depuis la ligne, tours bouclés, au stand.
+    pub lap_dist: f64,
+    pub total_laps: i16,
+    pub in_pits: bool,
+    /// Télémétrie trouvée pour cette voiture ; son horloge (s) et son contenu.
+    pub has_telem: bool,
+    pub telem_et: f64,
+    pub x: f32,
+    pub z: f32,
+    pub speed: f32,
+    pub throttle: f32,
+    pub brake: f32,
+}
 
 /// Rythme des autres voitures de la catégorie du pilote, d'après leur dernier tour au classement.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -439,6 +461,8 @@ pub struct Frame {
     pub telem: Option<VehicleTelemetry>,
     /// Rythme des autres voitures de la même catégorie (vide hors course ou seul en piste).
     pub class_pace: ClassPace,
+    /// Voiture de référence de la catégorie (meilleur tour), si elle existe.
+    pub rival: Option<RivalSample>,
 }
 
 /// Texte C (terminé par 0) → `String`.
@@ -485,12 +509,40 @@ pub unsafe fn read_frame_ptr(base: *const u8) -> Option<Frame> {
                     .collect();
                 ClassPace::from_laps(laps)
             });
+            // Voiture de référence : meilleur tour de la catégorie parmi les autres voitures.
+            let rival = scoring.as_ref().and_then(|me| {
+                let o = (0..n)
+                    .map(|i| OFF_VEH_SCORING + i * size_of::<VehicleScoring>())
+                    .filter(|o| rd_u8(o + OFF_IS_PLAYER) == 0)
+                    .filter(|o| std::ptr::read_unaligned(at(o + OFF_VEH_CLASS) as *const [u8; 32]) == me.mVehicleClass)
+                    .map(|o| (o, std::ptr::read_unaligned(at(o + OFF_VEH_BEST_LAP) as *const f64)))
+                    .filter(|(_, b)| b.is_finite() && *b > 0.0)
+                    .min_by(|a, b| a.1.total_cmp(&b.1))?
+                    .0;
+                let v = std::ptr::read_unaligned(at(o) as *const VehicleScoring);
+                let mut r = RivalSample { id: v.mID, best_lap_s: v.mBestLapTime, lap_dist: v.mLapDist, total_laps: v.mTotalLaps, in_pits: v.mInPits != 0, ..Default::default() };
+                let to = (0..active.min(MAX_MAPPED_VEHICLES))
+                    .map(|i| OFF_TELEM_INFO + i * size_of::<VehicleTelemetry>())
+                    .find(|o| std::ptr::read_unaligned(at(o + OFF_TELEM_ID) as *const i32) == v.mID);
+                if let Some(to) = to {
+                    let t = std::ptr::read_unaligned(at(to) as *const VehicleTelemetry);
+                    let vel = t.mLocalVel;
+                    r.has_telem = true;
+                    r.telem_et = t.mElapsedTime;
+                    r.x = t.mPos.x as f32;
+                    r.z = t.mPos.z as f32;
+                    r.speed = (vel.x * vel.x + vel.y * vel.y + vel.z * vel.z).sqrt() as f32;
+                    r.throttle = t.mUnfilteredThrottle as f32;
+                    r.brake = t.mUnfilteredBrake as f32;
+                }
+                Some(r)
+            });
             if witness(telem_off) != before {
                 std::hint::spin_loop();
                 continue;
             }
             let game_version = std::ptr::read_unaligned(at(OFF_GAME_VERSION) as *const i32);
-            return Some(Frame { game_version, info, scoring, telem, class_pace });
+            return Some(Frame { game_version, info, scoring, telem, class_pace, rival });
         }
         None
     }
@@ -577,6 +629,27 @@ mod tests {
         assert_eq!({ t.mFuel }, 61.5);
         assert_eq!({ t.mWheels[3].mSurfaceType }, 5);
         assert_eq!(f.class_pace, ClassPace { cars: 1, median_last_s: 93.4, best_last_s: 93.4 });
+        // Pas de meilleur tour connu : pas de voiture de référence.
+        assert!(f.rival.is_none());
+
+        // La voiture « a » (Hypercar) a un meilleur tour et une télémétrie publiée (même mID, index 0).
+        a.mID = 7;
+        a.mBestLapTime = 92.8;
+        a.mLapDist = 2100.0;
+        put(&mut mem, OFF_VEH_SCORING, a);
+        b.mID = 9;
+        b.mBestLapTime = 90.0;
+        put(&mut mem, OFF_VEH_SCORING + size_of::<VehicleScoring>(), b);
+        let mut ta: VehicleTelemetry = zeroed();
+        ta.mID = 7;
+        ta.mElapsedTime = 41.98;
+        ta.mPos = Vec3 { x: 10.0, y: 0.0, z: -20.0 };
+        ta.mLocalVel = Vec3 { x: 0.0, y: 0.0, z: -60.0 };
+        put(&mut mem, OFF_TELEM_INFO, ta);
+        let r = read_frame(&mem).unwrap().rival.expect("voiture de référence");
+        // La LMGT3 a un meilleur tour plus rapide mais n'est pas de la catégorie : écartée.
+        assert_eq!((r.id, r.best_lap_s, r.lap_dist, r.has_telem, r.telem_et), (7, 92.8, 2100.0, true, 41.98));
+        assert_eq!((r.x, r.z, r.speed), (10.0, -20.0, 60.0));
     }
 
     /// Données synthétiques : tour de stand écarté, médiane d'un nombre pair de tours.

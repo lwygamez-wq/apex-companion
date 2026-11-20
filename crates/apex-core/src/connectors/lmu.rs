@@ -472,7 +472,7 @@ mod tests {
         t.mElapsedTime = et;
         t.mLocalVel.z = 60.0;
         t.mVehicleModel[..9].copy_from_slice(b"Ferrari 4");
-        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t), class_pace: Default::default() }
+        Frame { game_version: 14000, info, scoring: Some(s), telem: Some(t), class_pace: Default::default(), rival: None }
     }
 
     #[test]
