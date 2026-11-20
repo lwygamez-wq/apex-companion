@@ -1553,6 +1553,59 @@ impl AppService {
     }
 
     /// Rapports de la sonde setup LMU, du plus récent au plus ancien.
+    /// Diagnostic setup d'une séance LMU (étape 2 du Setup Builder) : mesures seulement, aucun conseil.
+    /// Lit l'enregistrement `.apexlmu` d'origine ; s'il a disparu, le diagnostic le dit dans `missing`.
+    pub fn setup_diagnosis(&self, id: i64) -> Result<crate::analysis::setup_diag::SetupDiagnosis> {
+        use crate::analysis::setup_diag::{setup_diagnosis, DiagCorner, SetupDiagnosis};
+        let db = self.db();
+        let meta = db.session_meta(id)?;
+        if meta.sim != SimId::Lmu {
+            return Err(ServiceError::User("Diagnostic setup : séances Le Mans Ultimate seulement.".into()));
+        }
+        let laps = db.laps(id)?;
+        let metas: Vec<LapMeta> = laps.iter().map(|l| l.meta.clone()).collect();
+        // Virages : sur le meilleur tour utilisable de la séance.
+        let reference = laps
+            .iter()
+            .filter(|l| crate::analysis::setup_diag::usable(&l.meta))
+            .min_by(|a, b| a.meta.lap_time_s.unwrap_or(f64::MAX).total_cmp(&b.meta.lap_time_s.unwrap_or(f64::MAX)))
+            .and_then(|l| db.trace(l.id).ok());
+        let names = self.names_for(&db, &meta, reference.as_ref(), db.corner_names(&track_key(&meta))?);
+        drop(db);
+        let length = meta.track_length_m.or_else(|| reference.as_ref().map(|t| t.max_dist()));
+        let corners: Vec<DiagCorner> = match (&reference, length) {
+            (Some(t), Some(len)) => crate::analysis::resample::resample(t, len, 1.0)
+                .map(|r| {
+                    let mut defs = crate::analysis::corners::detect_corners(&r, &crate::analysis::corners::CornerConfig::default());
+                    crate::analysis::compare::apply_corner_names(&mut defs, &names);
+                    defs.iter()
+                        .map(|c| {
+                            let m = crate::analysis::corners::corner_metrics(&r, c);
+                            DiagCorner { name: c.name.clone(), entry_m: c.entry_m, apex_m: c.apex_m, throttle_m: m.throttle_on_m.unwrap_or(c.exit_m), exit_m: c.exit_m }
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            _ => vec![],
+        };
+        let rec = meta
+            .source_path
+            .as_deref()
+            .filter(|p| p.to_ascii_lowercase().ends_with(".apexlmu"))
+            .and_then(|p| std::fs::read(p).ok())
+            .and_then(|b| crate::ingest::lmu::decode(&b).ok());
+        Ok(match rec {
+            Some(r) => setup_diagnosis(&r, &metas, &corners),
+            None => SetupDiagnosis {
+                car: meta.car.clone(),
+                track: meta.track.clone(),
+                missing: vec!["Enregistrement d'origine (.apexlmu) introuvable : pneus, freins, hauteurs et setup ne sont que dans ce fichier.".into()],
+                temperature_note: crate::analysis::setup_diag::TEMPERATURE_NOTE.into(),
+                ..Default::default()
+            },
+        })
+    }
+
     pub fn setup_probe_reports(&self) -> Vec<crate::connectors::lmu_probe::ProbeReport> {
         let Some(dir) = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("sonde-lmu")) else { return vec![] };
         let mut files: Vec<(std::time::SystemTime, PathBuf)> = std::fs::read_dir(dir)

@@ -1276,6 +1276,7 @@
     "sim": "iracing",
     "track": "Road Atlanta"
   },
+  "setup_diag": null,
   "strategy": {
     "lap_time": 65.864,
     "laps": 17,

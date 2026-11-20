@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/hooks";
+import { SetupDiagCard } from "../components/SetupDiagCard";
 import type { SetupComparison, SetupEntry } from "../lib/types";
 
 const DIR_KEY = "apex.setups.dir";
@@ -102,7 +103,7 @@ function ComparisonTable({ c }: { c: SetupComparison }) {
   );
 }
 
-/** Onglet Setups : comparateur de setups LMU. */
+/** Onglet Setups : comparateur de setups LMU et diagnostic de séance. */
 export function SetupsPage() {
   const [dir, setDir] = useState<string | null>(() => load(DIR_KEY));
   const lib = useAsync(() => api.setupLibrary(dir), [dir ?? ""]);
@@ -172,6 +173,7 @@ export function SetupsPage() {
         {cmp && <ComparisonTable c={cmp} />}
         <p className="muted su-note">Apex lit les fichiers sans les modifier. Les valeurs viennent du jeu ; l'effet indiqué est le sens habituel, son ampleur dépend de la voiture et se vérifie en piste.</p>
       </div>
+      <SetupDiagCard />
     </div>
   );
 }

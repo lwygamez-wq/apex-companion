@@ -229,6 +229,7 @@
     "sim": "iracing",
     "track": "Autódromo José Carlos Pace"
   },
+  "setup_diag": null,
   "strategy": null,
   "theoretical_best_s": null
 }
