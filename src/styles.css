@@ -771,3 +771,7 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .sd-setup { margin-top: 14px; }
 .sd-setup summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .setups-page .card + .card { margin-top: 14px; }
+.sd-trial { margin-top: 16px; }
+.sd-trial-what { margin: 4px 0; }
+.sd-verdict { margin-top: 10px; }
+.sd-verdict p { margin: 6px 0; }

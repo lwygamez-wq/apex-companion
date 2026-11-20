@@ -197,6 +197,11 @@ pub async fn export_feedback(app: tauri::AppHandle, state: State<'_, AppState>, 
 
 /// Rapports de la sonde setup LMU.
 #[tauri::command]
+pub async fn setup_trial(state: State<'_, AppState>, before: i64, after: Option<i64>) -> R<apex_core::service::SetupTrialReport> {
+    blocking(state.svc.clone(), move |s| s.setup_trial(before, after)).await
+}
+
+#[tauri::command]
 pub async fn setup_diagnosis(state: State<'_, AppState>, session_id: i64) -> R<apex_core::analysis::setup_diag::SetupDiagnosis> {
     blocking(state.svc.clone(), move |s| s.setup_diagnosis(session_id)).await
 }

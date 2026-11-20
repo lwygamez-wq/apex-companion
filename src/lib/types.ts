@@ -1083,3 +1083,42 @@ export interface WearEvent {
   at: string | null;
   detail: string;
 }
+
+// --- Essai setup guidé (étape 3) : un essai, puis un verdict mesuré ---------------------------------
+
+export interface Trial {
+  axle: string;
+  label: string;
+  keys: string[];
+  current: SetupRow[];
+  direction: string;
+  steps: number;
+  metric: "inner_minus_outer" | "middle_minus_edges";
+  measured: number;
+  spread: number;
+  laps: number;
+  why: string;
+  what: string;
+  protocol: string;
+  at_limit: boolean;
+}
+
+export interface TrialVerdict {
+  applied: boolean;
+  applied_text: string;
+  others_changed: string[];
+  before: number | null;
+  after: number | null;
+  effect: number | null;
+  threshold: number | null;
+  significant: boolean;
+  lap_before_s: number | null;
+  lap_after_s: number | null;
+  text: string;
+}
+
+export interface SetupTrialReport {
+  proposal: Trial | null;
+  no_proposal: string | null;
+  verdict: TrialVerdict | null;
+}
