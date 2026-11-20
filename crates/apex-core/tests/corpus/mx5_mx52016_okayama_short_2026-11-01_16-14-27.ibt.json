@@ -891,7 +891,8 @@
         "to_lap": 12
       }
     ],
-    "stops": []
+    "stops": [],
+    "wear_events": []
   },
   "engineer_replay": null,
   "fastest": 7,

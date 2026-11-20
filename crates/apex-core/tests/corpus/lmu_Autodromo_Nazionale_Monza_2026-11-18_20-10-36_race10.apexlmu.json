@@ -1,5 +1,5 @@
 {
-  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Nazionale Monza · Voiture : Cadillac V-Series.R · Séance : course · Série : Open\nLongueur du circuit : 5781 m\nTours : 37 au total, 30 propres. Meilleur tour propre : 1:37.058 (tour 15). Tour théorique (meilleurs segments) : 1:36.354.\nRégularité : écart-type 0.93 s sur 29 tours propres, moyenne 1:38.329.\n\nTOURS (numéro, temps, état) :\n- T0 — incident, stand, 2.81 L\n- T1 1:44.632 propre, 2.89 L\n- T2 1:43.454 sortie de piste, 2.86 L\n- T3 1:39.598 propre, 2.84 L\n- T4 1:38.783 propre, 2.84 L\n- T5 1:38.227 propre, 2.82 L\n- T6 1:38.305 propre, 2.83 L\n- T7 1:38.232 propre, 2.88 L\n- T8 1:38.843 propre, 2.85 L\n- T9 1:39.282 propre, 2.83 L\n- T10 1:40.928 propre, 2.74 L\n- T11 1:39.003 propre, 2.90 L\n- T12 1:38.626 sortie de piste, incident, 2.90 L\n- T13 1:37.140 propre, 2.91 L\n- T14 1:37.601 propre, 2.85 L\n- T15 1:37.058 propre, 2.86 L\n- T16 1:38.135 propre, 2.88 L\n- T17 1:39.047 propre, 2.82 L\n- T18 1:39.728 propre, 2.79 L\n- T19 1:39.775 propre, 2.85 L\n- T20 1:37.412 propre, 2.78 L\n- T21 1:37.427 propre, 2.88 L\n- T22 1:45.598 incident, stand, 2.66 L\n- T23 2:26.841 stand\n- T24 1:37.600 propre, 2.78 L\n- T25 1:38.564 incident, 2.77 L\n- T26 1:37.352 propre, 2.82 L\n- T27 1:38.121 propre, 2.79 L\n- T28 1:38.186 propre, 2.82 L\n- T29 1:37.945 propre, 2.83 L\n- T30 1:38.044 propre, 2.86 L\n- T31 1:38.044 propre, 2.81 L\n- T32 1:38.559 propre, 2.86 L\n- T33 1:37.614 propre, 2.91 L\n- T34 1:43.466 sortie de piste, 2.95 L\n- T35 1:38.483 propre, 2.94 L\n- T36 1:37.072 propre, 3.04 L\n\nCOMPARAISON : ton tour 5 (1:38.227) contre la référence ton tour 15 (1:37.058). Écart final +1.168 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Rettifilo : +0.29 s · freinage plus tôt (-20 m) · vitesse mini 63 vs 65 km/h, gaz -2 m · sortie 171 vs 173 km/h\n- Lesmo 1 : +0.19 s · freinage plus tôt (-11 m) · vitesse mini 147 vs 151 km/h, gaz -10 m · sortie 198 vs 201 km/h\n- Ascari : +0.16 s · freinage plus tard (+20 m) · vitesse mini 135 vs 144 km/h, gaz +20 m · sortie 190 vs 204 km/h\n- Lesmo 2 : +0.07 s · freinage plus tôt (-14 m) · vitesse mini 138 vs 137 km/h, gaz -2 m · sortie 200 vs 201 km/h\n- Roggia : +0.07 s · freinage au même endroit · vitesse mini 94 vs 91 km/h, gaz +9 m · sortie 184 vs 186 km/h\n- Parabolica : -0.01 s · freinage plus tard (+13 m) · vitesse mini 152 vs 153 km/h, gaz -9 m · sortie 205 vs 207 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Rettifilo : freinage trop précoce (gain estimé 0.15 à 0.29 s) : Tu freines environ 20 m plus tôt que la référence. Perte mesurée : 0.29 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 14 m plus loin (réf. : 763 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 65 km/h au minimum.\n- Lesmo 1 : freinage trop précoce (gain estimé 0.10 à 0.19 s) : Tu freines environ 11 m plus tôt que la référence et ta vitesse minimale est inférieure de 4 km/h. Perte mesurée : 0.19 s par rapport à la référence. Confiance : moyenne. → Décale ton point de freinage d'environ 8 m plus loin (réf. : 2441 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 151 km/h au minimum.\n- Ascari : freinage trop tardif, entrée surchargée (gain estimé 0.08 à 0.16 s) : Tu freines 20 m plus tard que la référence mais tu sors moins vite (190 km/h contre 204 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.16 s par rapport à la référence. Confiance : élevée. → Reviens vers le point de freinage de la référence (3790 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 204 km/h.\n- Lesmo 2 : freinage trop précoce (gain estimé 0.04 à 0.07 s) : Tu freines environ 14 m plus tôt que la référence. Perte mesurée : 0.07 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 10 m plus loin (réf. : 2788 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 137 km/h au minimum.\n- Roggia : perte de temps sans cause isolée (gain estimé 0.03 à 0.07 s) : Tu perds 0.07 s sur ce virage, mais freinage, vitesse minimale et remise des gaz restent dans les seuils de détection. Perte mesurée : 0.07 s par rapport à la référence. Confiance : faible. → Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Lesmo 2 : 0.26 s entre ton passage moyen et ton meilleur, sans sortie.\n- Lesmo 2 : 1/67 sorties, à prendre 0.26 s en refaisant ton meilleur passage, une sortie coûte 23.7 s · 1 sortie sur 67 et 0.26 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Rettifilo : 1/67 sorties, à prendre 0.47 s en refaisant ton meilleur passage, une sortie coûte 5.0 s · 1 sortie sur 67 et 0.47 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Ascari : 1/67 sorties, à prendre 0.37 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie sur 67 et 0.37 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Roggia : 0/67 sorties, à prendre 0.33 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.33 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Parabolica : 0/67 sorties, à prendre 0.27 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.27 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Lesmo 1 : 0/67 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 67, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,51 s. Le plus gros : Roggia (0,32 s).\n- Roggia : −0.32 s possibles (meilleur passage au tour 36). Sur tes meilleurs passages, tu portes 6 km/h de plus au point le plus lent et tu sors 5 km/h plus vite.\n- Rettifilo : −0.32 s possibles (meilleur passage au tour 20). Sur tes meilleurs passages, tu freines 28 m plus tard et tu portes 4 km/h de plus au point le plus lent.\n- Ascari : −0.27 s possibles (meilleur passage au tour 15). Sur tes meilleurs passages, tu sors 10 km/h plus vite et tu portes 7 km/h de plus au point le plus lent.\n- Lesmo 2 : −0.24 s possibles (meilleur passage au tour 36). Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu sors 4 km/h plus vite.\n- Parabolica : −0.23 s possibles (meilleur passage au tour 35). Sur tes meilleurs passages, tu portes 6 km/h de plus au point le plus lent et tu freines 12 m plus tard.\n- Lesmo 1 : −0.13 s possibles (meilleur passage au tour 36). Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 7 km/h plus vite.\n\nSORTIES DE PISTE :\n- Rettifilo (à 910 m) aux tours [34]\n- Rettifilo (à 1023 m) aux tours [34]\n- hors virage (à 3335 m) aux tours [12]\n- Ascari (à 4223 m) aux tours [2]\n\nCOURSE : P8 → P9 sur 38 pilotes, 0x ; point noir : Rettifilo\nGrille Some(8), arrivée Some(9), 38 pilotes, 0 incidents.\n- Rettifilo : 2 incidents, 0x : Incidents aux tours 0, 25. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n- Départ : 24 places perdues au premier tour : P8 sur la grille, P32 après un tour. Le premier tour se joue au freinage du virage 1 et dans le peloton : vise la sortie propre plutôt que l'attaque.\n",
+  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Nazionale Monza · Voiture : Cadillac V-Series.R · Séance : course · Série : Open\nLongueur du circuit : 5781 m\nTours : 37 au total, 28 propres. Meilleur tour propre : 1:37.058 (tour 15). Tour théorique (meilleurs segments) : 1:36.522.\nRégularité : écart-type 0.92 s sur 27 tours propres, moyenne 1:38.390.\n\nTOURS (numéro, temps, état) :\n- T0 — incident, stand, 2.81 L\n- T1 1:44.632 propre, 2.89 L\n- T2 1:43.454 sortie de piste, 2.86 L\n- T3 1:39.598 propre, 2.84 L\n- T4 1:38.783 propre, 2.84 L\n- T5 1:38.227 propre, 2.82 L\n- T6 1:38.305 propre, 2.83 L\n- T7 1:38.232 propre, 2.88 L\n- T8 1:38.843 propre, 2.85 L\n- T9 1:39.282 propre, 2.83 L\n- T10 1:40.928 propre, 2.74 L\n- T11 1:39.003 propre, 2.90 L\n- T12 1:38.626 sortie de piste, incident, 2.90 L\n- T13 1:37.140 propre, 2.91 L\n- T14 1:37.601 propre, 2.85 L\n- T15 1:37.058 propre, 2.86 L\n- T16 1:38.135 propre, 2.88 L\n- T17 1:39.047 propre, 2.82 L\n- T18 1:39.728 propre, 2.79 L\n- T19 1:39.775 propre, 2.85 L\n- T20 1:37.412 propre, 2.78 L\n- T21 1:37.427 propre, 2.88 L\n- T22 1:45.598 incident, stand, 2.66 L\n- T23 2:26.841 stand\n- T24 1:37.600 propre, 2.78 L\n- T25 1:38.564 incident, 2.77 L\n- T26 1:37.352 propre, 2.82 L\n- T27 1:38.121 propre, 2.79 L\n- T28 1:38.186 propre, 2.82 L\n- T29 1:37.945 non valide, 2.83 L\n- T30 1:38.044 propre, 2.86 L\n- T31 1:38.044 propre, 2.81 L\n- T32 1:38.559 propre, 2.86 L\n- T33 1:37.614 propre, 2.91 L\n- T34 1:43.466 sortie de piste, 2.95 L\n- T35 1:38.483 propre, 2.94 L\n- T36 1:37.072 non valide, 3.04 L\n\nCOMPARAISON : ton tour 7 (1:38.232) contre la référence ton tour 15 (1:37.058). Écart final +1.175 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Roggia : +0.24 s · freinage plus tard (+9 m) · vitesse mini 88 vs 91 km/h, gaz +6 m · sortie 182 vs 186 km/h\n- Lesmo 2 : +0.23 s · freinage plus tard (+6 m) · vitesse mini 131 vs 137 km/h, gaz +13 m · sortie 195 vs 201 km/h\n- Lesmo 1 : +0.20 s · freinage plus tôt (-3 m) · vitesse mini 146 vs 151 km/h, gaz -43 m · sortie 200 vs 201 km/h\n- Parabolica : +0.10 s · freinage plus tard (+27 m) · vitesse mini 145 vs 153 km/h, gaz +20 m · sortie 204 vs 207 km/h\n- Rettifilo : +0.07 s · freinage plus tôt (-21 m) · vitesse mini 61 vs 65 km/h, gaz -2 m · sortie 172 vs 173 km/h\n- Ascari : +0.02 s · freinage plus tard (+9 m) · vitesse mini 136 vs 144 km/h, gaz -16 m · sortie 200 vs 204 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Roggia : freinage trop tardif, entrée surchargée (gain estimé 0.12 à 0.24 s) : Tu freines 9 m plus tard que la référence mais tu sors moins vite (182 km/h contre 186 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.24 s par rapport à la référence. Confiance : moyenne. → Reviens vers le point de freinage de la référence (1966 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 186 km/h.\n- Lesmo 2 : vitesse minimale insuffisante (gain estimé 0.11 à 0.23 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 6 km/h (131 km/h contre 137 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.23 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 137 km/h vers 2867 m).\n- Lesmo 1 : vitesse minimale insuffisante (gain estimé 0.10 à 0.20 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 5 km/h (146 km/h contre 151 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.20 s par rapport à la référence. Confiance : moyenne. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 151 km/h vers 2563 m).\n- Parabolica : freinage trop tardif, entrée surchargée (gain estimé 0.05 à 0.10 s) : Tu freines 27 m plus tard que la référence mais tu sors moins vite (204 km/h contre 207 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.10 s par rapport à la référence. Confiance : élevée. → Reviens vers le point de freinage de la référence (4979 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 207 km/h.\n- Rettifilo : freinage trop précoce (gain estimé 0.03 à 0.07 s) : Tu freines environ 21 m plus tôt que la référence et ta vitesse minimale est inférieure de 4 km/h. Perte mesurée : 0.07 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 15 m plus loin (réf. : 763 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 65 km/h au minimum.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Lesmo 2 : 0.26 s entre ton passage moyen et ton meilleur, sans sortie.\n- Lesmo 2 : 1/67 sorties, à prendre 0.26 s en refaisant ton meilleur passage, une sortie coûte 23.7 s · 1 sortie sur 67 et 0.26 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Rettifilo : 1/67 sorties, à prendre 0.47 s en refaisant ton meilleur passage, une sortie coûte 5.0 s · 1 sortie sur 67 et 0.47 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Ascari : 1/67 sorties, à prendre 0.37 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie sur 67 et 0.37 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Roggia : 0/67 sorties, à prendre 0.33 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.33 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Parabolica : 0/67 sorties, à prendre 0.27 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.27 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Lesmo 1 : 0/67 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 67, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,38 s. Le plus gros : Rettifilo (0,33 s).\n- Rettifilo : −0.33 s possibles (meilleur passage au tour 20). Sur tes meilleurs passages, tu freines 22 m plus tard et tu portes 4 km/h de plus au point le plus lent.\n- Ascari : −0.25 s possibles (meilleur passage au tour 15). Sur tes meilleurs passages, tu sors 10 km/h plus vite et tu portes 8 km/h de plus au point le plus lent.\n- Parabolica : −0.24 s possibles (meilleur passage au tour 35). Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu freines 14 m plus tard.\n- Roggia : −0.24 s possibles (meilleur passage au tour 33). Sur tes meilleurs passages, tu sors 7 km/h plus vite et tu portes 6 km/h de plus au point le plus lent.\n- Lesmo 2 : −0.21 s possibles (meilleur passage au tour 32). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 5 km/h plus vite.\n- Lesmo 1 : −0.11 s possibles (meilleur passage au tour 21). Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu sors 7 km/h plus vite.\n\nSORTIES DE PISTE :\n- Rettifilo (à 910 m) aux tours [34]\n- Rettifilo (à 1023 m) aux tours [34]\n- hors virage (à 3335 m) aux tours [12]\n- Ascari (à 4223 m) aux tours [2]\n\nCOURSE : P8 → P9 sur 38 pilotes, 0x ; point noir : Rettifilo\nGrille Some(8), arrivée Some(9), 38 pilotes, 0 incidents.\n- Rettifilo : 2 incidents, 0x : Incidents aux tours 0, 25. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n- Départ : 24 places perdues au premier tour : P8 sur la grille, P32 après un tour. Le premier tour se joue au freinage du virage 1 et dans le peloton : vise la sortie propre plutôt que l'attaque.\n",
   "analysis_reference": 15,
   "best": 15,
   "comparisons": [
@@ -274,7 +274,7 @@
           "title": "Ascari : sortie de virage pénalisante"
         },
         {
-          "confidence": "high",
+          "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
@@ -331,7 +331,9 @@
         }
       ],
       "reference": 15,
-      "warnings": []
+      "warnings": [
+        "Le tour analysé n°36 est perturbé ou invalide."
+      ]
     },
     {
       "compared": 1,
@@ -889,10 +891,10 @@
     }
   ],
   "consistency": {
-    "clean_laps": 29,
-    "cv_percent": 0.943,
-    "mean_s": 98.329,
-    "stddev_s": 0.927
+    "clean_laps": 27,
+    "cv_percent": 0.94,
+    "mean_s": 98.39,
+    "stddev_s": 0.925
   },
   "debrief": {
     "actions": [
@@ -1050,6 +1052,32 @@
         "lap": 22,
         "still_s": 26.1
       }
+    ],
+    "wear_events": [
+      {
+        "at": "5609 m",
+        "detail": "Avant droit : 2,66 % d'usure au tour 22 (médiane 0,50 %), surtout à 5609 m du départ. Contact sur ce tour.",
+        "lap": 22,
+        "median_pct": 0.502,
+        "wear_pct": 2.664,
+        "wheel": "Avant droit"
+      },
+      {
+        "at": "Rettifilo",
+        "detail": "Avant gauche : 4,16 % d'usure au tour 34 (médiane 0,78 %), surtout à Rettifilo. Sortie de piste sur ce tour.",
+        "lap": 34,
+        "median_pct": 0.78,
+        "wear_pct": 4.157,
+        "wheel": "Avant gauche"
+      },
+      {
+        "at": "Rettifilo",
+        "detail": "Arrière gauche : 2,95 % d'usure au tour 34 (médiane 0,80 %), surtout à Rettifilo. Sortie de piste sur ce tour.",
+        "lap": 34,
+        "median_pct": 0.805,
+        "wear_pct": 2.954,
+        "wheel": "Arrière gauche"
+      }
     ]
   },
   "engineer_replay": {
@@ -1089,7 +1117,7 @@
       0.0,
       0.0
     ],
-    "pit_loss": 55.986,
+    "pit_loss": 55.975,
     "said": [
       [
         18,
@@ -1512,7 +1540,7 @@
       "validity": "valid"
     },
     {
-      "clean": true,
+      "clean": false,
       "fuel": 2.832,
       "kind": "flying",
       "n": 29,
@@ -1522,7 +1550,7 @@
         32.076
       ],
       "time": 97.945,
-      "validity": "valid"
+      "validity": "invalid"
     },
     {
       "clean": true,
@@ -1599,13 +1627,13 @@
       "validity": "valid"
     },
     {
-      "clean": true,
+      "clean": false,
       "fuel": 3.045,
       "kind": "flying",
       "n": 36,
       "sectors": [],
       "time": 97.072,
-      "validity": "valid"
+      "validity": "invalid"
     }
   ],
   "off_tracks": [
@@ -1658,10 +1686,10 @@
     "pace": {
       "best_s": 97.058,
       "first_third_s": 99.022,
-      "laps": 29,
-      "last_third_s": 98.007,
-      "median_s": 98.186,
-      "spread_s": 0.911
+      "laps": 27,
+      "last_third_s": 98.0,
+      "median_s": 98.227,
+      "spread_s": 0.908
     },
     "start": 8
   },
@@ -1669,177 +1697,201 @@
   "regularity": {
     "corners": [
       {
-        "advice": "Sur tes meilleurs passages, tu portes 6 km/h de plus au point le plus lent et tu sors 5 km/h plus vite.",
-        "apex_m": 2146.0,
-        "best_lap": 36,
-        "best_s": 14.164,
-        "brake_spread_m": 12.926,
-        "differences": [
-          {
-            "fast": 92.575,
-            "label": "tu portes 6 km/h de plus au point le plus lent",
-            "metric": "min_speed",
-            "slow": 86.581
-          },
-          {
-            "fast": 185.77,
-            "label": "tu sors 5 km/h plus vite",
-            "metric": "exit_speed",
-            "slow": 180.728
-          },
-          {
-            "fast": 2154.0,
-            "label": "tu remets les gaz 8 m plus tôt",
-            "metric": "throttle",
-            "slow": 2162.0
-          }
-        ],
-        "gain_s": 0.322,
-        "median_s": 14.486,
-        "name": "Roggia",
-        "passes": 30
-      },
-      {
-        "advice": "Sur tes meilleurs passages, tu freines 28 m plus tard et tu portes 4 km/h de plus au point le plus lent.",
+        "advice": "Sur tes meilleurs passages, tu freines 22 m plus tard et tu portes 4 km/h de plus au point le plus lent.",
         "apex_m": 975.0,
         "best_lap": 20,
         "best_s": 26.281,
-        "brake_spread_m": 21.76,
+        "brake_spread_m": 21.098,
         "differences": [
           {
-            "fast": 762.0,
-            "label": "tu freines 28 m plus tard",
+            "fast": 760.0,
+            "label": "tu freines 22 m plus tard",
             "metric": "brake",
-            "slow": 734.0
+            "slow": 738.0
           },
           {
-            "fast": 64.194,
+            "fast": 64.861,
             "label": "tu portes 4 km/h de plus au point le plus lent",
             "metric": "min_speed",
-            "slow": 60.592
+            "slow": 60.519
+          },
+          {
+            "fast": 173.047,
+            "label": "tu sors 2 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 170.575
           }
         ],
-        "gain_s": 0.316,
-        "median_s": 26.597,
+        "gain_s": 0.328,
+        "median_s": 26.609,
         "name": "Rettifilo",
-        "passes": 30
+        "passes": 28
       },
       {
-        "advice": "Sur tes meilleurs passages, tu sors 10 km/h plus vite et tu portes 7 km/h de plus au point le plus lent.",
+        "advice": "Sur tes meilleurs passages, tu sors 10 km/h plus vite et tu portes 8 km/h de plus au point le plus lent.",
         "apex_m": 3966.0,
         "best_lap": 15,
         "best_s": 18.112,
-        "brake_spread_m": 8.115,
+        "brake_spread_m": 8.297,
         "differences": [
           {
-            "fast": 201.472,
+            "fast": 201.888,
             "label": "tu sors 10 km/h plus vite",
             "metric": "exit_speed",
-            "slow": 191.147
+            "slow": 192.142
           },
           {
-            "fast": 140.611,
-            "label": "tu portes 7 km/h de plus au point le plus lent",
-            "metric": "min_speed",
-            "slow": 133.873
-          }
-        ],
-        "gain_s": 0.266,
-        "median_s": 18.377,
-        "name": "Ascari",
-        "passes": 30
-      },
-      {
-        "advice": "Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu sors 4 km/h plus vite.",
-        "apex_m": 2869.0,
-        "best_lap": 36,
-        "best_s": 12.06,
-        "brake_spread_m": 10.849,
-        "differences": [
-          {
-            "fast": 138.217,
+            "fast": 141.049,
             "label": "tu portes 8 km/h de plus au point le plus lent",
             "metric": "min_speed",
-            "slow": 129.871
-          },
-          {
-            "fast": 202.274,
-            "label": "tu sors 4 km/h plus vite",
-            "metric": "exit_speed",
-            "slow": 197.788
-          },
-          {
-            "fast": 2779.0,
-            "label": "tu freines 6 m plus tard",
-            "metric": "brake",
-            "slow": 2773.0
+            "slow": 132.942
           }
         ],
-        "gain_s": 0.237,
-        "median_s": 12.297,
-        "name": "Lesmo 2",
-        "passes": 30
+        "gain_s": 0.253,
+        "median_s": 18.364,
+        "name": "Ascari",
+        "passes": 28
       },
       {
-        "advice": "Sur tes meilleurs passages, tu portes 6 km/h de plus au point le plus lent et tu freines 12 m plus tard.",
+        "advice": "Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu freines 14 m plus tard.",
         "apex_m": 5168.0,
         "best_lap": 35,
         "best_s": 18.576,
-        "brake_spread_m": 26.318,
+        "brake_spread_m": 27.208,
         "differences": [
           {
-            "fast": 151.614,
-            "label": "tu portes 6 km/h de plus au point le plus lent",
+            "fast": 151.405,
+            "label": "tu portes 7 km/h de plus au point le plus lent",
             "metric": "min_speed",
-            "slow": 145.526
+            "slow": 144.554
           },
           {
             "fast": 4984.0,
-            "label": "tu freines 12 m plus tard",
+            "label": "tu freines 14 m plus tard",
             "metric": "brake",
-            "slow": 4972.0
+            "slow": 4970.0
           },
           {
-            "fast": 203.245,
+            "fast": 203.097,
             "label": "tu sors 3 km/h plus vite",
             "metric": "exit_speed",
-            "slow": 200.721
-          }
-        ],
-        "gain_s": 0.232,
-        "median_s": 18.809,
-        "name": "Parabolica",
-        "passes": 30
-      },
-      {
-        "advice": "Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 7 km/h plus vite.",
-        "apex_m": 2568.0,
-        "best_lap": 36,
-        "best_s": 7.171,
-        "brake_spread_m": 18.605,
-        "differences": [
-          {
-            "fast": 152.585,
-            "label": "tu portes 7 km/h de plus au point le plus lent",
-            "metric": "min_speed",
-            "slow": 145.372
+            "slow": 200.367
           },
           {
-            "fast": 202.995,
-            "label": "tu sors 7 km/h plus vite",
-            "metric": "exit_speed",
-            "slow": 195.984
+            "fast": 5184.0,
+            "label": "tu remets les gaz 8 m plus tard",
+            "metric": "throttle",
+            "slow": 5176.0
           }
         ],
-        "gain_s": 0.133,
+        "gain_s": 0.243,
+        "median_s": 18.819,
+        "name": "Parabolica",
+        "passes": 28
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu sors 7 km/h plus vite et tu portes 6 km/h de plus au point le plus lent.",
+        "apex_m": 2146.0,
+        "best_lap": 33,
+        "best_s": 14.244,
+        "brake_spread_m": 13.189,
+        "differences": [
+          {
+            "fast": 185.735,
+            "label": "tu sors 7 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 178.505
+          },
+          {
+            "fast": 92.557,
+            "label": "tu portes 6 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 86.096
+          },
+          {
+            "fast": 2154.0,
+            "label": "tu remets les gaz 10 m plus tôt",
+            "metric": "throttle",
+            "slow": 2164.0
+          }
+        ],
+        "gain_s": 0.242,
+        "median_s": 14.486,
+        "name": "Roggia",
+        "passes": 28
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 5 km/h plus vite.",
+        "apex_m": 2869.0,
+        "best_lap": 32,
+        "best_s": 12.085,
+        "brake_spread_m": 11.228,
+        "differences": [
+          {
+            "fast": 138.126,
+            "label": "tu portes 9 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 128.632
+          },
+          {
+            "fast": 202.231,
+            "label": "tu sors 5 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 197.401
+          },
+          {
+            "fast": 2780.0,
+            "label": "tu freines 10 m plus tard",
+            "metric": "brake",
+            "slow": 2770.0
+          }
+        ],
+        "gain_s": 0.212,
+        "median_s": 12.297,
+        "name": "Lesmo 2",
+        "passes": 28
+      },
+      {
+        "advice": "Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu sors 7 km/h plus vite.",
+        "apex_m": 2568.0,
+        "best_lap": 21,
+        "best_s": 7.198,
+        "brake_spread_m": 19.127,
+        "differences": [
+          {
+            "fast": 152.556,
+            "label": "tu portes 8 km/h de plus au point le plus lent",
+            "metric": "min_speed",
+            "slow": 144.916
+          },
+          {
+            "fast": 203.468,
+            "label": "tu sors 7 km/h plus vite",
+            "metric": "exit_speed",
+            "slow": 196.757
+          },
+          {
+            "fast": 2438.0,
+            "label": "tu freines 8 m plus tard",
+            "metric": "brake",
+            "slow": 2430.0
+          },
+          {
+            "fast": 2554.0,
+            "label": "tu remets les gaz 8 m plus tard",
+            "metric": "throttle",
+            "slow": 2546.0
+          }
+        ],
+        "gain_s": 0.105,
         "median_s": 7.304,
         "name": "Lesmo 1",
-        "passes": 30
+        "passes": 28
       }
     ],
-    "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,51 s. Le plus gros : Roggia (0,32 s).",
-    "laps": 30,
-    "total_gain_s": 1.506
+    "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,38 s. Le plus gros : Rettifilo (0,33 s).",
+    "laps": 28,
+    "total_gain_s": 1.383
   },
   "risk": [
     {
@@ -2216,5 +2268,5 @@
     "stops": 1,
     "unit": "energy"
   },
-  "theoretical_best_s": 96.354
+  "theoretical_best_s": 96.522
 }

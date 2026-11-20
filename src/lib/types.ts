@@ -945,6 +945,8 @@ export interface RaceDebrief {
   missing: string[];
   /** Rythme face à ta catégorie (courses enregistrées depuis Apex 0.39). */
   class_pace: ClassPaceView | null;
+  /** Usure anormale d'un pneu sur un tour (≥ 3 × la médiane), avec l'endroit et ce qui a été mesuré. */
+  wear_events: WearEvent[];
 }
 
 export interface ClassPaceView {
@@ -1071,4 +1073,13 @@ export interface SetupDiagnosis {
   missing: string[];
   temperature_note: string;
   game_scale_note: string;
+}
+
+export interface WearEvent {
+  lap: number;
+  wheel: string;
+  wear_pct: number;
+  median_pct: number;
+  at: string | null;
+  detail: string;
 }

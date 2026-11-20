@@ -375,21 +375,12 @@ pub fn setup_diagnosis(rec: &Recording, laps: &[LapMeta], corners: &[DiagCorner]
 fn locks(rec: &Recording, dist: &[f32], corners: &[DiagCorner], on: &dyn Fn(&Tick) -> bool) -> Vec<LockZone> {
     let mut out = vec![];
     for (k, &wheel) in WHEELS.iter().enumerate() {
-        let mut r: Vec<f32> = rec
-            .ticks
-            .iter()
-            .filter(|t| on(t) && t.brake < 0.02 && t.throttle > 0.3 && t.wheel_rot[k].abs() > 10.0 && t.wheel_vlong[k].abs() > 10.0 && a_lat(t) < 3.0)
-            .map(|t| t.wheel_vlong[k].abs() / t.wheel_rot[k].abs())
-            .collect();
-        if r.len() < 200 {
-            continue;
-        }
-        let radius = pct(&mut r, 0.5);
+        let Some(radius) = wheel_radius(rec, k, on) else { continue };
         // Événement : au moins 6 échantillons (0,1 s à 60 Hz) à plus de 20 % de glissement.
         let mut by: BTreeMap<String, (usize, std::collections::BTreeSet<i32>, Vec<f32>)> = BTreeMap::new();
         let (mut run, mut worst) = (0usize, 0.0f32);
         for (i, t) in rec.ticks.iter().enumerate() {
-            let slip = if on(t) && t.brake > 0.2 && t.wheel_vlong[k].abs() > 5.0 { 1.0 - t.wheel_rot[k].abs() * radius / t.wheel_vlong[k].abs() } else { 0.0 };
+            let slip = if on(t) { brake_slip(t, k, radius) } else { 0.0 };
             if slip > 0.2 {
                 run += 1;
                 worst = worst.max(slip);
@@ -413,6 +404,27 @@ fn locks(rec: &Recording, dist: &[f32], corners: &[DiagCorner], on: &dyn Fn(&Tic
     }
     out.sort_by(|a, b| b.laps.cmp(&a.laps).then(b.events.cmp(&a.events)));
     out
+}
+
+/// Rayon de roulement d'une roue (m), mesuré en roue libre (gaz, sans frein, en ligne droite) : vitesse
+/// du sol sous la roue / rotation. `None` sans rotation enregistrée (fichiers d'avant 0.41).
+pub fn wheel_radius(rec: &Recording, k: usize, on: &dyn Fn(&Tick) -> bool) -> Option<f32> {
+    let mut r: Vec<f32> = rec
+        .ticks
+        .iter()
+        .filter(|t| on(t) && t.brake < 0.02 && t.throttle > 0.3 && t.wheel_rot[k].abs() > 10.0 && t.wheel_vlong[k].abs() > 10.0 && a_lat(t) < 3.0)
+        .map(|t| t.wheel_vlong[k].abs() / t.wheel_rot[k].abs())
+        .collect();
+    (r.len() >= 200).then(|| pct(&mut r, 0.5))
+}
+
+/// Glissement au freinage (0 = roule, 1 = bloquée), avec le rayon mesuré ; 0 hors freinage.
+pub fn brake_slip(t: &Tick, k: usize, radius: f32) -> f32 {
+    if t.brake > 0.2 && t.wheel_vlong[k].abs() > 5.0 {
+        1.0 - t.wheel_rot[k].abs() * radius / t.wheel_vlong[k].abs()
+    } else {
+        0.0
+    }
 }
 
 /// Équilibre par virage et par phase : rotation pour un angle de volant donné (lacet / (vitesse ×

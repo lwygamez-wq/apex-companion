@@ -177,6 +177,23 @@ pub struct RaceDebrief {
     pub missing: Vec<String>,
     /// Rythme face à ta catégorie (courses enregistrées depuis Apex 0.39).
     pub class_pace: Option<ClassPaceView>,
+    /// Usure anormale d'un pneu sur un tour, avec l'endroit et ce qui a été mesuré sur ce tour.
+    #[serde(default)]
+    pub wear_events: Vec<WearEvent>,
+}
+
+/// Usure d'un pneu sur un tour au moins 3 fois sa médiane de course (et plus d'un point de %).
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct WearEvent {
+    pub lap: i32,
+    pub wheel: &'static str,
+    /// Usure sur ce tour et médiane des tours de la course (points de %).
+    pub wear_pct: f32,
+    pub median_pct: f32,
+    /// Endroit où l'usure a le plus progressé dans le tour (virage), s'il est connu.
+    pub at: Option<String>,
+    /// Phrase complète : chiffres et ce qui a été mesuré (sortie, incident, blocage), ou ce qui manque.
+    pub detail: String,
 }
 
 fn median(v: &mut [f64]) -> Option<f64> {
@@ -472,6 +489,84 @@ pub fn attach_drift(d: &mut RaceDebrief, idx: usize, mut drift: crate::analysis:
     s.drift = Some(drift);
 }
 
+const WHEEL_NAMES: [&str; 4] = ["Avant gauche", "Avant droit", "Arrière gauche", "Arrière droit"];
+
+/// Pics d'usure d'une course. `laps` : tours importés (usure par tour) ; `rec` : enregistrement d'origine
+/// (usure à 60 Hz pour situer le pic, rotation des roues pour un blocage, 0.41+) ; `corners` : (nom,
+/// début, fin) en mètres depuis la ligne.
+pub fn wear_events(rec: &Recording, laps: &[LapMeta], corners: &[(String, f32, f32)]) -> Vec<WearEvent> {
+    let rows: Vec<(&LapMeta, [f32; 4])> = laps.iter().filter_map(|l| l.tyre_wear_pct.map(|w| (l, w))).collect();
+    if rows.len() < 5 {
+        return vec![];
+    }
+    let len = rec.header.track_length_m as f64;
+    let dist = crate::ingest::lmu::unwrapped_distance(&rec.ticks, &rec.anchors, len);
+    let has_rot = rec.ticks.iter().any(|t| t.wheel_rot != [0.0; 4]);
+    let on = |t: &crate::ingest::lmu::Tick| !t.pit && t.speed > 20.0;
+    let mut out = vec![];
+    for k in 0..4 {
+        let mut v: Vec<f32> = rows.iter().map(|r| r.1[k]).collect();
+        v.sort_by(f32::total_cmp);
+        let med = v[v.len() / 2];
+        for (l, w) in rows.iter().filter(|r| r.1[k] > 1.0 && r.1[k] >= 3.0 * med.max(0.05)) {
+            // Endroit : plus forte baisse du pneu restant sur une seconde, dans ce tour.
+            let idx: Vec<usize> = (0..rec.ticks.len()).filter(|&i| rec.ticks[i].lap == l.number && rec.ticks[i].wear[k] > 0.0).collect();
+            let win = (rec.header.hz.max(1.0)) as usize;
+            let at = idx
+                .windows(win.max(2))
+                .map(|w| (w[0], rec.ticks[w[0]].wear[k] - rec.ticks[*w.last().unwrap()].wear[k]))
+                .max_by(|a, b| a.1.total_cmp(&b.1))
+                .filter(|(_, d)| *d > 0.0)
+                .map(|(i, _)| dist[i].rem_euclid(len) as f32)
+                .map(|x| corners.iter().find(|c| x >= c.1 && x <= c.2).map(|c| c.0.clone()).unwrap_or_else(|| format!("{x:.0} m")));
+            let mut seen: Vec<String> = vec![];
+            if l.flags.off_track {
+                seen.push("sortie de piste".into());
+            }
+            if l.flags.incident {
+                seen.push("contact".into());
+            }
+            if let Some(r) = has_rot.then(|| crate::analysis::setup_diag::wheel_radius(rec, k, &on)).flatten() {
+                let lock = idx.iter().filter(|&&i| crate::analysis::setup_diag::brake_slip(&rec.ticks[i], k, r) > 0.2).count();
+                if lock as f32 >= rec.header.hz * 0.1 {
+                    seen.push(format!("roue bloquée {} s au freinage", format!("{:.1}", lock as f32 / rec.header.hz).replace('.', ",")));
+                }
+            }
+            let cause = if seen.is_empty() {
+                if has_rot { "Ni sortie, ni contact, ni blocage mesuré sur ce tour.".to_string() } else { "Ni sortie ni contact enregistrés ; blocage non mesurable (rotation des roues enregistrée à partir d'Apex 0.41).".to_string() }
+            } else {
+                let list = match seen.len() {
+                    1 => seen[0].clone(),
+                    n => format!("{} et {}", seen[..n - 1].join(", "), seen[n - 1]),
+                };
+                let mut c = format!("{list} sur ce tour.");
+                c.replace_range(..1, &c[..1].to_uppercase());
+                c
+            };
+            let fr = |x: f32| format!("{x:.2}").replace('.', ",");
+            let place = at
+                .as_ref()
+                .map(|a| match a {
+                    a if a.ends_with(" m") => format!(", surtout à {a} du départ"),
+                    a if a.starts_with("Virages ") => format!(", surtout aux {}", a.to_lowercase()),
+                    a if a.starts_with("Virage ") => format!(", surtout au {}", a.to_lowercase()),
+                    a => format!(", surtout à {a}"),
+                })
+                .unwrap_or_default();
+            out.push(WearEvent {
+                lap: l.number,
+                wheel: WHEEL_NAMES[k],
+                wear_pct: w[k],
+                median_pct: med,
+                at,
+                detail: format!("{} : {} % d'usure au tour {} (médiane {} %){place}. {cause}", WHEEL_NAMES[k], fr(w[k]), l.number, fr(med)),
+            });
+        }
+    }
+    out.sort_by_key(|e| e.lap);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -554,6 +649,42 @@ mod tests {
         let a = d.actions.iter().find(|a| a.title == "Tenir le rythme en fin de relais").unwrap();
         assert!(a.detail.ends_with("Rivazza en sortie +0,30 s. Sur tout le tour, 0,40 s en sortie (100 % de la perte)."), "{}", a.detail);
         assert!(d.stints[0].drift.as_ref().unwrap().summary.as_ref().unwrap().starts_with("Ce qui ralentit le plus"));
+    }
+
+    /// Données synthétiques : 6 tours, l'avant droit s'use de 3,5 % au tour 4 (0,45 % ailleurs), d'un coup
+    /// entre 1000 et 1050 m, sur un tour avec sortie de piste.
+    #[test]
+    fn wear_spike_is_an_event_with_place_and_cause() {
+        use crate::ingest::lmu::{Anchor, Header, Recording, Tick};
+        let mut laps: Vec<LapMeta> = (1..=6).map(|n| lap(n, LapKind::Flying, 100.0, n == 4)).collect();
+        for l in &mut laps {
+            l.tyre_wear_pct = Some([0.4, if l.number == 4 { 3.5 } else { 0.45 }, 0.5, 0.5]);
+        }
+        // Circuit de 2000 m à 50 m/s, 60 Hz ; pneu restant avant droit.
+        let mut ticks = vec![];
+        let mut left = 100.0f32;
+        for i in 0..(6 * 40 * 60) {
+            let et = i as f64 / 60.0;
+            let x = et * 50.0;
+            let lap_n = (x / 2000.0) as i32 + 1;
+            let d = x % 2000.0;
+            left -= if lap_n == 4 && (1000.0..1050.0).contains(&d) { 3.05 / 60.0 } else { 0.45 / 2400.0 };
+            ticks.push(Tick { et, lap: lap_n, speed: 50.0, wear: [90.0, left, 90.0, 90.0], ..Default::default() });
+        }
+        let rec = Recording { header: Header { track_length_m: 2000.0, hz: 60.0, ..Default::default() }, anchors: (0..240).map(|k| Anchor { et: k as f64, lap_dist: ((k as f32 * 50.0) % 2000.0), total_laps: (k as f32 * 50.0 / 2000.0) as i32 }).collect(), ticks, laps: vec![], wheels: vec![], setup: None };
+        let mut laps2 = laps.clone();
+        laps2[3].flags.incident = true;
+        let ev2 = wear_events(&rec, &laps2, &[("Virage 4".into(), 950.0, 1150.0)]);
+        assert!(ev2[0].detail.ends_with("surtout au virage 4. Sortie de piste et contact sur ce tour."), "{}", ev2[0].detail);
+        let ev = wear_events(&rec, &laps, &[("Rettifilo".into(), 950.0, 1150.0)]);
+        assert_eq!(ev.len(), 1, "{ev:?}");
+        assert_eq!((ev[0].lap, ev[0].wheel, ev[0].at.as_deref()), (4, "Avant droit", Some("Rettifilo")));
+        assert_eq!(ev[0].detail, "Avant droit : 3,50 % d'usure au tour 4 (médiane 0,45 %), surtout à Rettifilo. Sortie de piste sur ce tour.");
+        // Usure régulière : aucun événement.
+        for l in &mut laps {
+            l.tyre_wear_pct = Some([0.4, 0.45, 0.5, 0.5]);
+        }
+        assert!(wear_events(&rec, &laps, &[]).is_empty());
     }
 
     #[test]

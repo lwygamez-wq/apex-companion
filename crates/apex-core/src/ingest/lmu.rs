@@ -828,6 +828,7 @@ pub fn import_recording(r: &Recording) -> Result<ImportedSession, String> {
     let si = SessionInfo { track_length_m: Some(h.track_length_m).filter(|l| *l > 100.0), sim: Some(SimId::Lmu), ..Default::default() };
     let mut laps = split_laps(&ch, &si);
     apply_official_times(&mut laps, &r.laps);
+    mark_untimed_laps(&mut laps, &r.laps);
     for l in &mut laps {
         // Invalidation du jeu (limites de piste) : on ignore la première demi-seconde, où le drapeau
         // du tour précédent peut encore être levé.
@@ -892,6 +893,20 @@ fn apply_official_times(laps: &mut [ImportedLap], events: &[LapEvent]) {
                 l.meta.sector_times_s = vec![e.s1, e.s2 - e.s1, e.lap_time - e.s2];
             }
             p = k + 1;
+        }
+    }
+}
+
+/// Tour que le jeu n'a pas chronométré (temps officiel ≤ 0) : en course, c'est sa sanction des limites
+/// de piste (Monza et Bahreïn : chaque avertissement tombe dans un tour non chronométré, alors que le
+/// drapeau « tour invalidé » reste à 0). Le tour est invalide pour le jeu : il ne doit pas servir de
+/// référence. Sa consommation reste valable (la stratégie filtre sur les drapeaux, pas sur la validité).
+/// Le classement compte les tours bouclés : l'événement `total_laps = n + 1` clôt le tour `n`.
+fn mark_untimed_laps(laps: &mut [ImportedLap], events: &[LapEvent]) {
+    for e in events.iter().filter(|e| e.lap_time <= 0.0) {
+        if let Some(l) = laps.iter_mut().find(|l| l.meta.number == e.total_laps - 1 && l.meta.kind == LapKind::Flying) {
+            l.meta.validity = Validity::Invalid;
+            l.meta.validity_source = ValiditySource::SimReported;
         }
     }
 }
@@ -1181,6 +1196,24 @@ mod tests {
         assert_eq!(back.anchors, r.anchors);
         assert_eq!(back.laps, r.laps);
         assert!(back.ticks[1234].energy > 0.0 && back.ticks[1234].wear[3] > 0.0);
+    }
+
+    /// Données synthétiques : le jeu ne chronomètre pas un tour (temps officiel −1, sanction des limites de
+    /// piste en course) : le tour devient invalide, les autres restent tels quels.
+    #[test]
+    fn laps_the_game_did_not_time_are_invalid() {
+        let mut r = record(1);
+        let flying: Vec<i32> = import_recording(&r).unwrap().laps.iter().filter(|l| l.meta.kind == LapKind::Flying && l.meta.validity == Validity::Valid).map(|l| l.meta.number).collect();
+        let target = *flying.first().expect("un tour lancé valide");
+        let e = r.laps.iter_mut().find(|e| e.total_laps == target + 1).expect("événement du tour");
+        e.lap_time = -1.0;
+        let s = import_recording(&r).unwrap();
+        let get = |n: i32| s.laps.iter().find(|l| l.meta.number == n && l.meta.kind == LapKind::Flying).unwrap();
+        assert_eq!((get(target).meta.validity, get(target).meta.validity_source), (Validity::Invalid, ValiditySource::SimReported));
+        assert!(!get(target).meta.is_clean());
+        for n in flying.iter().skip(1) {
+            assert_eq!(get(*n).meta.validity, Validity::Valid, "tour {n}");
+        }
     }
 
     #[test]

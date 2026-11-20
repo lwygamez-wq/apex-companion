@@ -1255,7 +1255,8 @@
         "lap": 32,
         "still_s": 9.88
       }
-    ]
+    ],
+    "wear_events": []
   },
   "engineer_replay": null,
   "fastest": 43,

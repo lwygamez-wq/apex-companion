@@ -1163,6 +1163,48 @@
         "lap": 34,
         "still_s": 26.62
       }
+    ],
+    "wear_events": [
+      {
+        "at": "Tamburello",
+        "detail": "Avant gauche : 3,09 % d'usure au tour 8 (médiane 0,54 %), surtout à Tamburello. Sortie de piste et contact sur ce tour.",
+        "lap": 8,
+        "median_pct": 0.536,
+        "wear_pct": 3.087,
+        "wheel": "Avant gauche"
+      },
+      {
+        "at": "Tamburello",
+        "detail": "Arrière gauche : 3,81 % d'usure au tour 8 (médiane 0,78 %), surtout à Tamburello. Sortie de piste et contact sur ce tour.",
+        "lap": 8,
+        "median_pct": 0.784,
+        "wear_pct": 3.813,
+        "wheel": "Arrière gauche"
+      },
+      {
+        "at": "Tamburello",
+        "detail": "Arrière droit : 2,55 % d'usure au tour 8 (médiane 0,83 %), surtout à Tamburello. Sortie de piste et contact sur ce tour.",
+        "lap": 8,
+        "median_pct": 0.833,
+        "wear_pct": 2.546,
+        "wheel": "Arrière droit"
+      },
+      {
+        "at": "Rivazza",
+        "detail": "Arrière droit : 3,25 % d'usure au tour 39 (médiane 0,83 %), surtout à Rivazza. Sortie de piste et contact sur ce tour.",
+        "lap": 39,
+        "median_pct": 0.833,
+        "wear_pct": 3.254,
+        "wheel": "Arrière droit"
+      },
+      {
+        "at": "Tamburello",
+        "detail": "Arrière gauche : 2,41 % d'usure au tour 42 (médiane 0,78 %), surtout à Tamburello. Sortie de piste sur ce tour.",
+        "lap": 42,
+        "median_pct": 0.784,
+        "wear_pct": 2.408,
+        "wheel": "Arrière gauche"
+      }
     ]
   },
   "engineer_replay": null,
