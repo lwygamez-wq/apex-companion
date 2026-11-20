@@ -1019,6 +1019,86 @@
       }
     ]
   },
+  "engineer_replay": {
+    "line_exact_errors": [
+      -1.0,
+      -1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "pit_loss": 55.986,
+    "said": [
+      [
+        0,
+        "Relais 1 sur 2. Box à la fin du tour 17. Cible 5,45 % par tour. Tu fais 4,52 % : pas besoin d'économiser, roule à ton rythme."
+      ],
+      [
+        18,
+        "Box à la fin du prochain tour."
+      ],
+      [
+        19,
+        "Box, box, ce tour. Règle l'énergie à 72 %, ratio 0,66, soit 47 litres."
+      ],
+      [
+        20,
+        "Toujours en piste : règle l'énergie à 62 % pour 14 tours après l'arrêt."
+      ],
+      [
+        22,
+        "Dans la voie : règle l'énergie à 59 %, ratio 0,66, soit 38 litres."
+      ],
+      [
+        23,
+        "Dernier relais, 12 tours. Cible 4,71 % par tour. Tu fais 4,29 %, 1 tour de marge à l'arrivée : pas besoin d'économiser, roule à ton rythme."
+      ]
+    ],
+    "stops": [
+      {
+        "announced": 59.0,
+        "lap": 22,
+        "laps_est": 13.015,
+        "laps_true": 13.015,
+        "needed": 59.482,
+        "per_est": 4.313,
+        "per_true": 4.401,
+        "set": 63.0,
+        "spare_actual": 1.299,
+        "spare_if_announced": 0.391
+      }
+    ]
+  },
   "fastest": 10,
   "lap_2": true,
   "laps": [

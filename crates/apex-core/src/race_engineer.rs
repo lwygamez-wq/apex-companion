@@ -96,6 +96,14 @@ pub struct RaceState {
     /// Distance de course restante en tours, fraction du tour en cours comprise (course au temps : fin du
     /// chrono et passage du leader pris en compte). Exacte à l'entrée des stands, où que soit la ligne.
     pub laps_exact: Option<f32>,
+    /// Consommation retenue pour le plein : la plus haute de la moyenne récente et de la médiane des tours
+    /// de course (≥ 5 tours). Rejeu des 2 courses de Monza du 18 nov. : la moyenne des 3 derniers tours
+    /// avant l'arrêt (4,32 et 4,27 %) sous-estimait la fin de course (4,37 et 4,40 %, poussée des derniers
+    /// tours) ; avec la médiane (4,36 et 4,30 %), l'arrivée tombe à 0,64 et 0,39 tour.
+    pub per_lap_fill: Option<f32>,
+    /// Course au temps sans temps d'arrêt connu (ni sur ce circuit, ni ailleurs) : le chrono restant ne
+    /// retire pas le temps passé au stand, ce qui compte un tour de trop (rejeu Monza 18 nov. : +4,3 %).
+    pub pit_time_unknown: bool,
 }
 
 /// Dernière consigne calculée (écran « Au volant », commande « stratégie »).
@@ -148,6 +156,8 @@ pub struct Engineer {
     last: Option<EngineerCall>,
     /// Consigne déjà donnée à l'entrée des stands pour l'arrêt en cours.
     pit_entry_done: bool,
+    /// Niveau dit au dernier « box » (arrondi) : redit s'il change quand le pilote reste en piste.
+    said_fill: Option<f32>,
 }
 
 /// Le MFD du jeu face au niveau conseillé : bon, trop haut ou trop bas (le cas qui fait tomber en panne).
@@ -236,6 +246,7 @@ impl Engineer {
                 self.box_calls = 0;
                 self.committed_box = None;
                 self.fuel_warned = false;
+                self.said_fill = None;
             }
         }
         self.prev = level;
@@ -252,9 +263,10 @@ impl Engineer {
             return None;
         }
         self.pit_entry_done = true;
-        let reserve = self.plan.margin_laps.max(0.0) * s.per_lap;
+        let per = s.per_lap_fill.filter(|p| *p > 0.0).unwrap_or(s.per_lap).max(s.per_lap);
+        let reserve = self.plan.margin_laps.max(0.0) * per;
         // Relais restants équilibrés, comme `pit_fill`, mais sur la distance exacte.
-        let fill = (x / r as f32 * s.per_lap + reserve).min(s.cap);
+        let fill = (x / r as f32 * per + reserve).min(s.cap);
         let u = s.unit;
         let ratio = s.fuel_ratio.filter(|_| u == Unit::Energy);
         let fill_fuel_l = ratio.map(|rt| fill * rt);
@@ -274,6 +286,7 @@ impl Engineer {
             Some(g) if g + 0.5 < x / r as f32 => format!(" Attention, le jeu ne compte que {} avec ce niveau, il en faut {need}.", plural((g + 1e-3).floor() as u32, "tour")),
             _ => String::new(),
         };
+        let unknown = if s.pit_time_unknown { " Temps d'arrêt inconnu sur ce circuit : niveau calculé sans le temps au stand, il peut compter un tour de trop." } else { "" };
         if let Some(c) = self.last.as_mut() {
             c.fill = Some(fill);
             c.fill_fuel_l = fill_fuel_l;
@@ -283,7 +296,8 @@ impl Engineer {
             c.laps_to_box = Some(1);
         }
         self.box_calls = 2;
-        Some(format!("{set}{mfd}{game}"))
+        self.said_fill = Some(up(fill));
+        Some(format!("{set}{mfd}{game}{unknown}"))
     }
 
     /// Passage de la ligne en course : met à jour la consigne et renvoie le message radio s'il y a lieu.
@@ -453,6 +467,22 @@ impl Engineer {
                 };
                 parts.push(format!("Box, box, ce tour.{set}{mfd}{game}"));
                 self.box_calls = 2;
+                self.said_fill = fill.map(up);
+            }
+            // « Box » déjà dit, et le pilote reste en piste : le niveau change à chaque tour, on le redit.
+            // (Monza, 18 nov. : 72 % dits au tour 19, arrêt au tour 22 où il fallait 63 %.)
+            _ if self.box_calls == 2 && !s.in_pits && !self.pit_entry_done && self.stops_left.unwrap_or(0) > 0 => {
+                if let (Some(f), Some(said)) = (fill, self.said_fill) {
+                    if (up(f) - said).abs() >= 1.0 {
+                        let after = laps_after_stop.map(|n| format!(" pour {} après l'arrêt", plural(n, "tour"))).unwrap_or_default();
+                        let what = match u {
+                            Unit::Energy => format!("règle l'énergie à {:.0} %", up(f)),
+                            Unit::Litres => format!("mets {:.0} litres", up(f)),
+                        };
+                        parts.push(format!("Toujours en piste : {what}{after}."));
+                        self.said_fill = Some(up(f));
+                    }
+                }
             }
             Some(b) if b > 2 => self.box_calls = 0,
             _ => {}
@@ -509,7 +539,7 @@ mod tests {
     use super::*;
 
     fn state(level: f32, per_lap: f32, laps_left: u32, lap: i32) -> RaceState {
-        RaceState { unit: Unit::Energy, level, cap: 100.0, per_lap, laps_left, lap, fuel_ratio: Some(0.86), fuel_laps: None, energy_laps: None, mfd_energy: None, mfd_laps: None, in_pits: false, laps_exact: None }
+        RaceState { unit: Unit::Energy, level, cap: 100.0, per_lap, laps_left, lap, fuel_ratio: Some(0.86), fuel_laps: None, energy_laps: None, mfd_energy: None, mfd_laps: None, in_pits: false, laps_exact: None, per_lap_fill: None, pit_time_unknown: false }
     }
 
     /// Chiffres relevés sur la course de Monza du 18 nov. (Cadillac, 60 min) : ligne d'arrivée dans la voie
@@ -536,6 +566,65 @@ mod tests {
         e.on_lap(&st);
         let low = RaceState { mfd_energy: Some(54.0), ..pit };
         assert!(e.on_pit_entry(&low).unwrap().ends_with("Ton MFD est à 54 %, il manque 4 : monte à 58, sinon panne avant l'arrivée."));
+    }
+
+    /// Données synthétiques sur le schéma de Monza (18 nov.) : « box » dit, le pilote reste en piste deux
+    /// tours de plus. Le niveau baisse à chaque tour : il est redit, sinon le pilote règle le premier.
+    #[test]
+    fn says_the_new_fill_when_the_driver_stays_out() {
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
+        let mut said: Vec<(i32, String)> = vec![];
+        let mut boxed = None;
+        for lap in 1..=40 {
+            if boxed.is_some_and(|b| lap > b + 2) {
+                break;
+            }
+            let st = state(98.0 - 3.2 * lap as f32, 3.2, (41 - lap) as u32, lap);
+            if let Some(m) = e.on_lap(&st) {
+                if m.contains("Box, box") {
+                    boxed = Some(lap);
+                }
+                said.push((lap, m));
+            }
+        }
+        let boxed = boxed.expect("box");
+        let again: Vec<&String> = said.iter().filter(|(l, _)| *l > boxed).map(|(_, m)| m).filter(|m| m.contains("Toujours en piste")).collect();
+        assert!(!again.is_empty(), "{said:?}");
+        // Chaque rappel donne le niveau recalculé et les tours après l'arrêt.
+        let fill = up(e.last().unwrap().fill.unwrap());
+        let n = e.last().unwrap().laps_after_stop.unwrap();
+        assert_eq!(again.last().unwrap().as_str(), format!("Toujours en piste : règle l'énergie à {fill:.0} % pour {n} tours après l'arrêt."));
+        // Une fois dans la voie, plus de rappel.
+        let pit = RaceState { in_pits: true, ..state(2.0, 3.2, (41 - boxed - 3) as u32, boxed + 3) };
+        assert!(e.on_lap(&pit).is_none_or(|m| !m.contains("Toujours en piste")));
+    }
+
+    /// Course au temps sans temps d'arrêt connu : l'ingénieur le dit au lieu de compter 0 s en silence.
+    #[test]
+    fn says_when_the_pit_time_is_unknown() {
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
+        let st = RaceState { pit_time_unknown: true, ..state(9.0, 4.29, 15, 21) };
+        e.on_lap(&st);
+        let pit = RaceState { in_pits: true, laps_exact: Some(13.03), laps_left: 14, lap: 23, ..st };
+        assert!(e.on_pit_entry(&pit).unwrap().ends_with("Temps d'arrêt inconnu sur ce circuit : niveau calculé sans le temps au stand, il peut compter un tour de trop."));
+    }
+
+    /// Rejeu de la course de Monza du 18 nov. (21 h 39) : 4,27 % en moyenne sur les 3 derniers tours, 4,30 %
+    /// en médiane de course, 13,01 tours après l'entrée des stands. Avec la moyenne récente : 58 %, arrivée
+    /// à 0,16 tour (la fin de course a consommé 4,40 %). Avec la médiane : 59 %, arrivée à 0,39 tour.
+    #[test]
+    fn pit_entry_fill_uses_the_race_median_when_it_is_higher() {
+        let run = |fill_per: Option<f32>| {
+            let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Attack, margin_laps: 0.5 });
+            let st = RaceState { per_lap_fill: fill_per, ..state(9.0, 4.27, 15, 21) };
+            e.on_lap(&st);
+            let pit = RaceState { in_pits: true, laps_exact: Some(13.01), laps_left: 14, lap: 23, ..st };
+            e.on_pit_entry(&pit).unwrap()
+        };
+        assert!(run(None).starts_with("Dans la voie : règle l'énergie à 58 %"), "{}", run(None));
+        assert!(run(Some(4.30)).starts_with("Dans la voie : règle l'énergie à 59 %"), "{}", run(Some(4.30)));
+        // Médiane plus basse que la moyenne récente (lift demandé, ou fin de relais plus lente) : la récente reste.
+        assert_eq!(run(Some(4.10)), run(None));
     }
 
     /// Données synthétiques. Fin de relais avec le MFD lu dans le jeu : l'ingénieur dit s'il est bon,
