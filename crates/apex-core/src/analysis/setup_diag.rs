@@ -523,6 +523,10 @@ pub fn api_label(key: &str) -> (String, String) {
         "VM_DIFF_COAST" => ("Différentiel au lâcher", "Différentiel"),
         "VM_DIFF_PRELOAD" => ("Précharge du différentiel", "Différentiel"),
         "VM_TRACTIONCONTROLMAP" => ("Antipatinage (TC)", "Aides"),
+        "VM_TRACTIONCONTROLPOWERCUTMAP" => ("Antipatinage coupure (TC cut)", "Aides"),
+        "VM_TRACTIONCONTROLSLIPANGLEMAP" => ("Antipatinage glisse (TC slip)", "Aides"),
+        "VM_FUEL_LEVEL" => ("Carburant (ratio)", "Général"),
+        "VM_VIRTUAL_ENERGY" => ("Énergie virtuelle", "Général"),
         "VM_ANTILOCKBRAKESYSTEMMAP" => ("ABS", "Aides"),
         _ => {
             let raw = base.trim_start_matches("VM_").trim_start_matches("WM_").replace('_', " ").to_lowercase();

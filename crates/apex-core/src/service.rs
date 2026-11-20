@@ -505,6 +505,14 @@ pub struct SessionDetail {
     pub regularity: Option<crate::analysis::regularity::RegularityReport>,
 }
 
+/// Essai setup guidé : proposition (ou raison de ne pas en faire) et verdict mesuré.
+#[derive(Debug, Clone, Serialize)]
+pub struct SetupTrialReport {
+    pub proposal: Option<crate::analysis::setup_trial::Trial>,
+    pub no_proposal: Option<String>,
+    pub verdict: Option<crate::analysis::setup_trial::TrialVerdict>,
+}
+
 /// Objectif du programme et son résultat sur la séance suivante.
 #[derive(Debug, Clone, Serialize)]
 pub struct PlanItem {
@@ -1605,6 +1613,37 @@ impl AppService {
                 ..Default::default()
             },
         })
+    }
+
+    /// Essai setup guidé (étape 3) : l'essai proposé d'après la séance `before`, et, avec `after`, le verdict
+    /// mesuré entre les deux séances (même circuit, même voiture).
+    pub fn setup_trial(&self, before: i64, after: Option<i64>) -> Result<SetupTrialReport> {
+        use crate::analysis::setup_trial::{propose, verdict};
+        let d_before = self.setup_diagnosis(before)?;
+        let (proposal, no_proposal) = match propose(&d_before) {
+            Ok(t) => (Some(t), None),
+            Err(why) => (None, Some(why)),
+        };
+        let lap_median = |id: i64| -> Result<Option<f64>> {
+            let mut t: Vec<f64> = self.db().laps(id)?.iter().filter(|l| crate::analysis::setup_diag::usable(&l.meta)).filter_map(|l| l.meta.lap_time_s).collect();
+            t.sort_by(f64::total_cmp);
+            Ok(t.get(t.len() / 2).copied())
+        };
+        let verdict = match (after, &proposal) {
+            (Some(a), Some(t)) => {
+                let (mb, ma) = {
+                    let db = self.db();
+                    (db.session_meta(before)?, db.session_meta(a)?)
+                };
+                if mb.track != ma.track || mb.car != ma.car || mb.track_config != ma.track_config {
+                    return Err(ServiceError::User("Essai : la séance d'après doit être sur le même circuit, avec la même voiture.".into()));
+                }
+                let d_after = self.setup_diagnosis(a)?;
+                Some(verdict(t, &d_before, &d_after, lap_median(before)?, lap_median(a)?))
+            }
+            _ => None,
+        };
+        Ok(SetupTrialReport { proposal, no_proposal, verdict })
     }
 
     pub fn setup_probe_reports(&self) -> Vec<crate::connectors::lmu_probe::ProbeReport> {

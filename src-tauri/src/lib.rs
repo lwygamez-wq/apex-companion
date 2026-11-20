@@ -68,6 +68,7 @@ pub fn run() {
             commands::setup_compare,
             commands::setup_probe_reports,
             commands::setup_diagnosis,
+            commands::setup_trial,
             commands::export_feedback,
             commands::set_engineer_plan,
             commands::delete_session,

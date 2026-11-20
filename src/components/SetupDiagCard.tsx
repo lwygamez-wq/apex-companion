@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { dateTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
-import type { BalancePhase, BalanceTrend, BalanceZone, DiagStat, SetupDiagnosis, SetupRow } from "../lib/types";
+import type { BalancePhase, BalanceTrend, BalanceZone, DiagStat, SessionSummary, SetupDiagnosis, SetupRow, SetupTrialReport } from "../lib/types";
+import { lapTime } from "../lib/format";
 
 /** « 58,7 °C » ; « — » sans mesure. */
 export function fmtStat(s: DiagStat | null | undefined, digits = 1): string {
@@ -207,6 +208,42 @@ export function Diagnosis({ d }: { d: SetupDiagnosis }) {
   );
 }
 
+/** Essai guidé : un seul réglage à essayer, puis le verdict mesuré sur la séance d'après. */
+export function TrialView({ r, afterChoices, after, onAfter }: { r: SetupTrialReport; afterChoices: SessionSummary[]; after: number | null; onAfter: (id: number | null) => void }) {
+  return (
+    <div className="su-group sd-trial">
+      <h3>Essai guidé</h3>
+      {!r.proposal && <p className="muted sd-note">{r.no_proposal}</p>}
+      {r.proposal && (
+        <>
+          <p className="sd-trial-what"><b>{r.proposal.what}</b></p>
+          <p className="muted sd-note">Pourquoi : {r.proposal.why}</p>
+          <p className="muted sd-note">Comment : {r.proposal.protocol} Aucun gain de temps n'est promis : on mesure l'effet.</p>
+          <label className="su-pick" style={{ marginTop: 10 }}>
+            <span>Séance d'après</span>
+            <select value={after ?? ""} onChange={(e) => onAfter(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">Choisir la séance avec le nouveau réglage…</option>
+              {afterChoices.map((s) => (
+                <option key={s.id} value={s.id}>{dateTime(s.started_at_unix)} · {s.lap_count} tours</option>
+              ))}
+            </select>
+          </label>
+          {r.verdict && (
+            <div className="sd-verdict">
+              <p className={r.verdict.applied ? "" : "fc-warn"}>{r.verdict.applied_text}</p>
+              <p><span className={`chip ${r.verdict.significant && r.verdict.applied ? "good" : ""}`}>{r.verdict.significant ? "effet mesuré" : "pas d'effet mesurable"}</span> {r.verdict.text}</p>
+              {r.verdict.others_changed.length > 0 && <p className="muted sd-note">Autres réglages changés : {r.verdict.others_changed.join(" ; ")}.</p>}
+              {r.verdict.lap_before_s != null && r.verdict.lap_after_s != null && (
+                <p className="muted sd-note">Temps au tour médian, à titre indicatif (piste, carburant et rythme changent aussi) : {lapTime(r.verdict.lap_before_s)} puis {lapTime(r.verdict.lap_after_s)}.</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Onglet Setups : diagnostic d'une séance LMU, mesures seulement. */
 export function SetupDiagCard() {
   const sessions = useAsync(() => api.sessions({ sim: "lmu" }), []);
@@ -216,6 +253,27 @@ export function SetupDiagCard() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const chosen = id ?? list[0]?.id ?? null;
+  const cur = list.find((s) => s.id === chosen);
+  // Séance d'après : même circuit, même voiture, plus récente.
+  const afterChoices = cur ? list.filter((s) => s.track === cur.track && s.car === cur.car && s.track_config === cur.track_config && s.started_at_unix > cur.started_at_unix) : [];
+  const [after, setAfter] = useState<number | null>(null);
+  const [trial, setTrial] = useState<SetupTrialReport | null>(null);
+  useEffect(() => {
+    setTrial(null);
+    if (chosen == null) return;
+    let live = true;
+    api.setupTrial(chosen, after).then(
+      (x) => {
+        if (live) setTrial(x);
+      },
+      () => {
+        if (live) setTrial(null);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [chosen, after]);
 
   useEffect(() => {
     setD(null);
@@ -247,7 +305,7 @@ export function SetupDiagCard() {
       ) : (
         <label className="su-pick">
           <span>Séance</span>
-          <select value={chosen ?? ""} onChange={(e) => setId(Number(e.target.value))}>
+          <select value={chosen ?? ""} onChange={(e) => { setId(Number(e.target.value)); setAfter(null); }}>
             {list.map((s) => (
               <option key={s.id} value={s.id}>{dateTime(s.started_at_unix)} · {s.track} · {s.car} · {s.lap_count} tours</option>
             ))}
@@ -257,6 +315,7 @@ export function SetupDiagCard() {
       {busy && <div className="muted" style={{ marginTop: 10 }}>Lecture de l'enregistrement…</div>}
       {err && <div className="fc-warn">{err}</div>}
       {d && <Diagnosis d={d} />}
+      {d && trial && <TrialView r={trial} afterChoices={afterChoices} after={after} onAfter={setAfter} />}
     </div>
   );
 }
