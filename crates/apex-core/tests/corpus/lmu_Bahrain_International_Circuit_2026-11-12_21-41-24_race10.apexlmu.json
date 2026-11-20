@@ -343,6 +343,12 @@
               "5",
               "9",
               "+4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.36 s · entrée -0.24 s · sortie +0.09 s"
             ]
           ],
           "gain": [
@@ -393,6 +399,12 @@
               "16",
               "10",
               "-6"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.05 s · entrée +0.01 s · milieu +0.00 s · sortie +0.10 s"
             ]
           ],
           "gain": [
@@ -443,6 +455,12 @@
               "3",
               "3",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée +0.03 s · milieu +0.00 s · sortie +0.09 s"
             ]
           ],
           "gain": [
@@ -799,6 +817,12 @@
               "5",
               "8",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.62 s · entrée -0.17 s · sortie +0.24 s"
             ]
           ],
           "gain": [
@@ -812,7 +836,7 @@
           "title": "Virage 1 : freinage trop précoce"
         },
         {
-          "confidence": "high",
+          "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
@@ -849,6 +873,12 @@
               "7",
               "7",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.08 s · entrée -0.03 s · sortie +0.63 s"
             ]
           ],
           "gain": [
@@ -899,6 +929,12 @@
               "7",
               "3",
               "-4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.31 s · entrée +0.04 s · sortie +0.08 s"
             ]
           ],
           "gain": [
@@ -949,6 +985,12 @@
               "3",
               "6",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée +0.07 s · milieu +0.00 s · sortie +0.34 s"
             ]
           ],
           "gain": [
@@ -962,7 +1004,7 @@
           "title": "Virage 12 : vitesse minimale insuffisante"
         },
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -999,6 +1041,12 @@
               "7",
               "7",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.34 s · entrée +0.00 s · sortie +0.07 s"
             ]
           ],
           "gain": [
@@ -1049,6 +1097,12 @@
               "6",
               "14",
               "+8"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.21 s · entrée -0.01 s · sortie +0.12 s"
             ]
           ],
           "gain": [
@@ -1099,6 +1153,12 @@
               "16",
               "8",
               "-8"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.01 s · entrée +0.01 s · milieu +0.00 s · sortie +0.21 s"
             ]
           ],
           "gain": [
@@ -1112,7 +1172,7 @@
           "title": "Virage 6 : sortie de virage pénalisante"
         },
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -1149,6 +1209,12 @@
               "13",
               "12",
               "-1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.08 s · entrée -0.03 s · sortie +0.30 s"
             ]
           ],
           "gain": [
@@ -1199,6 +1265,12 @@
               "5",
               "5",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.00 s · entrée +0.03 s · sortie +0.13 s"
             ]
           ],
           "gain": [

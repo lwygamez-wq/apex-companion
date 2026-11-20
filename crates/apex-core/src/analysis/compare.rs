@@ -1,7 +1,7 @@
 //! Comparaison de deux tours : delta par distance, virages, conseils, avertissements.
 
 use super::corners::{corner_metrics, detect_corners, CornerConfig, CornerDef, CornerMetrics};
-use super::insights::{corner_insight, DataQuality, Insight, Thresholds};
+use super::insights::{apply_phases, corner_insight, DataQuality, Insight, Thresholds};
 use super::phases::{corner_phases, PhaseLoss};
 use super::resample::{resample, ResampleError, Resampled};
 use crate::model::{LapMeta, LapTrace, SessionMeta};
@@ -205,8 +205,10 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
         mc.exit_speed_kmh = c.speed_kmh[c.idx(at)];
         mr.exit_at_m = at;
         mc.exit_at_m = at;
+        let phases = corner_phases(&r, &d, &mr, &delta, floor_m);
         if !hard_mismatch {
-            if let Some(i) = corner_insight(&d, &mr, &mc, &q, &th) {
+            if let Some(mut i) = corner_insight(&d, &mr, &mc, &q, &th) {
+                apply_phases(&mut i, &phases);
                 insights.push(i);
             }
         }
@@ -214,7 +216,6 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
             (Some(o), Some(s)) => o.get(r.idx(d.apex_m)).map(|v| v * s),
             _ => None,
         };
-        let phases = corner_phases(&r, &d, &mr, &delta, floor_m);
         floor_m = d.exit_m;
         corners.push(CornerComparison { time_delta_s: mc.time_s - mr.time_s, apex_offset_m, phases, corner: d, reference: mr, compared: mc });
     }

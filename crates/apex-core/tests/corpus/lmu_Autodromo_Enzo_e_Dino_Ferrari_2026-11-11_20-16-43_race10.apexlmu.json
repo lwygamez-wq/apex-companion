@@ -327,6 +327,12 @@
               "13",
               "10",
               "-3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.04 s · entrée +0.02 s · milieu +0.00 s · sortie +0.08 s"
             ]
           ],
           "gain": [
@@ -377,6 +383,12 @@
               "7",
               "5",
               "-2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.06 s · entrée +0.01 s · sortie +0.05 s"
             ]
           ],
           "gain": [
@@ -390,7 +402,7 @@
           "title": "Piratella : freinage trop précoce"
         },
         {
-          "confidence": "high",
+          "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
@@ -427,6 +439,12 @@
               "8",
               "14",
               "+6"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.09 s · entrée -0.02 s · sortie +0.18 s"
             ]
           ],
           "gain": [
@@ -730,7 +748,7 @@
       "delta_end_s": 20.067,
       "insights": [
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -767,6 +785,12 @@
               "13",
               "14",
               "+1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.67 s · entrée +0.03 s · milieu +0.02 s · sortie +15.98 s"
             ]
           ],
           "gain": [
@@ -780,7 +804,7 @@
           "title": "Villeneuve : freinage trop précoce"
         },
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -817,6 +841,12 @@
               "11",
               "9",
               "-2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.12 s · entrée +0.00 s · sortie +0.39 s"
             ]
           ],
           "gain": [
@@ -867,6 +897,12 @@
               "2",
               "4",
               "+2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.05 s · entrée +0.10 s · sortie +0.25 s"
             ]
           ],
           "gain": [
@@ -917,6 +953,12 @@
               "8",
               "14",
               "+6"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.16 s · entrée +0.01 s · sortie +0.15 s"
             ]
           ],
           "gain": [
@@ -967,6 +1009,12 @@
               "7",
               "5",
               "-2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.10 s · entrée +0.00 s · sortie +0.04 s"
             ]
           ],
           "gain": [
@@ -1017,6 +1065,12 @@
               "6",
               "11",
               "+5"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.24 s · entrée -0.02 s · milieu -0.04 s · sortie -0.11 s"
             ]
           ],
           "gain": [

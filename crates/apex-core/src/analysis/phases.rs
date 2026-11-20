@@ -27,6 +27,16 @@ pub enum CornerPhase {
 impl CornerPhase {
     pub const ALL: [CornerPhase; 4] = [CornerPhase::Freinage, CornerPhase::Entree, CornerPhase::Milieu, CornerPhase::Sortie];
 
+    /// Libellé court (« freinage », « entrée »…).
+    pub fn label(self) -> &'static str {
+        match self {
+            CornerPhase::Freinage => "freinage",
+            CornerPhase::Entree => "entrée",
+            CornerPhase::Milieu => "milieu",
+            CornerPhase::Sortie => "sortie",
+        }
+    }
+
     /// Libellé prononçable (« au freinage », « à l'entrée »…).
     pub fn spoken(self) -> &'static str {
         match self {

@@ -215,6 +215,12 @@
               "1",
               "6",
               "+5"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.06 s · entrée +0.03 s · sortie +0.11 s"
             ]
           ],
           "gain": [
@@ -265,6 +271,12 @@
               "5",
               "8",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.04 s · entrée +0.02 s · milieu +0.02 s · sortie +0.06 s"
             ]
           ],
           "gain": [
@@ -456,7 +468,7 @@
       "delta_end_s": 2.488,
       "insights": [
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -493,6 +505,12 @@
               "1",
               "5",
               "+4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.19 s · entrée +0.28 s · sortie +1.95 s"
             ]
           ],
           "gain": [
@@ -543,6 +561,12 @@
               "5",
               "6",
               "+1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.03 s · entrée +0.09 s · milieu +0.00 s · sortie -0.01 s"
             ]
           ],
           "gain": [
