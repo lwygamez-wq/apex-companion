@@ -15,6 +15,7 @@ pub mod resample;
 pub mod stint_drift;
 pub mod risk;
 pub mod session;
+pub mod setup_diag;
 pub mod strategy;
 pub mod surface;
 

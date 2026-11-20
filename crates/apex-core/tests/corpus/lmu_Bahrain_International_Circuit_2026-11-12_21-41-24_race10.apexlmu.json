@@ -2270,6 +2270,301 @@
     "sim": "lmu",
     "track": "Bahrain International Circuit"
   },
+  "setup_diag": {
+    "balance": [
+      [
+        "Virage 1",
+        "entree",
+        "sous_vire",
+        0.778,
+        28
+      ],
+      [
+        "Virage 1",
+        "sortie",
+        "pas_d_ecart",
+        1.033,
+        28
+      ],
+      [
+        "Virage 4",
+        "entree",
+        "sous_vire",
+        0.806,
+        28
+      ],
+      [
+        "Virage 4",
+        "milieu",
+        "pas_d_ecart",
+        0.825,
+        28
+      ],
+      [
+        "Virage 4",
+        "sortie",
+        "pas_d_ecart",
+        1.083,
+        28
+      ],
+      [
+        "Virage 6",
+        "entree",
+        "pas_d_ecart",
+        0.921,
+        28
+      ],
+      [
+        "Virage 6",
+        "milieu",
+        "sous_vire",
+        0.564,
+        28
+      ],
+      [
+        "Virage 6",
+        "sortie",
+        "pas_d_ecart",
+        0.903,
+        28
+      ],
+      [
+        "Virage 8",
+        "entree",
+        "sous_vire",
+        0.786,
+        28
+      ],
+      [
+        "Virage 8",
+        "milieu",
+        "sous_vire",
+        0.708,
+        20
+      ],
+      [
+        "Virage 8",
+        "sortie",
+        "pas_d_ecart",
+        1.077,
+        27
+      ],
+      [
+        "Virages 9-10",
+        "entree",
+        "pas_d_ecart",
+        1.046,
+        28
+      ],
+      [
+        "Virages 9-10",
+        "milieu",
+        "sous_vire",
+        0.599,
+        24
+      ],
+      [
+        "Virages 9-10",
+        "sortie",
+        "pas_d_ecart",
+        1.048,
+        25
+      ],
+      [
+        "Virage 11",
+        "entree",
+        "sous_vire",
+        0.644,
+        28
+      ],
+      [
+        "Virage 11",
+        "milieu",
+        "sous_vire",
+        0.716,
+        28
+      ],
+      [
+        "Virage 11",
+        "sortie",
+        "pas_d_ecart",
+        1.052,
+        28
+      ],
+      [
+        "Virage 12",
+        "entree",
+        "pas_d_ecart",
+        0.846,
+        28
+      ],
+      [
+        "Virage 12",
+        "milieu",
+        "sous_vire",
+        0.645,
+        28
+      ],
+      [
+        "Virage 12",
+        "sortie",
+        "pas_d_ecart",
+        0.89,
+        28
+      ],
+      [
+        "Virage 13",
+        "entree",
+        "pas_d_ecart",
+        0.88,
+        28
+      ],
+      [
+        "Virage 13",
+        "milieu",
+        "sous_vire",
+        0.629,
+        28
+      ],
+      [
+        "Virage 13",
+        "sortie",
+        "pas_d_ecart",
+        0.992,
+        28
+      ],
+      [
+        "Virage 14",
+        "entree",
+        "sous_vire",
+        0.757,
+        28
+      ],
+      [
+        "Virage 14",
+        "milieu",
+        "sous_vire",
+        0.6,
+        28
+      ],
+      [
+        "Virage 14",
+        "sortie",
+        "pas_d_ecart",
+        1.079,
+        28
+      ]
+    ],
+    "brakes": [
+      [
+        "Avant gauche",
+        421.473,
+        532.631
+      ],
+      [
+        "Avant droit",
+        421.338,
+        530.648
+      ],
+      [
+        "Arrière gauche",
+        370.973,
+        461.927
+      ],
+      [
+        "Arrière droit",
+        371.699,
+        462.642
+      ]
+    ],
+    "height_findings": [
+      "Avant gauche : points les plus bas à Virage 1 (28 tours sur 28), 21,8 mm.",
+      "Avant droit : points les plus bas à Virage 1 (28 tours sur 28), 21,9 mm.",
+      "Arrière gauche : points les plus bas à Virage 12 (28 tours sur 28), 23,2 mm.",
+      "Arrière droit : points les plus bas à Virage 1 (28 tours sur 28), 24,2 mm."
+    ],
+    "heights": [
+      [
+        "Avant gauche",
+        34.5,
+        21.8,
+        0,
+        "Virage 1 (28 tours sur 28)"
+      ],
+      [
+        "Avant droit",
+        35.2,
+        21.9,
+        0,
+        "Virage 1 (28 tours sur 28)"
+      ],
+      [
+        "Arrière gauche",
+        38.8,
+        23.2,
+        0,
+        "Virage 12 (28 tours sur 28)"
+      ],
+      [
+        "Arrière droit",
+        39.8,
+        24.2,
+        2,
+        "Virage 1 (28 tours sur 28)"
+      ]
+    ],
+    "laps": 28,
+    "locks": 0,
+    "missing": [
+      "Couche interne des pneus : enregistrée à partir d'Apex 0.41.",
+      "Blocages de roue : rotation des roues enregistrée à partir d'Apex 0.41."
+    ],
+    "setup_rows": 132,
+    "tyre_findings": [
+      "Avant gauche : intérieur plus chaud que l'extérieur de 4,5 °C en appui.",
+      "Avant gauche : milieu plus chaud que les bords de 5,0 °C en appui.",
+      "Avant droit : intérieur plus chaud que l'extérieur de 5,2 °C en appui.",
+      "Avant droit : milieu plus chaud que les bords de 5,3 °C en appui.",
+      "Arrière gauche : intérieur plus chaud que l'extérieur de 5,5 °C en appui.",
+      "Arrière gauche : milieu plus chaud que les bords de 3,7 °C en appui.",
+      "Arrière droit : intérieur plus chaud que l'extérieur de 10,1 °C en appui.",
+      "Arrière droit : milieu plus chaud que les bords de 3,9 °C en appui."
+    ],
+    "tyres": [
+      [
+        "Avant gauche",
+        60.203,
+        67.816,
+        65.426,
+        83.388,
+        165.505
+      ],
+      [
+        "Avant droit",
+        54.013,
+        62.818,
+        60.088,
+        79.937,
+        164.01
+      ],
+      [
+        "Arrière gauche",
+        56.944,
+        65.42,
+        64.647,
+        82.092,
+        164.179
+      ],
+      [
+        "Arrière droit",
+        51.768,
+        61.966,
+        63.302,
+        79.841,
+        162.861
+      ]
+    ]
+  },
   "strategy": {
     "lap_time": 109.746,
     "laps": 33,

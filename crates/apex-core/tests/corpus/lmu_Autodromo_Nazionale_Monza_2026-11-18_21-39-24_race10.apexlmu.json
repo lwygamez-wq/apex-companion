@@ -1804,6 +1804,237 @@
     "sim": "lmu",
     "track": "Autodromo Nazionale Monza"
   },
+  "setup_diag": {
+    "balance": [
+      [
+        "Rettifilo",
+        "entree",
+        "pas_d_ecart",
+        0.925,
+        28
+      ],
+      [
+        "Rettifilo",
+        "sortie",
+        "survire",
+        1.351,
+        28
+      ],
+      [
+        "Roggia",
+        "entree",
+        "pas_d_ecart",
+        0.903,
+        30
+      ],
+      [
+        "Roggia",
+        "milieu",
+        "pas_d_ecart",
+        1.097,
+        30
+      ],
+      [
+        "Roggia",
+        "sortie",
+        "pas_d_ecart",
+        1.229,
+        30
+      ],
+      [
+        "Lesmo 1",
+        "entree",
+        "pas_d_ecart",
+        1.161,
+        30
+      ],
+      [
+        "Lesmo 1",
+        "milieu",
+        "pas_d_ecart",
+        0.793,
+        30
+      ],
+      [
+        "Lesmo 1",
+        "sortie",
+        "pas_d_ecart",
+        1.301,
+        30
+      ],
+      [
+        "Lesmo 2",
+        "entree",
+        "pas_d_ecart",
+        0.789,
+        30
+      ],
+      [
+        "Lesmo 2",
+        "milieu",
+        "pas_d_ecart",
+        0.924,
+        30
+      ],
+      [
+        "Lesmo 2",
+        "sortie",
+        "survire",
+        1.707,
+        29
+      ],
+      [
+        "Ascari",
+        "entree",
+        "pas_d_ecart",
+        0.812,
+        30
+      ],
+      [
+        "Ascari",
+        "milieu",
+        "sous_vire",
+        0.717,
+        30
+      ],
+      [
+        "Ascari",
+        "sortie",
+        "pas_d_ecart",
+        1.024,
+        30
+      ],
+      [
+        "Parabolica",
+        "entree",
+        "pas_d_ecart",
+        1.04,
+        30
+      ],
+      [
+        "Parabolica",
+        "milieu",
+        "sous_vire",
+        0.702,
+        30
+      ],
+      [
+        "Parabolica",
+        "sortie",
+        "pas_d_ecart",
+        1.248,
+        30
+      ]
+    ],
+    "brakes": [
+      [
+        "Avant gauche",
+        355.674,
+        465.801
+      ],
+      [
+        "Avant droit",
+        355.486,
+        464.538
+      ],
+      [
+        "Arrière gauche",
+        262.483,
+        346.823
+      ],
+      [
+        "Arrière droit",
+        262.836,
+        347.154
+      ]
+    ],
+    "height_findings": [
+      "Avant gauche : points les plus bas en ligne droite (30 tours sur 30), 22,0 mm.",
+      "Avant droit : points les plus bas en ligne droite (30 tours sur 30), 22,4 mm.",
+      "Arrière gauche : points les plus bas en ligne droite (30 tours sur 30), 19,7 mm.",
+      "Arrière droit : points les plus bas en ligne droite (30 tours sur 30), 23,6 mm."
+    ],
+    "heights": [
+      [
+        "Avant gauche",
+        30.9,
+        22.0,
+        0,
+        "en ligne droite (30 tours sur 30)"
+      ],
+      [
+        "Avant droit",
+        32.6,
+        22.4,
+        0,
+        "en ligne droite (30 tours sur 30)"
+      ],
+      [
+        "Arrière gauche",
+        33.4,
+        19.7,
+        6,
+        "en ligne droite (30 tours sur 30)"
+      ],
+      [
+        "Arrière droit",
+        37.9,
+        23.6,
+        17,
+        "en ligne droite (30 tours sur 30)"
+      ]
+    ],
+    "laps": 30,
+    "locks": 0,
+    "missing": [
+      "Couche interne des pneus : enregistrée à partir d'Apex 0.41.",
+      "Blocages de roue : rotation des roues enregistrée à partir d'Apex 0.41."
+    ],
+    "setup_rows": 132,
+    "tyre_findings": [
+      "Avant gauche : milieu plus chaud que les bords de 4,9 °C en appui.",
+      "Avant droit : intérieur plus chaud que l'extérieur de 5,6 °C en appui.",
+      "Avant droit : milieu plus chaud que les bords de 3,7 °C en appui.",
+      "Arrière gauche : intérieur plus chaud que l'extérieur de 5,1 °C en appui.",
+      "Arrière gauche : milieu plus chaud que les bords de 3,8 °C en appui.",
+      "Arrière droit : intérieur plus chaud que l'extérieur de 10,4 °C en appui.",
+      "Arrière droit : milieu plus chaud que les bords de 3,9 °C en appui."
+    ],
+    "tyres": [
+      [
+        "Avant gauche",
+        51.196,
+        57.559,
+        54.901,
+        76.981,
+        156.48
+      ],
+      [
+        "Avant droit",
+        40.716,
+        48.185,
+        47.925,
+        67.368,
+        151.694
+      ],
+      [
+        "Arrière gauche",
+        50.395,
+        56.65,
+        55.391,
+        76.762,
+        155.307
+      ],
+      [
+        "Arrière droit",
+        42.25,
+        53.389,
+        54.893,
+        69.873,
+        151.194
+      ]
+    ]
+  },
   "strategy": {
     "lap_time": 98.134,
     "laps": 37,

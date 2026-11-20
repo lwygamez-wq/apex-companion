@@ -979,3 +979,93 @@ export interface GameFacts {
   fuel_ratio: number | null;
   est_lap_s: number | null;
 }
+
+// --- Diagnostic setup (LMU, étape 2) : mesures seulement, aucun conseil -----------------------------
+
+export interface DiagStat {
+  value: number;
+  unit: string;
+  laps: number;
+  /** Écart entre le 9e et le 1er décile des valeurs par tour. */
+  spread: number;
+}
+
+export interface DiagFinding {
+  text: string;
+  value: number;
+  unit: string;
+  laps: number;
+  spread: number;
+}
+
+export interface TyreDiag {
+  wheel: string;
+  outer: DiagStat | null;
+  middle: DiagStat | null;
+  inner: DiagStat | null;
+  inner_minus_outer: DiagStat | null;
+  middle_minus_edges: DiagStat | null;
+  carcass: DiagStat | null;
+  inner_layer: DiagStat | null;
+  pressure_hot: DiagStat | null;
+  pressure_set: string | null;
+}
+
+export interface BrakeDiag {
+  wheel: string;
+  median: DiagStat | null;
+  peak: DiagStat | null;
+}
+
+export interface LockZone {
+  corner: string;
+  wheel: string;
+  events: number;
+  laps: number;
+  slip_pct: number;
+}
+
+export interface HeightDiag {
+  wheel: string;
+  median: DiagStat | null;
+  low: DiagStat | null;
+  spikes_under_5mm: number;
+  low_zone: string | null;
+}
+
+export type BalancePhase = "entree" | "milieu" | "sortie";
+export type BalanceTrend = "sous_vire" | "pas_d_ecart" | "survire";
+
+export interface BalanceZone {
+  corner: string;
+  phase: BalancePhase;
+  trend: BalanceTrend;
+  ratio: DiagStat;
+  countersteer_pct: number;
+}
+
+export interface SetupRow {
+  key: string;
+  label: string;
+  group: string;
+  step: number;
+  min: number;
+  max: number;
+  display: string;
+}
+
+export interface SetupDiagnosis {
+  car: string;
+  track: string;
+  laps_used: number;
+  tyres: TyreDiag[];
+  tyre_findings: DiagFinding[];
+  brakes: BrakeDiag[];
+  locks: LockZone[];
+  heights: HeightDiag[];
+  height_findings: DiagFinding[];
+  balance: BalanceZone[];
+  setup: SetupRow[];
+  missing: string[];
+  temperature_note: string;
+}

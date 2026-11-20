@@ -126,6 +126,14 @@ pub struct Tick {
     pub tl_steps: u8,
     /// Hauteur de caisse par roue (m), AvG, AvD, ArG, ArD ; 0 si inconnu (fichier d'avant 0.36).
     pub ride_h_m: [f32; 4],
+    /// Accélérations de la voiture dans son repère (m/s²), latérale et longitudinale ; 0 si inconnu
+    /// (fichier d'avant 0.41).
+    pub accel_lat: f32,
+    pub accel_long: f32,
+    /// Rotation de chaque roue (rad/s) et vitesse du sol sous la roue, dans l'axe de la roue (m/s) :
+    /// leur rapport donne le glissement (blocage au freinage). 0 si inconnu (fichier d'avant 0.41).
+    pub wheel_rot: [f32; 4],
+    pub wheel_vlong: [f32; 4],
 }
 
 /// Pneus et freins, relevés 5 fois par seconde (ils varient lentement). Ordre des roues : AvG, AvD,
@@ -138,6 +146,9 @@ pub struct WheelSample {
     pub carcass_c: [f32; 4],
     pub pressure_kpa: [f32; 4],
     pub brake_c: [f32; 4],
+    /// Couche interne de la bande de roulement, gauche / milieu / droite (°C) ; 0 si inconnu
+    /// (fichier d'avant 0.41).
+    pub inner_c: [[f32; 3]; 4],
 }
 
 /// Un réglage du garage au départ de la séance (API du jeu) : cran, valeur affichée, crans mini et maxi.
@@ -296,6 +307,10 @@ fn tick_from(f: &Frame, t: &VehicleTelemetry, s: Option<&VehicleScoring>, impact
         wear: tyre_left_pct(t),
         tl_steps: t.mTrackLimitsSteps,
         ride_h_m: std::array::from_fn(|k| t.mWheels[k].mRideHeight as f32),
+        accel_lat: t.mLocalAccel.x as f32,
+        accel_long: t.mLocalAccel.z as f32,
+        wheel_rot: std::array::from_fn(|k| t.mWheels[k].mRotation as f32),
+        wheel_vlong: std::array::from_fn(|k| t.mWheels[k].mLongitudinalGroundVel as f32),
     }
 }
 
@@ -309,6 +324,7 @@ fn wheel_from(t: &VehicleTelemetry) -> WheelSample {
         carcass_c: std::array::from_fn(|w| c(t.mWheels[w].mTireCarcassTemperature)),
         pressure_kpa: std::array::from_fn(|w| t.mWheels[w].mPressure as f32),
         brake_c: std::array::from_fn(|w| c(t.mWheels[w].mBrakeTemp)),
+        inner_c: std::array::from_fn(|w| std::array::from_fn(|z| c(t.mWheels[w].mTireInnerLayerTemperature[z]))),
     }
 }
 
@@ -499,6 +515,27 @@ pub fn encode(r: &Recording) -> Vec<u8> {
             put_f32(&mut raw, r.wheels.iter().map(|w| col(w, k)));
         }
     }
+    // Extension 3 (Apex 0.41) : accélérations, rotation et vitesse sol de chaque roue (centièmes ou
+    // dixièmes, en entiers 16 bits), puis couche interne des pneus à 5 Hz (dixièmes de °C).
+    raw.extend_from_slice(EXT3);
+    let i16s = |raw: &mut Vec<u8>, it: &mut dyn Iterator<Item = f32>, scale: f32| {
+        for v in it {
+            raw.extend_from_slice(&((v * scale).round().clamp(-32768.0, 32767.0) as i16).to_le_bytes());
+        }
+    };
+    i16s(&mut raw, &mut r.ticks.iter().map(|t| t.accel_lat), 100.0);
+    i16s(&mut raw, &mut r.ticks.iter().map(|t| t.accel_long), 100.0);
+    for k in 0..4 {
+        i16s(&mut raw, &mut r.ticks.iter().map(|t| t.wheel_rot[k]), 10.0);
+    }
+    for k in 0..4 {
+        i16s(&mut raw, &mut r.ticks.iter().map(|t| t.wheel_vlong[k]), 100.0);
+    }
+    for k in 0..4 {
+        for z in 0..3 {
+            i16s(&mut raw, &mut r.wheels.iter().map(|w| w.inner_c[k][z]), 10.0);
+        }
+    }
     let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
     let _ = gz.write_all(&raw);
     gz.finish().unwrap_or_default()
@@ -508,6 +545,8 @@ pub fn encode(r: &Recording) -> Vec<u8> {
 const EXT1: &[u8; 4] = b"EXT1";
 /// Marqueur de l'extension 2 (hauteurs par roue, pneus et freins à 5 Hz).
 const EXT2: &[u8; 4] = b"EXT2";
+/// Marqueur de l'extension 3 (accélérations, rotation des roues, couche interne des pneus).
+const EXT3: &[u8; 4] = b"EXT3";
 
 /// Taille décompressée maximale d'un enregistrement (une séance de 24 h à 60 Hz en fait ≈ 400 Mo).
 const MAX_RAW_BYTES: u64 = 512 * 1024 * 1024;
@@ -627,6 +666,29 @@ pub fn decode(bytes: &[u8]) -> Result<Recording, String> {
         }
         for k in 0..4 {
             col(&mut o, &|w, v| w.brake_c[k] = v)?;
+        }
+    }
+    if raw.get(o..o + 4) == Some(EXT3.as_slice()) {
+        o += 4;
+        let m = wheels.len();
+        let i16col = |o: &mut usize, len: usize, set: &mut dyn FnMut(usize, f32), scale: f32| -> Result<(), String> {
+            for (i, c) in take(o, len * 2)?.chunks_exact(2).enumerate() {
+                set(i, i16::from_le_bytes(c.try_into().unwrap()) as f32 / scale);
+            }
+            Ok(())
+        };
+        i16col(&mut o, n, &mut |i, v| ticks[i].accel_lat = v, 100.0)?;
+        i16col(&mut o, n, &mut |i, v| ticks[i].accel_long = v, 100.0)?;
+        for k in 0..4 {
+            i16col(&mut o, n, &mut |i, v| ticks[i].wheel_rot[k] = v, 10.0)?;
+        }
+        for k in 0..4 {
+            i16col(&mut o, n, &mut |i, v| ticks[i].wheel_vlong[k] = v, 100.0)?;
+        }
+        for k in 0..4 {
+            for z in 0..3 {
+                i16col(&mut o, m, &mut |i, v| wheels[i].inner_c[k][z] = v, 10.0)?;
+            }
         }
     }
     Ok(Recording { header: meta.header, ticks, anchors: meta.anchors, laps: meta.laps, wheels, setup: meta.setup })
@@ -1100,7 +1162,11 @@ mod tests {
         // Le pilote LMU de test ne remplit ni hauteurs, ni pneus, ni setup : on les pose ici.
         r.ticks[1234].ride_h_m = [0.0451, 0.0452, 0.0603, 0.0604];
         assert!(r.wheels.len() > 900, "{}", r.wheels.len());
-        r.wheels[7] = WheelSample { et: 12.5, temp_c: [[85.0, 88.5, 91.0]; 4], carcass_c: [90.0; 4], pressure_kpa: [131.2; 4], brake_c: [450.0, 455.0, 380.0, 382.0] };
+        r.wheels[7] = WheelSample { et: 12.5, temp_c: [[85.0, 88.5, 91.0]; 4], carcass_c: [90.0; 4], pressure_kpa: [131.2; 4], brake_c: [450.0, 455.0, 380.0, 382.0], inner_c: [[95.5, 97.0, 96.2]; 4] };
+        r.ticks[1234].accel_lat = -21.37;
+        r.ticks[1234].accel_long = 30.05;
+        r.ticks[1234].wheel_rot = [-150.3, -150.4, -149.9, 0.0];
+        r.ticks[1234].wheel_vlong = [55.21, 55.22, 55.19, 55.2];
         r.setup = Some(SetupSnapshot { values: vec![SetupValue { key: "WM_CAMBER-W_FL".into(), value: 27, display: "-1.3 deg".into(), min: 0, max: 31 }], presets: vec!["fast".into()], optimal_temp_c: vec![("Medium".into(), 92.0)] });
         let back = decode(&encode(&r)).unwrap();
         assert_eq!(back.wheels, r.wheels);
@@ -1115,6 +1181,25 @@ mod tests {
         assert_eq!(back.anchors, r.anchors);
         assert_eq!(back.laps, r.laps);
         assert!(back.ticks[1234].energy > 0.0 && back.ticks[1234].wear[3] > 0.0);
+    }
+
+    #[test]
+    fn files_without_the_grip_extension_still_open() {
+        use std::io::{Read, Write};
+        let mut r = record(1);
+        r.ticks[10].wheel_rot = [-100.0; 4];
+        let mut raw = vec![];
+        flate2::read::GzDecoder::new(encode(&r).as_slice()).read_to_end(&mut raw).unwrap();
+        // Fichier d'Apex 0.36 à 0.40 : tout ce qui suit le marqueur EXT3 disparaît.
+        let cut = raw.windows(4).rposition(|w| w == EXT3).unwrap();
+        raw.truncate(cut);
+        let mut e = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        e.write_all(&raw).unwrap();
+        let back = decode(&e.finish().unwrap()).unwrap();
+        assert_eq!(back.ticks.len(), r.ticks.len());
+        assert_eq!(back.wheels.len(), r.wheels.len(), "l'extension 2 reste lue");
+        assert!(back.ticks.iter().all(|t| t.wheel_rot == [0.0; 4] && t.accel_lat == 0.0));
+        assert!(back.wheels.iter().all(|w| w.inner_c == [[0.0; 3]; 4]));
     }
 
     #[test]

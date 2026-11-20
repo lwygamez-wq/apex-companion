@@ -147,7 +147,7 @@ apex-companion/
 │   │   ├── mock.rs             # circuit et sessions de démo (défauts injectés connus)
 │   │   ├── ingest/ibt.rs       # parseur iRacing .ibt (+ écrivain de test)
 │   │   ├── connectors/         # mod.rs (traits), iracing.rs, iracing_live.rs, lmu.rs, ac.rs
-│   │   └── analysis/           # resample, corners, phases, insights, compare, session, progress
+│   │   └── analysis/           # resample, corners, phases, insights, compare, session, progress, setup_diag
 │   ├── tests/                  # analysis_e2e.rs, ibt_real.rs (tes fichiers réels)
 │   └── examples/               # demo_report.rs (rapport texte), dump_fixtures.rs
 ├── src-tauri/

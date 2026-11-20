@@ -132,6 +132,27 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         }
     }
 
+    // Diagnostic setup (LMU) : chiffres seulement ; tout constat cite un chiffre mesuré.
+    let setup_diag = (m.sim == apex_core::model::SimId::Lmu).then(|| svc.setup_diagnosis(id).unwrap()).map(|g| {
+        for f in g.tyre_findings.iter().chain(&g.height_findings) {
+            if !has_digit(&f.text) || f.laps == 0 {
+                rule.push(format!("{} diagnostic « {} » : aucun chiffre mesuré", file.display(), f.text));
+            }
+        }
+        json!({
+            "laps": g.laps_used,
+            "tyres": g.tyres.iter().map(|t| json!([t.wheel, t.outer.as_ref().map(|x| x.value), t.middle.as_ref().map(|x| x.value), t.inner.as_ref().map(|x| x.value), t.carcass.as_ref().map(|x| x.value), t.pressure_hot.as_ref().map(|x| x.value)])).collect::<Vec<_>>(),
+            "tyre_findings": g.tyre_findings.iter().map(|f| &f.text).collect::<Vec<_>>(),
+            "brakes": g.brakes.iter().map(|b| json!([b.wheel, b.median.as_ref().map(|x| x.value), b.peak.as_ref().map(|x| x.value)])).collect::<Vec<_>>(),
+            "heights": g.heights.iter().map(|h| json!([h.wheel, h.median.as_ref().map(|x| x.value), h.low.as_ref().map(|x| x.value), h.spikes_under_5mm, h.low_zone])).collect::<Vec<_>>(),
+            "height_findings": g.height_findings.iter().map(|f| &f.text).collect::<Vec<_>>(),
+            "balance": g.balance.iter().map(|b| json!([b.corner, b.phase, b.trend, b.ratio.value, b.ratio.laps])).collect::<Vec<_>>(),
+            "locks": g.locks.len(),
+            "setup_rows": g.setup.len(),
+            "missing": g.missing,
+        })
+    });
+
     let strategy = svc
         .race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, None, 0.5, 0.5, &StrategyOverrides::default())
         .ok()
@@ -176,6 +197,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "comparisons": comparisons,
         "ai_context": svc.ai_context(id).ok(),
         "strategy": strategy,
+        "setup_diag": setup_diag,
         "radio": radio,
         "lap_2": lap_id(2).is_some(),
     }))

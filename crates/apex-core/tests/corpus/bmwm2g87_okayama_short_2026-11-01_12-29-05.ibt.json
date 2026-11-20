@@ -1028,6 +1028,7 @@
     "sim": "iracing",
     "track": "Okayama International Circuit"
   },
+  "setup_diag": null,
   "strategy": {
     "lap_time": 60.079,
     "laps": 14,

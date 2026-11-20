@@ -758,3 +758,16 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .rd-class-grid b { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .rd-class-grid b.slow { color: var(--red); }
 .rd-class-grid b.fast { color: var(--green, #3ad17a); }
+
+/* Diagnostic setup (onglet Setups) */
+.sd { margin-top: 12px; }
+.sd-findings { margin: 8px 0 4px; padding-left: 18px; }
+.sd-findings li { margin: 3px 0; }
+.su-group .sd-table { table-layout: auto; }
+.su-group .sd-table th:nth-child(n) { width: auto; }
+.sd-table td.num, .sd-table th:nth-child(n+2) { text-align: right; }
+.sd-table td:nth-child(4):not(.num) { text-align: right; }
+.sd-note { font-size: 12.5px; margin: 6px 0 0; }
+.sd-setup { margin-top: 14px; }
+.sd-setup summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.setups-page .card + .card { margin-top: 14px; }

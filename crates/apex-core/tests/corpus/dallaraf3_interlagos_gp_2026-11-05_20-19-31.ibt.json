@@ -1430,6 +1430,7 @@
     "sim": "iracing",
     "track": "Autódromo José Carlos Pace"
   },
+  "setup_diag": null,
   "strategy": {
     "lap_time": 91.924,
     "laps": 21,

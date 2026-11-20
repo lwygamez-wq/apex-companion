@@ -2465,6 +2465,192 @@
     "sim": "lmu",
     "track": "Autodromo Enzo e Dino Ferrari"
   },
+  "setup_diag": {
+    "balance": [
+      [
+        "Tamburello",
+        "entree",
+        "pas_d_ecart",
+        0.715,
+        46
+      ],
+      [
+        "Tamburello",
+        "milieu",
+        "sous_vire",
+        0.51,
+        46
+      ],
+      [
+        "Tamburello",
+        "sortie",
+        "pas_d_ecart",
+        0.791,
+        46
+      ],
+      [
+        "Villeneuve",
+        "entree",
+        "pas_d_ecart",
+        1.001,
+        46
+      ],
+      [
+        "Villeneuve",
+        "milieu",
+        "sous_vire",
+        0.588,
+        46
+      ],
+      [
+        "Villeneuve",
+        "sortie",
+        "pas_d_ecart",
+        0.852,
+        46
+      ],
+      [
+        "Tosa",
+        "entree",
+        "pas_d_ecart",
+        0.683,
+        46
+      ],
+      [
+        "Tosa",
+        "milieu",
+        "sous_vire",
+        0.634,
+        46
+      ],
+      [
+        "Tosa",
+        "sortie",
+        "pas_d_ecart",
+        1.161,
+        46
+      ],
+      [
+        "Piratella",
+        "entree",
+        "pas_d_ecart",
+        0.948,
+        46
+      ],
+      [
+        "Piratella",
+        "milieu",
+        "sous_vire",
+        0.542,
+        46
+      ],
+      [
+        "Piratella",
+        "sortie",
+        "pas_d_ecart",
+        0.97,
+        46
+      ],
+      [
+        "Acque Minerali",
+        "entree",
+        "pas_d_ecart",
+        0.923,
+        46
+      ],
+      [
+        "Acque Minerali",
+        "milieu",
+        "sous_vire",
+        0.639,
+        46
+      ],
+      [
+        "Acque Minerali",
+        "sortie",
+        "pas_d_ecart",
+        1.029,
+        46
+      ],
+      [
+        "Variante Alta",
+        "entree",
+        "pas_d_ecart",
+        0.794,
+        46
+      ],
+      [
+        "Variante Alta",
+        "milieu",
+        "sous_vire",
+        0.595,
+        45
+      ],
+      [
+        "Variante Alta",
+        "sortie",
+        "pas_d_ecart",
+        1.153,
+        46
+      ],
+      [
+        "Rivazza",
+        "entree",
+        "pas_d_ecart",
+        1.03,
+        46
+      ],
+      [
+        "Rivazza",
+        "milieu",
+        "sous_vire",
+        0.583,
+        46
+      ],
+      [
+        "Rivazza",
+        "sortie",
+        "pas_d_ecart",
+        0.978,
+        46
+      ],
+      [
+        "V8",
+        "entree",
+        "pas_d_ecart",
+        0.749,
+        46
+      ],
+      [
+        "V8",
+        "milieu",
+        "sous_vire",
+        0.62,
+        46
+      ],
+      [
+        "V8",
+        "sortie",
+        "pas_d_ecart",
+        1.09,
+        46
+      ]
+    ],
+    "brakes": [],
+    "height_findings": [],
+    "heights": [],
+    "laps": 46,
+    "locks": 0,
+    "missing": [
+      "Setup de la séance : non enregistré (jeu fermé au départ, ou fichier d'avant 0.36).",
+      "Pneus et freins : non enregistrés sur cette séance (fichier d'avant 0.36).",
+      "Blocages de roue : rotation des roues enregistrée à partir d'Apex 0.41.",
+      "Hauteurs de caisse : non enregistrées sur cette séance (fichier d'avant 0.36)."
+    ],
+    "setup_rows": 0,
+    "tyre_findings": [],
+    "tyres": []
+  },
   "strategy": {
     "lap_time": 94.64,
     "laps": 58,
