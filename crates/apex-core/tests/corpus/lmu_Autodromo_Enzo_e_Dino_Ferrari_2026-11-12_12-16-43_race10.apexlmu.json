@@ -1352,6 +1352,49 @@
     "spare_laps": 4.531,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.29
+            ],
+            [
+              "entree",
+              -0.01
+            ],
+            [
+              "milieu",
+              -0.003
+            ],
+            [
+              "sortie",
+              0.013
+            ]
+          ],
+          "laps_first": 12,
+          "laps_second": 12,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Variante Alta en sortie +0,11 s, Rivazza en sortie +0,07 s, Rivazza à l'entrée +0,03 s. Usure par tour : avant 0,99 %, arrière 0,74 %.",
+          "top": [
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.112,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Rivazza",
+              "drift_s": 0.071,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Rivazza",
+              "drift_s": 0.034,
+              "phase": "entree"
+            }
+          ],
+          "total_s": -0.29,
+          "wear_front_pct": 0.993,
+          "wear_rear_pct": 0.739
+        },
         "first_half_s": 94.884,
         "from_lap": 1,
         "laps": 29,
@@ -1360,6 +1403,49 @@
         "to_lap": 29
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.018
+            ],
+            [
+              "entree",
+              0.102
+            ],
+            [
+              "milieu",
+              -0.003
+            ],
+            [
+              "sortie",
+              -0.277
+            ]
+          ],
+          "laps_first": 9,
+          "laps_second": 8,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Acque Minerali en sortie +0,09 s, V8 à l'entrée +0,06 s, Rivazza au freinage +0,06 s. Sur tout le tour, 0,10 s à l'entrée (100 % de la perte). Usure par tour : avant 0,81 %, arrière 0,65 %.",
+          "top": [
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.091,
+              "phase": "sortie"
+            },
+            {
+              "corner": "V8",
+              "drift_s": 0.064,
+              "phase": "entree"
+            },
+            {
+              "corner": "Rivazza",
+              "drift_s": 0.058,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.197,
+          "wear_front_pct": 0.811,
+          "wear_rear_pct": 0.646
+        },
         "first_half_s": 94.256,
         "from_lap": 32,
         "laps": 25,

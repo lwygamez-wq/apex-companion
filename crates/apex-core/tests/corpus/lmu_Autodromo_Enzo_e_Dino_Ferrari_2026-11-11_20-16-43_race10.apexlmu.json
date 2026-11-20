@@ -1134,6 +1134,49 @@
     "spare_laps": null,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              0.154
+            ],
+            [
+              "entree",
+              0.056
+            ],
+            [
+              "milieu",
+              0.029
+            ],
+            [
+              "sortie",
+              -0.214
+            ]
+          ],
+          "laps_first": 11,
+          "laps_second": 11,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Acque Minerali au freinage +0,09 s, Tosa au freinage +0,05 s, Variante Alta au freinage +0,05 s. Sur tout le tour, 0,15 s au freinage (65 % de la perte).",
+          "top": [
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.092,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Tosa",
+              "drift_s": 0.054,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.049,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": 0.025,
+          "wear_front_pct": null,
+          "wear_rear_pct": null
+        },
         "first_half_s": 95.359,
         "from_lap": 1,
         "laps": 30,
@@ -1142,6 +1185,49 @@
         "to_lap": 30
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.089
+            ],
+            [
+              "entree",
+              0.049
+            ],
+            [
+              "milieu",
+              0.026
+            ],
+            [
+              "sortie",
+              -0.041
+            ]
+          ],
+          "laps_first": 9,
+          "laps_second": 9,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Acque Minerali en sortie +0,10 s, Villeneuve en sortie +0,08 s, Tosa au freinage +0,06 s.",
+          "top": [
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.101,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Villeneuve",
+              "drift_s": 0.084,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Tosa",
+              "drift_s": 0.062,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.055,
+          "wear_front_pct": null,
+          "wear_rear_pct": null
+        },
         "first_half_s": 95.235,
         "from_lap": 34,
         "laps": 22,

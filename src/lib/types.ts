@@ -907,6 +907,26 @@ export interface StintPace {
   median_s: number;
   first_half_s: number;
   second_half_s: number;
+  /** Où le temps se perd d'une moitié du relais à l'autre (virage, phase), usure des pneus. */
+  drift: StintDrift | null;
+}
+
+export interface PhaseDrift {
+  corner: string;
+  phase: CornerPhase;
+  /** Seconde moitié moins première (s) ; positif = plus lent en fin de relais. */
+  drift_s: number;
+}
+
+export interface StintDrift {
+  laps_first: number;
+  laps_second: number;
+  by_phase: [CornerPhase, number][];
+  top: PhaseDrift[];
+  total_s: number;
+  wear_front_pct: number | null;
+  wear_rear_pct: number | null;
+  summary: string | null;
 }
 
 export interface RaceDebrief {

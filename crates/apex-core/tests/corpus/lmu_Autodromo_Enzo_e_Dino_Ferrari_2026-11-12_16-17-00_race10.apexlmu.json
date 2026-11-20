@@ -1051,6 +1051,49 @@
     "spare_laps": 2.38,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.062
+            ],
+            [
+              "entree",
+              0.013
+            ],
+            [
+              "milieu",
+              -0.016
+            ],
+            [
+              "sortie",
+              -0.005
+            ]
+          ],
+          "laps_first": 14,
+          "laps_second": 14,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Variante Alta à l'entrée +0,06 s, Acque Minerali en sortie +0,05 s, Villeneuve au freinage +0,05 s. Usure par tour : avant 0,68 %, arrière 0,82 %.",
+          "top": [
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.059,
+              "phase": "entree"
+            },
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.05,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Villeneuve",
+              "drift_s": 0.048,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.07,
+          "wear_front_pct": 0.685,
+          "wear_rear_pct": 0.819
+        },
         "first_half_s": 93.689,
         "from_lap": 1,
         "laps": 33,
@@ -1059,6 +1102,49 @@
         "to_lap": 33
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              0.205
+            ],
+            [
+              "entree",
+              0.088
+            ],
+            [
+              "milieu",
+              0.061
+            ],
+            [
+              "sortie",
+              -0.068
+            ]
+          ],
+          "laps_first": 8,
+          "laps_second": 7,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Variante Alta au freinage +0,09 s, Variante Alta à l'entrée +0,07 s, Variante Alta au milieu du virage +0,06 s. Sur tout le tour, 0,21 s au freinage (58 % de la perte). Usure par tour : avant 0,61 %, arrière 0,72 %.",
+          "top": [
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.095,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.074,
+              "phase": "entree"
+            },
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.062,
+              "phase": "milieu"
+            }
+          ],
+          "total_s": 0.286,
+          "wear_front_pct": 0.609,
+          "wear_rear_pct": 0.719
+        },
         "first_half_s": 94.303,
         "from_lap": 36,
         "laps": 19,

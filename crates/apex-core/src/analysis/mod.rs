@@ -12,6 +12,7 @@ pub mod progress;
 pub mod race;
 pub mod regularity;
 pub mod resample;
+pub mod stint_drift;
 pub mod risk;
 pub mod session;
 pub mod strategy;

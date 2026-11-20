@@ -905,6 +905,49 @@
     "spare_laps": 1.322,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              0.356
+            ],
+            [
+              "entree",
+              0.082
+            ],
+            [
+              "milieu",
+              0.01
+            ],
+            [
+              "sortie",
+              -0.258
+            ]
+          ],
+          "laps_first": 7,
+          "laps_second": 8,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Rettifilo au freinage +0,29 s, Lesmo 2 en sortie +0,06 s, Lesmo 1 au freinage +0,05 s. Sur tout le tour, 0,36 s au freinage (79 % de la perte). Usure par tour : avant 0,60 %, arrière 0,81 %.",
+          "top": [
+            {
+              "corner": "Rettifilo",
+              "drift_s": 0.287,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Lesmo 2",
+              "drift_s": 0.056,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Lesmo 1",
+              "drift_s": 0.045,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": 0.19,
+          "wear_front_pct": 0.598,
+          "wear_rear_pct": 0.808
+        },
         "first_half_s": 97.871,
         "from_lap": 1,
         "laps": 21,
@@ -913,6 +956,49 @@
         "to_lap": 21
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.134
+            ],
+            [
+              "entree",
+              -0.045
+            ],
+            [
+              "milieu",
+              -0.0
+            ],
+            [
+              "sortie",
+              -0.104
+            ]
+          ],
+          "laps_first": 5,
+          "laps_second": 5,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Rettifilo en sortie +0,16 s, Parabolica au freinage +0,05 s, Ascari en sortie +0,05 s. Usure par tour : avant 0,62 %, arrière 0,80 %.",
+          "top": [
+            {
+              "corner": "Rettifilo",
+              "drift_s": 0.163,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Parabolica",
+              "drift_s": 0.053,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Ascari",
+              "drift_s": 0.045,
+              "phase": "sortie"
+            }
+          ],
+          "total_s": -0.283,
+          "wear_front_pct": 0.615,
+          "wear_rear_pct": 0.801
+        },
         "first_half_s": 98.372,
         "from_lap": 24,
         "laps": 11,

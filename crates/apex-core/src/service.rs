@@ -1901,7 +1901,19 @@ impl AppService {
                     .map(|r| crate::analysis::debrief::race_extras(&r));
                 crate::analysis::debrief::race_debrief(&metas, &off_tracks, extras.as_ref())
             })
-            .flatten();
+            .flatten()
+            .map(|mut d| {
+                // Où part le temps en fin de relais : virage et phase, sur la télémétrie des tours du relais.
+                for i in 0..d.stints.len() {
+                    let keep: Vec<i32> = crate::analysis::debrief::stint_pace_laps(&d, &d.stints[i], &metas).iter().map(|l| l.number).collect();
+                    let tr: Vec<(LapMeta, LapTrace)> = laps.iter().filter(|l| keep.contains(&l.meta.number)).filter_map(|l| db.trace(l.id).ok().map(|t| (l.meta.clone(), t))).collect();
+                    let pairs: Vec<(&LapMeta, &LapTrace)> = tr.iter().map(|(m, t)| (m, t)).collect();
+                    if let Some(x) = crate::analysis::stint_drift::stint_drift(&meta, &pairs, &names) {
+                        crate::analysis::debrief::attach_drift(&mut d, i, x);
+                    }
+                }
+                d
+            });
         let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
             Some(p) => {
                 let l = db.lap(p)?;

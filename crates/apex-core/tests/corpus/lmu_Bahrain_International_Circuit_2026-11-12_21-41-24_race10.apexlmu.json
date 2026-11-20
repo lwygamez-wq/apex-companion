@@ -1330,6 +1330,49 @@
     "spare_laps": 0.509,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.203
+            ],
+            [
+              "entree",
+              0.253
+            ],
+            [
+              "milieu",
+              0.012
+            ],
+            [
+              "sortie",
+              -0.262
+            ]
+          ],
+          "laps_first": 9,
+          "laps_second": 9,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Virages 9-10 à l'entrée +0,19 s, Virage 8 au freinage +0,13 s, Virage 12 à l'entrée +0,07 s. Sur tout le tour, 0,25 s à l'entrée (96 % de la perte). Usure par tour : avant 0,87 %, arrière 0,80 %.",
+          "top": [
+            {
+              "corner": "Virages 9-10",
+              "drift_s": 0.187,
+              "phase": "entree"
+            },
+            {
+              "corner": "Virage 8",
+              "drift_s": 0.13,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Virage 12",
+              "drift_s": 0.067,
+              "phase": "entree"
+            }
+          ],
+          "total_s": -0.2,
+          "wear_front_pct": 0.867,
+          "wear_rear_pct": 0.801
+        },
         "first_half_s": 109.804,
         "from_lap": 2,
         "laps": 21,
@@ -1338,6 +1381,44 @@
         "to_lap": 22
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.843
+            ],
+            [
+              "entree",
+              -0.287
+            ],
+            [
+              "milieu",
+              -0.006
+            ],
+            [
+              "sortie",
+              0.152
+            ]
+          ],
+          "laps_first": 4,
+          "laps_second": 3,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Virage 4 en sortie +0,25 s, Virages 9-10 au freinage +0,06 s. Sur tout le tour, 0,15 s en sortie (100 % de la perte). Usure par tour : avant 0,86 %, arrière 0,77 %.",
+          "top": [
+            {
+              "corner": "Virage 4",
+              "drift_s": 0.245,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Virages 9-10",
+              "drift_s": 0.064,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.985,
+          "wear_front_pct": 0.855,
+          "wear_rear_pct": 0.768
+        },
         "first_half_s": 110.014,
         "from_lap": 25,
         "laps": 8,

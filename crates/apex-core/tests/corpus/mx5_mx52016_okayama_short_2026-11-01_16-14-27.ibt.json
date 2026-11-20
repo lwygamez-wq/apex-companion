@@ -840,6 +840,49 @@
     "spare_laps": null,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.237
+            ],
+            [
+              "entree",
+              0.056
+            ],
+            [
+              "milieu",
+              -0.013
+            ],
+            [
+              "sortie",
+              0.186
+            ]
+          ],
+          "laps_first": 3,
+          "laps_second": 3,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : V3 en sortie +0,12 s, V4 au freinage +0,10 s, V5 en sortie +0,07 s. Sur tout le tour, 0,19 s en sortie (77 % de la perte).",
+          "top": [
+            {
+              "corner": "V3",
+              "drift_s": 0.122,
+              "phase": "sortie"
+            },
+            {
+              "corner": "V4",
+              "drift_s": 0.103,
+              "phase": "freinage"
+            },
+            {
+              "corner": "V5",
+              "drift_s": 0.073,
+              "phase": "sortie"
+            }
+          ],
+          "total_s": -0.008,
+          "wear_front_pct": null,
+          "wear_rear_pct": null
+        },
         "first_half_s": 62.104,
         "from_lap": 2,
         "laps": 8,

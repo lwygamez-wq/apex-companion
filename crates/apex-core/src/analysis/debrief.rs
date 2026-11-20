@@ -150,6 +150,8 @@ pub struct StintPace {
     /// Médiane de la première et de la seconde moitié des tours propres du relais (s).
     pub first_half_s: f64,
     pub second_half_s: f64,
+    /// Où le temps se perd d'une moitié du relais à l'autre (virage, phase), et usure des pneus.
+    pub drift: Option<crate::analysis::stint_drift::StintDrift>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
@@ -384,7 +386,7 @@ pub fn race_debrief(laps: &[LapMeta], off_tracks: &[OffTrackZone], extras: Optio
             let half = t.len() / 2;
             let (fa, fb) = (median(&mut t[..half].to_vec()).unwrap_or(med), median(&mut t[half..].to_vec()).unwrap_or(med));
             let all = median(&mut t).unwrap_or(med);
-            out.push(StintPace { from_lap: cur[0].number, to_lap: cur[cur.len() - 1].number, laps: cur.len(), median_s: all, first_half_s: fa, second_half_s: fb });
+            out.push(StintPace { from_lap: cur[0].number, to_lap: cur[cur.len() - 1].number, laps: cur.len(), median_s: all, first_half_s: fa, second_half_s: fb, drift: None });
         }
         cur.clear();
     };
@@ -445,6 +447,29 @@ pub fn race_debrief(laps: &[LapMeta], off_tracks: &[OffTrackZone], extras: Optio
 fn fmt_lap(s: f64) -> String {
     let m = (s / 60.0).floor();
     format!("{}:{:04.1}", m as i64, s - m * 60.0)
+}
+
+/// Tours d'un relais retenus pour son rythme (mêmes critères que `StintPace`), dans l'ordre.
+pub fn stint_pace_laps<'a>(d: &RaceDebrief, s: &StintPace, laps: &'a [LapMeta]) -> Vec<&'a LapMeta> {
+    let thr = error_threshold(d.median_s);
+    laps.iter()
+        .filter(|l| l.number >= s.from_lap && l.number <= s.to_lap && l.kind == LapKind::Flying)
+        .filter(|l| !l.flags.pit && !l.flags.yellow_flag && !l.flags.off_track && !l.flags.incident)
+        .filter(|l| l.lap_time_s.is_some_and(|t| t - d.median_s <= thr))
+        .collect()
+}
+
+/// Range la dérive mesurée d'un relais et la cite dans la priorité « fin de relais » qui le concerne.
+pub fn attach_drift(d: &mut RaceDebrief, idx: usize, mut drift: crate::analysis::stint_drift::StintDrift) {
+    let Some(s) = d.stints.get_mut(idx) else { return };
+    let key = format!("Relais des tours {} à {} :", s.from_lap, s.to_lap);
+    drift.summary = crate::analysis::stint_drift::drift_sentence(&drift);
+    if let Some(sentence) = drift.summary.clone() {
+        if let Some(a) = d.actions.iter_mut().find(|a| a.title == "Tenir le rythme en fin de relais" && a.detail.starts_with(&key)) {
+            a.detail = format!("{} {sentence}", a.detail);
+        }
+    }
+    s.drift = Some(drift);
 }
 
 #[cfg(test)]
@@ -509,6 +534,26 @@ mod tests {
         assert!((d.stints[0].second_half_s - d.stints[0].first_half_s - 0.6).abs() < 1e-9);
         // Toute priorité cite un chiffre.
         assert!(d.actions.iter().all(|a| a.detail.chars().any(|c| c.is_ascii_digit())));
+        // Dérive du relais 1 mesurée : citée dans la priorité « fin de relais », rangée dans le relais.
+        let laps = race();
+        let kept = stint_pace_laps(&d, &d.stints[0], &laps);
+        // Relais 1 (tours 2 à 13) sans les tours ratés : 6 (sortie, +12 s) et 9 (+3,4 s).
+        assert_eq!(kept.iter().map(|l| l.number).collect::<Vec<_>>(), [2, 3, 4, 5, 7, 8, 10, 11, 12, 13]);
+        let drift = crate::analysis::stint_drift::StintDrift {
+            laps_first: 3,
+            laps_second: 3,
+            by_phase: vec![(crate::analysis::phases::CornerPhase::Sortie, 0.4)],
+            top: vec![crate::analysis::stint_drift::PhaseDrift { corner: "Rivazza".into(), phase: crate::analysis::phases::CornerPhase::Sortie, drift_s: 0.3 }],
+            total_s: 0.4,
+            wear_front_pct: None,
+            wear_rear_pct: None,
+            summary: None,
+        };
+        let mut d = d;
+        attach_drift(&mut d, 0, drift);
+        let a = d.actions.iter().find(|a| a.title == "Tenir le rythme en fin de relais").unwrap();
+        assert!(a.detail.ends_with("Rivazza en sortie +0,30 s. Sur tout le tour, 0,40 s en sortie (100 % de la perte)."), "{}", a.detail);
+        assert!(d.stints[0].drift.as_ref().unwrap().summary.as_ref().unwrap().starts_with("Ce qui ralentit le plus"));
     }
 
     #[test]
