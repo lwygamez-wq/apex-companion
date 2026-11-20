@@ -6,6 +6,7 @@ pub mod debrief;
 pub mod goals;
 pub mod insights;
 pub mod offtrack;
+pub mod phases;
 pub mod plan;
 pub mod progress;
 pub mod race;

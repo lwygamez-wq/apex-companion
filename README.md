@@ -4,7 +4,7 @@ Compagnon de pilotage simracing pour iRacing et Le Mans Ultimate : import automa
 
 Ce que fait l'application :
 
-- **Analyse de tour** : virages nommés (relevés et géométrie publique), temps perdu virage par virage, conseils avec niveau de confiance, relecture synchronisée carte + courbes.
+- **Analyse de tour** : virages nommés (relevés et géométrie publique), temps perdu virage par virage puis **phase par phase** (freinage, entrée, milieu, sortie : écart de chrono exact entre deux points communs aux deux tours, dont la somme fait l'écart du virage), conseils avec niveau de confiance, relecture synchronisée carte + courbes. Le tableau de bord et le programme d'entraînement disent dans quelle phase chaque virage coûte le plus, en médiane sur les tours propres de la séance.
 - **Carte de risque** : pour chaque virage, temps à prendre contre probabilité et coût d'une sortie de piste.
 - **Coach de course** : grille, positions tour par tour, incidents typés et localisés, départ, fin de course, qualification contre rythme course.
 - **Programme d'entraînement** : 2 à 3 objectifs mesurables pour la prochaine séance, évalués automatiquement ensuite.

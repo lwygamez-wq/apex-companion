@@ -1,4 +1,4 @@
-import type { Comparison, CornerComparison } from "./types";
+import type { Comparison, CornerComparison, CornerPhase, PhaseLoss } from "./types";
 
 /** Axe horizontal des courbes : position sur la piste (référence calée au même endroit) ou temps écoulé. */
 export type Axis = "distance" | "time";
@@ -169,4 +169,20 @@ export function cornerFacts(k: CornerComparison): CornerFact[] {
   const dx = c.exit_speed_kmh - r.exit_speed_kmh;
   if (Math.abs(dx) >= 3) out.push({ score: Math.abs(dx) / 3, f: { text: `sortie ${Math.abs(dx).toFixed(0)} km/h ${dx < 0 ? "moins vite" : "plus vite"}`, bad: dx < 0 } });
   return out.sort((a, b) => b.score - a.score).map((o) => o.f);
+}
+
+export const PHASE_LABEL: Record<CornerPhase, string> = { freinage: "freinage", entree: "entrée", milieu: "milieu", sortie: "sortie" };
+export const PHASE_SPOKEN: Record<CornerPhase, string> = { freinage: "au freinage", entree: "à l'entrée", milieu: "au milieu", sortie: "en sortie" };
+
+/** Phase où le tour perd le plus, si la perte atteint `min` secondes. */
+export function worstPhase(phases: readonly PhaseLoss[] | undefined, min = 0.03): PhaseLoss | null {
+  let best: PhaseLoss | null = null;
+  for (const p of phases ?? []) if (p.delta_s >= min && (!best || p.delta_s > best.delta_s)) best = p;
+  return best;
+}
+
+/** Écart d'une phase, signé, au centième (« +0.15 », « −0.04 », « ±0.00 »). */
+export function fmtPhase(v: number): string {
+  if (Math.abs(v) < 0.005) return "±0.00";
+  return `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
 }

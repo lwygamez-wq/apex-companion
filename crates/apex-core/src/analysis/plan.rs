@@ -114,7 +114,11 @@ fn fr2(x: impl Into<f64>) -> String {
 
 /// Constat d'une zone : le conseil représentatif (celui dont vient l'objectif) et sa récurrence.
 fn zone_why(z: &ProgressZone) -> String {
-    format!("{} : perte sur {}/{} tours propres, ≈{} s à chaque fois.", z.example.title, z.occurrences, z.laps_compared, fr2(z.avg_loss_s))
+    let mut s = format!("{} : perte sur {}/{} tours propres, ≈{} s à chaque fois.", z.example.title, z.occurrences, z.laps_compared, fr2(z.avg_loss_s));
+    if let Some(p) = &z.main_phase {
+        s.push_str(&format!(" Surtout {} : {} s par tour en médiane ({}/{} tours).", p.phase.spoken(), fr2(p.median_s), p.laps_losing, p.laps));
+    }
+    s
 }
 
 fn objective_from(g: GoalSuggestion, why: String) -> PlanObjective {
@@ -205,7 +209,18 @@ mod tests {
                 recommendation: String::new(),
                 goal: Some(goal),
             },
+            phases: vec![],
+            main_phase: None,
         }
+    }
+
+    #[test]
+    fn why_names_the_costly_phase() {
+        use crate::analysis::phases::{CornerPhase, PhaseStat};
+        let mut z = zone("Junção", 3194.0, 5);
+        assert_eq!(zone_why(&z), "Junção : freinage trop précoce : perte sur 5/6 tours propres, ≈0,21 s à chaque fois.");
+        z.main_phase = Some(PhaseStat { phase: CornerPhase::Freinage, median_s: 0.18, laps_losing: 5, laps: 6 });
+        assert!(zone_why(&z).ends_with(" Surtout au freinage : 0,18 s par tour en médiane (5/6 tours)."), "{}", zone_why(&z));
     }
 
     #[test]

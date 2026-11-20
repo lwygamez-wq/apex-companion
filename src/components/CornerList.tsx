@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { cornerFacts } from "../lib/compareView";
-import type { CornerComparison } from "../lib/types";
+import { cornerFacts, fmtPhase, PHASE_LABEL, PHASE_SPOKEN, worstPhase } from "../lib/compareView";
+import type { CornerComparison, CornerPhase } from "../lib/types";
 
 const m = (v: number | null | undefined) => (v == null ? "—" : `${v.toFixed(0)} m`);
 const kmh = (v: number) => `${v.toFixed(0)} km/h`;
@@ -32,6 +32,16 @@ export function CornerList({ corners, selected, onSelect, onRename }: {
       {corners.map((k) => {
         const d = k.time_delta_s;
         const facts = cornerFacts(k).slice(0, 2);
+        const worst = worstPhase(k.phases);
+        const phaseCell = (ph: CornerPhase) => {
+          const p = k.phases?.find((x) => x.phase === ph);
+          if (!p) return <td className="num muted">—</td>;
+          return (
+            <td className={`num mono ${p.delta_s > 0.02 ? "pos" : p.delta_s < -0.02 ? "neg" : "muted"}`} title={`${PHASE_LABEL[ph]} : ${p.range_m[0].toFixed(0)}–${p.range_m[1].toFixed(0)} m`}>
+              {fmtPhase(p.delta_s)} s
+            </td>
+          );
+        };
         const open = selected === k.corner.id;
         const w = `${Math.min(100, (Math.abs(d) / max) * 100)}%`;
         return (
@@ -65,7 +75,8 @@ export function CornerList({ corners, selected, onSelect, onRename }: {
               {Math.abs(d) < 0.005 ? "±0.00" : `${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(2)}`} s
             </div>
             <div className="corner-facts">
-              {facts.length === 0 ? <span className="muted">comme la référence</span> : facts.map((f) => <span key={f.text} className={f.bad ? "fact bad" : "fact good"}>{f.text}</span>)}
+              {worst && <span className="fact bad" title="temps mesuré entre deux points du circuit, communs aux deux tours">{worst.delta_s.toFixed(2)} s perdus {PHASE_SPOKEN[worst.phase]}</span>}
+              {facts.length === 0 && !worst ? <span className="muted">comme la référence</span> : facts.map((f) => <span key={f.text} className={f.bad ? "fact bad" : "fact good"}>{f.text}</span>)}
             </div>
             {open && (
               <table className="corner-detail" onClick={(e) => e.stopPropagation()}>
@@ -75,6 +86,15 @@ export function CornerList({ corners, selected, onSelect, onRename }: {
                 <tbody>
                   <tr><td><i className="swatch ref" />Référence</td><td className="num">{m(k.reference.brake_peak >= 0.2 ? k.reference.brake_on_m : null)}</td><td className="num">{kmh(k.reference.min_speed_kmh)}</td><td className="num">{m(k.reference.throttle_on_m)}</td><td className="num">{kmh(k.reference.exit_speed_kmh)}</td></tr>
                   <tr><td><i className="swatch cmp" />Toi</td><td className="num">{m(k.compared.brake_peak >= 0.2 ? k.compared.brake_on_m : null)}</td><td className="num">{kmh(k.compared.min_speed_kmh)}</td><td className="num">{m(k.compared.throttle_on_m)}</td><td className="num">{kmh(k.compared.exit_speed_kmh)}</td></tr>
+                  {k.phases?.length > 0 && (
+                    <tr title="Temps perdu (+) ou gagné (−) dans chaque phase : freinage, entrée jusqu'à la corde, milieu jusqu'aux gaz, sortie">
+                      <td>Temps par phase</td>
+                      {phaseCell("freinage")}
+                      {phaseCell("entree")}
+                      {phaseCell("milieu")}
+                      {phaseCell("sortie")}
+                    </tr>
+                  )}
                 </tbody>
                 {k.apex_offset_m != null && Math.abs(k.apex_offset_m) >= 0.3 && (
                   <tfoot><tr><td colSpan={5} className="muted">À la corde, tu passes {Math.abs(k.apex_offset_m).toFixed(1)} m plus à l'{k.apex_offset_m > 0 ? "intérieur" : "extérieur"} que la référence.</td></tr></tfoot>

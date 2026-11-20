@@ -5,6 +5,7 @@ import { NoCleanLaps } from "../components/NoCleanLaps";
 import { PlanCard } from "../components/PlanCard";
 import { api, onSessionsChanged } from "../lib/api";
 import { dateTime, lapTime, SESSION_KIND_FR } from "../lib/format";
+import { PHASE_SPOKEN } from "../lib/compareView";
 import { useAsync } from "../lib/hooks";
 import type { StatusPayload } from "../lib/types";
 import { ReadyCard } from "../components/ReadyCard";
@@ -117,7 +118,10 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
                   {d.progress_zones.slice(0, 4).map((z) => (
                     <div key={z.segment} className="zone-row clickable" onClick={() => navigate({ page: "analysis", sessionId: s.id })}>
                       <b>{z.segment}</b>
-                      <span className="muted">{z.typical_issue.split(" : ")[1] ?? z.typical_issue}</span>
+                      <span className="muted">
+                        {z.typical_issue.split(" : ")[1] ?? z.typical_issue}
+                        {z.main_phase && <> · surtout {PHASE_SPOKEN[z.main_phase.phase]} ({z.main_phase.median_s.toFixed(2)} s, {z.main_phase.laps_losing}/{z.main_phase.laps} tours)</>}
+                      </span>
                       <span className="mono">{z.avg_loss_s.toFixed(2)} s</span>
                       <span className="muted" style={{ fontSize: 13 }}>{z.occurrences}/{z.laps_compared} tours</span>
                     </div>

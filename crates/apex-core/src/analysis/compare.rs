@@ -2,6 +2,7 @@
 
 use super::corners::{corner_metrics, detect_corners, CornerConfig, CornerDef, CornerMetrics};
 use super::insights::{corner_insight, DataQuality, Insight, Thresholds};
+use super::phases::{corner_phases, PhaseLoss};
 use super::resample::{resample, ResampleError, Resampled};
 use crate::model::{LapMeta, LapTrace, SessionMeta};
 use serde::Serialize;
@@ -21,6 +22,8 @@ pub struct CornerComparison {
     pub time_delta_s: f32,
     /// Écart de trajectoire à l'apex (m) : positif = plus à l'intérieur que la référence.
     pub apex_offset_m: Option<f32>,
+    /// Temps perdu par phase (freinage, entrée, milieu, sortie), bornes communes aux deux tours.
+    pub phases: Vec<PhaseLoss>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -192,6 +195,7 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
     let th = Thresholds::default();
     let mut corners = Vec::with_capacity(defs.len());
     let mut insights = Vec::new();
+    let mut floor_m = 0.0f32;
     for d in defs {
         let mut mr = corner_metrics(&r, &d);
         let mut mc = corner_metrics(&c, &d);
@@ -210,7 +214,9 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
             (Some(o), Some(s)) => o.get(r.idx(d.apex_m)).map(|v| v * s),
             _ => None,
         };
-        corners.push(CornerComparison { time_delta_s: mc.time_s - mr.time_s, apex_offset_m, corner: d, reference: mr, compared: mc });
+        let phases = corner_phases(&r, &d, &mr, &delta, floor_m);
+        floor_m = d.exit_m;
+        corners.push(CornerComparison { time_delta_s: mc.time_s - mr.time_s, apex_offset_m, phases, corner: d, reference: mr, compared: mc });
     }
     insights.sort_by(|a, b| {
         a.priority.cmp(&b.priority).then(

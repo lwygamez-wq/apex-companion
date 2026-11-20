@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildView, cornerFacts, finalGap, fmtGap, gapMeters, interp, shortCorner } from "./compareView";
+import { buildView, cornerFacts, finalGap, fmtGap, fmtPhase, gapMeters, interp, shortCorner, worstPhase } from "./compareView";
 import type { Comparison, CornerComparison } from "./types";
 
 /** Deux tours à vitesse constante sur 1000 m : référence 50 m/s (20 s), toi 40 m/s (25 s). */
@@ -68,5 +68,19 @@ describe("compareView", () => {
     const f = cornerFacts(k);
     expect(f.map((x) => x.text)).toEqual(["11 km/h de moins à la corde", "freinage 20 m plus tôt"]);
     expect(f.every((x) => x.bad)).toBe(true);
+  });
+
+  it("désigne la phase qui coûte le plus", () => {
+    const ph = [
+      { phase: "freinage" as const, range_m: [400, 460] as [number, number], delta_s: -0.02 },
+      { phase: "entree" as const, range_m: [460, 500] as [number, number], delta_s: 0.12 },
+      { phase: "sortie" as const, range_m: [500, 600] as [number, number], delta_s: 0.05 },
+    ];
+    expect(worstPhase(ph)?.phase).toBe("entree");
+    expect(worstPhase(ph, 0.2)).toBeNull();
+    expect(worstPhase(undefined)).toBeNull();
+    expect(fmtPhase(0.123)).toBe("+0.12");
+    expect(fmtPhase(-0.04)).toBe("−0.04");
+    expect(fmtPhase(0.001)).toBe("±0.00");
   });
 });

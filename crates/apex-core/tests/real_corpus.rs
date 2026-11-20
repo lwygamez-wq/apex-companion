@@ -102,12 +102,26 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
                 rule.push(format!("{} tour {} « {} » : aucun chiffre", file.display(), cmp.meta.number, i.title));
             }
         }
+        // Phases : bornes ordonnées, dans la fenêtre du virage, sans chevauchement, somme = écart du virage.
+        let mut last_end = 0.0f32;
+        for k in &c.corners {
+            for p in &k.phases {
+                if p.range_m[0] < last_end - 0.01 || p.range_m[1] <= p.range_m[0] || p.range_m[1] > k.corner.exit_m + 0.01 {
+                    rule.push(format!("{} tour {} {} : phase {:?} mal bornée {:?}", file.display(), cmp.meta.number, k.corner.name, p.phase, p.range_m));
+                }
+                last_end = p.range_m[1];
+            }
+            let sum: f32 = k.phases.iter().map(|p| p.delta_s).sum();
+            if !k.phases.is_empty() && (sum - k.time_delta_s).abs() > 0.005 {
+                rule.push(format!("{} tour {} {} : phases {sum:.3} s ≠ virage {:.3} s", file.display(), cmp.meta.number, k.corner.name, k.time_delta_s));
+            }
+        }
         comparisons.push(json!({
             "reference": num(Some(r)),
             "compared": cmp.meta.number,
             "delta_end_s": c.delta_s.last(),
             "warnings": c.warnings,
-            "corners": c.corners.iter().map(|k| json!({ "apex_m": k.corner.apex_m, "dt": k.time_delta_s, "min_ref": k.reference.min_speed_kmh, "min_cmp": k.compared.min_speed_kmh })).collect::<Vec<_>>(),
+            "corners": c.corners.iter().map(|k| json!({ "apex_m": k.corner.apex_m, "dt": k.time_delta_s, "min_ref": k.reference.min_speed_kmh, "min_cmp": k.compared.min_speed_kmh, "phases": k.phases.iter().map(|p| json!([p.phase, p.range_m, p.delta_s])).collect::<Vec<_>>() })).collect::<Vec<_>>(),
             "insights": c.insights.iter().map(|i| json!({ "id": i.id, "title": i.title, "priority": i.priority, "gain": i.est_gain_s, "segment": i.segment, "recommendation": i.recommendation, "evidence": i.evidence.iter().map(|e| [&e.label, &e.reference, &e.compared, &e.delta]).collect::<Vec<_>>(), "confidence": i.confidence })).collect::<Vec<_>>(),
         }));
     }
