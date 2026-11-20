@@ -614,6 +614,7 @@ mod tests {
                 ],
                 ..Default::default()
             }),
+            rival: vec![],
         }
     }
 

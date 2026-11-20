@@ -671,7 +671,7 @@ mod tests {
             left -= if lap_n == 4 && (1000.0..1050.0).contains(&d) { 3.05 / 60.0 } else { 0.45 / 2400.0 };
             ticks.push(Tick { et, lap: lap_n, speed: 50.0, wear: [90.0, left, 90.0, 90.0], ..Default::default() });
         }
-        let rec = Recording { header: Header { track_length_m: 2000.0, hz: 60.0, ..Default::default() }, anchors: (0..240).map(|k| Anchor { et: k as f64, lap_dist: ((k as f32 * 50.0) % 2000.0), total_laps: (k as f32 * 50.0 / 2000.0) as i32 }).collect(), ticks, laps: vec![], wheels: vec![], setup: None };
+        let rec = Recording { header: Header { track_length_m: 2000.0, hz: 60.0, ..Default::default() }, anchors: (0..240).map(|k| Anchor { et: k as f64, lap_dist: ((k as f32 * 50.0) % 2000.0), total_laps: (k as f32 * 50.0 / 2000.0) as i32 }).collect(), ticks, laps: vec![], wheels: vec![], setup: None, rival: vec![] };
         let mut laps2 = laps.clone();
         laps2[3].flags.incident = true;
         let ev2 = wear_events(&rec, &laps2, &[("Virage 4".into(), 950.0, 1150.0)]);

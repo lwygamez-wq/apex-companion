@@ -481,7 +481,7 @@ mod tests {
         assert!((s.fields["pneu_ecart_int_ext_c"].max - 10.0).abs() < 1e-9);
         assert_eq!(s.fields["pneu_temperature_optimale"].filled, 0);
         assert_eq!(s.fields["appui_av_n"].filled, 5);
-        let mut f: Frame = Frame { game_version: 1, info: zeroed(), scoring: None, telem: Some(t), class_pace: Default::default() };
+        let mut f: Frame = Frame { game_version: 1, info: zeroed(), scoring: None, telem: Some(t), class_pace: Default::default(), rival: None };
         f.game_version = 14000;
         let r = ProbeReport::new("x", &f, &s);
         let pct = |n: &str| r.fields.iter().find(|x| x.name == n).unwrap().filled_pct;
