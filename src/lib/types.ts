@@ -1007,6 +1007,8 @@ export interface TyreDiag {
   middle_minus_edges: DiagStat | null;
   carcass: DiagStat | null;
   inner_layer: DiagStat | null;
+  /** Échelle du HUD du jeu, ESTIMÉE : (carcasse + couche interne) / 2. Jamais comparée à l'idéal. */
+  game_scale: DiagStat | null;
   pressure_hot: DiagStat | null;
   pressure_set: string | null;
 }
@@ -1068,4 +1070,5 @@ export interface SetupDiagnosis {
   setup: SetupRow[];
   missing: string[];
   temperature_note: string;
+  game_scale_note: string;
 }

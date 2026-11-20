@@ -87,7 +87,7 @@ export function Diagnosis({ d }: { d: SetupDiagnosis }) {
           <h3>Pneus, en appui</h3>
           <table className="su-table sd-table">
             <thead>
-              <tr><th>Roue</th><th>Extérieur</th><th>Milieu</th><th>Intérieur</th><th>Carcasse</th><th>Pression à chaud</th><th>Réglée</th></tr>
+              <tr><th>Roue</th><th>Extérieur</th><th>Milieu</th><th>Intérieur</th><th>Carcasse</th><th>Couche interne</th><th>Échelle du jeu (estimée)</th><th>Pression à chaud</th><th>Réglée</th></tr>
             </thead>
             <tbody>
               {d.tyres.map((t) => (
@@ -97,13 +97,15 @@ export function Diagnosis({ d }: { d: SetupDiagnosis }) {
                   <td className="num">{fmtStat(t.middle)}</td>
                   <td className="num">{fmtStat(t.inner)}</td>
                   <td className="num">{fmtStat(t.carcass)}</td>
+                  <td className="num">{fmtStat(t.inner_layer)}</td>
+                  <td className="num">{fmtStat(t.game_scale)}</td>
                   <td className="num">{fmtStat(t.pressure_hot, 0)}</td>
                   <td className="num muted">{t.pressure_set ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="muted sd-note">{d.temperature_note} Dispersion d'un tour à l'autre : {fmtSpread(d.tyres[0]?.inner_minus_outer)} (écart intérieur / extérieur, avant gauche).</p>
+          <p className="muted sd-note">{d.temperature_note} {d.game_scale_note} Dispersion d'un tour à l'autre : {fmtSpread(d.tyres[0]?.inner_minus_outer)} (écart intérieur / extérieur, avant gauche).</p>
         </div>
       )}
 

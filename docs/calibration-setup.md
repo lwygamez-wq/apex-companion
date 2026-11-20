@@ -30,7 +30,28 @@ Constats :
 
 Conclusion : les trois zones mesurent la surface de la bande de roulement, la carcasse mesure la carcasse. Certitude élevée sur ce point (comportement thermique net et répété). En revanche, **on ne sait pas laquelle de ces grandeurs le jeu compare à son idéal de 92 °C** : la carcasse (67 à 84 °C) en est plus proche que la surface (41 à 68 °C), mais rien ne le prouve. Certitude faible.
 
-Décision : le diagnostic affiche les températures telles que lues, **sans aucune comparaison à l'idéal**, et le dit à l'écran. Pour trancher : relever en jeu l'affichage des températures du HUD de LMU en même temps qu'un enregistrement 0.41 (qui ajoute la couche interne).
+Décision : le diagnostic affiche les températures telles que lues, **sans aucune comparaison à l'idéal**, et le dit à l'écran. Relevé du HUD fait le 20 nov. (ci-dessous).
+
+### Relevé du HUD du jeu (20 nov. 2026, Monza, Cadillac V-Series.R)
+
+Alex a photographié le HUD pneus du jeu à 0:06:37 de temps restant de la course de 20 h 09, soit 3330,4 s dans le `.apexlmu` (19 s avant la ligne du tour 31). L'instant est confirmé : pressions et freins du HUD identiques à Apex à 0,1 kPa / 0,1 °C près, usure (75 / 81 / 73 / 76 %) et énergie (25 %) concordantes. Enregistrement 0.41 : la couche interne est disponible.
+
+| °C | AvG | AvD | ArG | ArD |
+|---|---|---|---|---|
+| **HUD du jeu** | **68,8** | **62,1** | **71,0** | **66,7** |
+| Surface (moyenne des 3 zones) | 46,4 | 48,5 | 48,5 | 48,2 |
+| Couche interne (moyenne des 3 zones) | 61,6 | 56,1 | 63,2 | 59,8 |
+| Carcasse | 77,6 | 68,3 | 80,2 | 74,5 |
+| (carcasse + interne) / 2 | 69,6 | 62,2 | 71,7 | 67,2 |
+| Écart au HUD | +0,8 | +0,1 | +0,7 | +0,5 |
+
+- Surface exclue : 15 à 22 °C sous le HUD. Carcasse seule : 6 à 9 °C au-dessus. Couche interne seule : 6 à 8 °C en dessous.
+- Premier relevé (fin des essais de 19 h 37, roue arrêtée, heure exacte inconnue) : même formule, 0,7 à 1,4 °C d'écart, même sens.
+- Le tableau de bord SimHub affiche 70 / 62 / 72 / 67 : même échelle que le HUD.
+
+Conclusion : la température affichée par le jeu est **estimée** par (carcasse + moyenne des 3 zones de la couche interne) / 2, à 1,4 °C près sur les deux relevés. C'est une hypothèse, pas une certitude : 4 roues à un seul instant (plus un relevé moins bien daté), et la carcasse et la couche interne varient ensemble, donc d'autres pondérations colleraient presque aussi bien. On ne sait toujours pas si le jeu compare cette valeur à son idéal de 92 °C.
+
+Décision (0.42) : le diagnostic ajoute une colonne « Échelle du jeu (estimée) » par roue, avec la mention « estimation d'après 2 relevés du HUD, à confirmer ». Surface, carcasse et couche interne restent affichées telles que lues. **Aucune comparaison à 92 °C**, ni de la surface ni de l'estimation, tant qu'un 3e relevé n'a pas confirmé la formule (de préférence à un autre moment de la séance, pneus plus froids ou plus chauds, pour séparer carcasse et couche interne).
 
 Contrôle du sens des zones (gauche = extérieur pour les roues gauches) : à Monza (virages surtout à droite), les pneus gauches sont plus chauds que les droits (carcasse AvG 78 °C contre AvD 69 °C), et l'intérieur est plus chaud que l'extérieur sur les quatre roues avec un carrossage négatif. C'est cohérent avec l'ordre gauche / milieu / droite du jeu.
 

@@ -2066,7 +2066,7 @@
     "laps": 30,
     "locks": 0,
     "missing": [
-      "Couche interne des pneus : enregistrée à partir d'Apex 0.41.",
+      "Couche interne des pneus, et donc température à l'échelle du jeu : enregistrées à partir d'Apex 0.41.",
       "Blocages de roue : rotation des roues enregistrée à partir d'Apex 0.41."
     ],
     "setup_rows": 132,
