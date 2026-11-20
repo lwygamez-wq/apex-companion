@@ -1601,6 +1601,7 @@ impl AppService {
                 track: meta.track.clone(),
                 missing: vec!["Enregistrement d'origine (.apexlmu) introuvable : pneus, freins, hauteurs et setup ne sont que dans ce fichier.".into()],
                 temperature_note: crate::analysis::setup_diag::TEMPERATURE_NOTE.into(),
+                game_scale_note: crate::analysis::setup_diag::GAME_SCALE_NOTE.into(),
                 ..Default::default()
             },
         })

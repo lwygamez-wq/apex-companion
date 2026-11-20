@@ -57,6 +57,9 @@ pub struct TyreDiag {
     pub carcass: Option<Stat>,
     /// Couche interne (fichiers 0.41 et plus).
     pub inner_layer: Option<Stat>,
+    /// Température à l'échelle du HUD du jeu, ESTIMÉE : (carcasse + couche interne) / 2, en appui
+    /// comme les autres colonnes (fichiers 0.41 et plus). Formule tirée de 2 relevés du HUD : jamais comparée à l'idéal.
+    pub game_scale: Option<Stat>,
     /// Pression à chaud (kPa), en piste.
     pub pressure_hot: Option<Stat>,
     /// Pression réglée au garage (valeur affichée par le jeu).
@@ -153,6 +156,8 @@ pub struct SetupDiagnosis {
     pub missing: Vec<String>,
     /// Comment lire les températures (nature de la mesure non établie).
     pub temperature_note: String,
+    /// Comment lire la température à l'échelle du jeu (estimation à confirmer).
+    pub game_scale_note: String,
 }
 
 /// Fenêtre d'un virage (distances depuis la ligne, en m), relevée sur le tour de référence.
@@ -171,6 +176,14 @@ pub fn usable(l: &LapMeta) -> bool {
 }
 
 pub const TEMPERATURE_NOTE: &str = "Températures telles que lues dans le jeu, pas comparées à l'idéal annoncé : on ne sait pas encore laquelle de ces mesures le jeu compare à son idéal.";
+pub const GAME_SCALE_NOTE: &str = "Échelle du jeu : estimation d'après 2 relevés du HUD, à confirmer. Pas comparée à l'idéal de 92 °C tant qu'un 3e relevé n'a pas confirmé la formule.";
+
+/// Température du pneu à l'échelle du HUD du jeu, ESTIMÉE : moyenne de la carcasse et de la couche
+/// interne (moyenne de ses 3 zones). Relevés du HUD à Monza le 20 nov. 2026 (Cadillac, course et fin
+/// d'essais) : 0,1 à 1,4 °C d'écart. Hypothèse à confirmer (`docs/calibration-setup.md`).
+pub fn game_scale_c(carcass_c: f32, inner_c: [f32; 3]) -> f32 {
+    (carcass_c + inner_c.iter().sum::<f32>() / 3.0) / 2.0
+}
 
 /// Seuils : écart de température net (°C), part des tours dans le même sens, tours minimum.
 const TEMP_DELTA_C: f32 = 3.0;
@@ -218,7 +231,7 @@ fn corner_at(corners: &[DiagCorner], d: f32) -> Option<&DiagCorner> {
 pub fn setup_diagnosis(rec: &Recording, laps: &[LapMeta], corners: &[DiagCorner]) -> SetupDiagnosis {
     let h = &rec.header;
     let keep: Vec<i32> = laps.iter().filter(|l| usable(l)).map(|l| l.number).collect();
-    let mut d = SetupDiagnosis { car: h.car.clone(), track: h.track.clone(), laps_used: keep.len(), temperature_note: TEMPERATURE_NOTE.into(), ..Default::default() };
+    let mut d = SetupDiagnosis { car: h.car.clone(), track: h.track.clone(), laps_used: keep.len(), temperature_note: TEMPERATURE_NOTE.into(), game_scale_note: GAME_SCALE_NOTE.into(), ..Default::default() };
     if keep.len() < MIN_LAPS {
         d.missing.push(format!("Seulement {} tour(s) utilisable(s) : il en faut {MIN_LAPS} (hors stand, sortie, incident, jaune).", keep.len()));
     }
@@ -260,6 +273,9 @@ pub fn setup_diagnosis(rec: &Recording, laps: &[LapMeta], corners: &[DiagCorner]
                 m[5].entry(t.lap).or_default().push(w.carcass_c[k]);
                 if has_inner {
                     m[6].entry(t.lap).or_default().push(w.inner_c[k].iter().sum::<f32>() / 3.0);
+                    if w.carcass_c[k] > 0.0 && w.inner_c[k].iter().all(|v| *v > 0.0) {
+                        m[9].entry(t.lap).or_default().push(game_scale_c(w.carcass_c[k], w.inner_c[k]));
+                    }
                 }
             }
             let peaks: BTreeMap<i32, Vec<f32>> = m[8].iter().map(|(l, v)| (*l, vec![v.iter().copied().fold(0.0, f32::max)])).collect();
@@ -282,6 +298,7 @@ pub fn setup_diagnosis(rec: &Recording, laps: &[LapMeta], corners: &[DiagCorner]
                 middle_minus_edges: me,
                 carcass: stat(&m[5], "°C"),
                 inner_layer: stat(&m[6], "°C"),
+                game_scale: stat(&m[9], "°C"),
                 pressure_hot: stat(&m[7], "kPa"),
                 pressure_set: set_pressure(k),
             });
@@ -291,7 +308,7 @@ pub fn setup_diagnosis(rec: &Recording, laps: &[LapMeta], corners: &[DiagCorner]
             d.tyre_findings.push(Finding { text: "Pneus : pas d'écart mesurable entre intérieur, milieu et extérieur.".into(), value: 0.0, unit: "°C", laps: d.tyres.iter().filter_map(|t| t.inner_minus_outer.as_ref()).map(|s| s.laps).max().unwrap_or(0), spread: 0.0 });
         }
         if !has_inner {
-            d.missing.push("Couche interne des pneus : enregistrée à partir d'Apex 0.41.".into());
+            d.missing.push("Couche interne des pneus, et donc température à l'échelle du jeu : enregistrées à partir d'Apex 0.41.".into());
         }
     }
 
@@ -612,6 +629,41 @@ mod tests {
         // Freins : médiane par roue.
         assert_eq!(d.brakes[0].median.as_ref().unwrap().value, 400.0);
         assert_eq!(d.brakes[2].peak.as_ref().unwrap().value, 300.0);
+    }
+
+    /// Relevé RÉEL du HUD (Monza, Cadillac, course de 20 h 09, 20 nov. 2026, 3330,4 s) recopié en
+    /// fixture : carcasse et couche interne lues par Apex au même instant, température affichée par le jeu.
+    #[test]
+    fn game_scale_estimate_stays_within_1_5_c_of_the_hud() {
+        let carcass = [77.6, 68.3, 80.2, 74.5];
+        let inner_mean = [61.6, 56.1, 63.2, 59.8];
+        let hud = [68.8, 62.1, 71.0, 66.7];
+        for k in 0..4 {
+            let est = game_scale_c(carcass[k], [inner_mean[k]; 3]);
+            assert!((est - hud[k]).abs() <= 1.5, "roue {k} : {est} contre {}", hud[k]);
+        }
+        assert!((game_scale_c(77.6, [60.0, 62.0, 62.8]) - 69.6).abs() < 1e-4);
+    }
+
+    #[test]
+    fn game_scale_needs_the_inner_layer_and_is_never_compared_to_the_ideal() {
+        let laps: Vec<LapMeta> = (1..=5).map(|n| lap_meta(n, false)).collect();
+        let old = setup_diagnosis(&recording(&|_, _| {}), &laps, &corners());
+        assert!(old.tyres.iter().all(|t| t.game_scale.is_none()));
+        assert!(old.missing.iter().any(|m| m.contains("échelle du jeu")));
+        let mut r = recording(&|_, _| {});
+        for w in &mut r.wheels {
+            w.carcass_c = [77.6, 68.3, 80.2, 74.5];
+            w.inner_c = [[61.6; 3], [56.1; 3], [63.2; 3], [59.8; 3]];
+        }
+        let d = setup_diagnosis(&r, &laps, &corners());
+        let g: Vec<f32> = d.tyres.iter().map(|t| (t.game_scale.as_ref().unwrap().value * 10.0).round() / 10.0).collect();
+        assert_eq!(g, vec![69.6, 62.2, 71.7, 67.2]);
+        assert_eq!(d.tyres[0].game_scale.as_ref().unwrap().laps, 5);
+        assert!(!d.missing.iter().any(|m| m.contains("Couche interne")));
+        // Aucun constat ne parle de l'idéal ni de 92 °C.
+        assert!(d.tyre_findings.iter().all(|f| !f.text.contains("92") && !f.text.contains("idéal")));
+        assert!(GAME_SCALE_NOTE.contains("à confirmer") && GAME_SCALE_NOTE.contains("Pas comparée"));
     }
 
     #[test]
