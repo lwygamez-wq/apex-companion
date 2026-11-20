@@ -10,49 +10,281 @@
           "apex_m": 700.0,
           "dt": 0.021,
           "min_cmp": 118.116,
-          "min_ref": 121.695
+          "min_ref": 121.695,
+          "phases": [
+            [
+              "freinage",
+              [
+                455.0,
+                695.0
+              ],
+              -0.173
+            ],
+            [
+              "entree",
+              [
+                695.0,
+                700.0
+              ],
+              0.002
+            ],
+            [
+              "sortie",
+              [
+                700.0,
+                845.0
+              ],
+              0.192
+            ]
+          ]
         },
         {
           "apex_m": 1420.0,
           "dt": 0.144,
           "min_cmp": 133.01,
-          "min_ref": 130.741
+          "min_ref": 130.741,
+          "phases": [
+            [
+              "freinage",
+              [
+                1170.0,
+                1395.0
+              ],
+              0.036
+            ],
+            [
+              "entree",
+              [
+                1395.0,
+                1420.0
+              ],
+              0.021
+            ],
+            [
+              "milieu",
+              [
+                1420.0,
+                1425.0
+              ],
+              0.003
+            ],
+            [
+              "sortie",
+              [
+                1425.0,
+                1555.0
+              ],
+              0.084
+            ]
+          ]
         },
         {
           "apex_m": 1715.0,
           "dt": -0.011,
           "min_cmp": 89.779,
-          "min_ref": 83.922
+          "min_ref": 83.922,
+          "phases": [
+            [
+              "freinage",
+              [
+                1575.0,
+                1680.0
+              ],
+              0.086
+            ],
+            [
+              "entree",
+              [
+                1680.0,
+                1715.0
+              ],
+              0.048
+            ],
+            [
+              "sortie",
+              [
+                1715.0,
+                1845.0
+              ],
+              -0.145
+            ]
+          ]
         },
         {
           "apex_m": 2320.0,
           "dt": 0.126,
           "min_cmp": 146.057,
-          "min_ref": 149.928
+          "min_ref": 149.928,
+          "phases": [
+            [
+              "freinage",
+              [
+                2155.0,
+                2315.0
+              ],
+              0.062
+            ],
+            [
+              "entree",
+              [
+                2315.0,
+                2320.0
+              ],
+              0.01
+            ],
+            [
+              "sortie",
+              [
+                2320.0,
+                2450.0
+              ],
+              0.054
+            ]
+          ]
         },
         {
           "apex_m": 2850.0,
           "dt": 0.072,
           "min_cmp": 109.418,
-          "min_ref": 113.667
+          "min_ref": 113.667,
+          "phases": [
+            [
+              "freinage",
+              [
+                2610.0,
+                2835.0
+              ],
+              -0.094
+            ],
+            [
+              "entree",
+              [
+                2835.0,
+                2850.0
+              ],
+              -0.016
+            ],
+            [
+              "sortie",
+              [
+                2850.0,
+                2980.0
+              ],
+              0.182
+            ]
+          ]
         },
         {
           "apex_m": 3385.0,
           "dt": -0.163,
           "min_cmp": 85.762,
-          "min_ref": 75.428
+          "min_ref": 75.428,
+          "phases": [
+            [
+              "freinage",
+              [
+                3185.0,
+                3375.0
+              ],
+              0.15
+            ],
+            [
+              "entree",
+              [
+                3375.0,
+                3385.0
+              ],
+              -0.003
+            ],
+            [
+              "milieu",
+              [
+                3385.0,
+                3390.0
+              ],
+              -0.031
+            ],
+            [
+              "sortie",
+              [
+                3390.0,
+                3520.0
+              ],
+              -0.279
+            ]
+          ]
         },
         {
           "apex_m": 4130.0,
           "dt": 0.027,
           "min_cmp": 102.33,
-          "min_ref": 103.537
+          "min_ref": 103.537,
+          "phases": [
+            [
+              "freinage",
+              [
+                3915.0,
+                4105.0
+              ],
+              0.015
+            ],
+            [
+              "entree",
+              [
+                4105.0,
+                4130.0
+              ],
+              0.022
+            ],
+            [
+              "milieu",
+              [
+                4130.0,
+                4140.0
+              ],
+              0.008
+            ],
+            [
+              "sortie",
+              [
+                4140.0,
+                4200.0
+              ],
+              -0.017
+            ]
+          ]
         },
         {
           "apex_m": 4260.0,
           "dt": 0.034,
           "min_cmp": 111.505,
-          "min_ref": 115.414
+          "min_ref": 115.414,
+          "phases": [
+            [
+              "freinage",
+              [
+                4200.0,
+                4215.0
+              ],
+              0.009
+            ],
+            [
+              "entree",
+              [
+                4215.0,
+                4260.0
+              ],
+              0.098
+            ],
+            [
+              "sortie",
+              [
+                4260.0,
+                4385.0
+              ],
+              -0.074
+            ]
+          ]
         }
       ],
       "delta_end_s": 0.22,
@@ -95,6 +327,12 @@
               "13",
               "10",
               "-3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.04 s · entrée +0.02 s · milieu +0.00 s · sortie +0.08 s"
             ]
           ],
           "gain": [
@@ -145,6 +383,12 @@
               "7",
               "5",
               "-2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.06 s · entrée +0.01 s · sortie +0.05 s"
             ]
           ],
           "gain": [
@@ -158,7 +402,7 @@
           "title": "Piratella : freinage trop précoce"
         },
         {
-          "confidence": "high",
+          "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
@@ -195,6 +439,12 @@
               "8",
               "14",
               "+6"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.09 s · entrée -0.02 s · sortie +0.18 s"
             ]
           ],
           "gain": [
@@ -218,55 +468,287 @@
           "apex_m": 700.0,
           "dt": 0.507,
           "min_cmp": 118.616,
-          "min_ref": 121.695
+          "min_ref": 121.695,
+          "phases": [
+            [
+              "freinage",
+              [
+                455.0,
+                695.0
+              ],
+              0.119
+            ],
+            [
+              "entree",
+              [
+                695.0,
+                700.0
+              ],
+              0.001
+            ],
+            [
+              "sortie",
+              [
+                700.0,
+                845.0
+              ],
+              0.386
+            ]
+          ]
         },
         {
           "apex_m": 1420.0,
           "dt": 16.699,
           "min_cmp": 13.716,
-          "min_ref": 130.741
+          "min_ref": 130.741,
+          "phases": [
+            [
+              "freinage",
+              [
+                1170.0,
+                1395.0
+              ],
+              0.668
+            ],
+            [
+              "entree",
+              [
+                1395.0,
+                1420.0
+              ],
+              0.033
+            ],
+            [
+              "milieu",
+              [
+                1420.0,
+                1425.0
+              ],
+              0.02
+            ],
+            [
+              "sortie",
+              [
+                1425.0,
+                1555.0
+              ],
+              15.978
+            ]
+          ]
         },
         {
           "apex_m": 1715.0,
           "dt": 0.407,
           "min_cmp": 84.961,
-          "min_ref": 83.922
+          "min_ref": 83.922,
+          "phases": [
+            [
+              "freinage",
+              [
+                1575.0,
+                1680.0
+              ],
+              0.053
+            ],
+            [
+              "entree",
+              [
+                1680.0,
+                1715.0
+              ],
+              0.103
+            ],
+            [
+              "sortie",
+              [
+                1715.0,
+                1845.0
+              ],
+              0.251
+            ]
+          ]
         },
         {
           "apex_m": 2320.0,
           "dt": 0.142,
           "min_cmp": 145.521,
-          "min_ref": 149.928
+          "min_ref": 149.928,
+          "phases": [
+            [
+              "freinage",
+              [
+                2155.0,
+                2315.0
+              ],
+              0.1
+            ],
+            [
+              "entree",
+              [
+                2315.0,
+                2320.0
+              ],
+              0.002
+            ],
+            [
+              "sortie",
+              [
+                2320.0,
+                2450.0
+              ],
+              0.04
+            ]
+          ]
         },
         {
           "apex_m": 2850.0,
           "dt": 0.314,
           "min_cmp": 105.027,
-          "min_ref": 113.667
+          "min_ref": 113.667,
+          "phases": [
+            [
+              "freinage",
+              [
+                2610.0,
+                2835.0
+              ],
+              0.157
+            ],
+            [
+              "entree",
+              [
+                2835.0,
+                2850.0
+              ],
+              0.005
+            ],
+            [
+              "sortie",
+              [
+                2850.0,
+                2980.0
+              ],
+              0.151
+            ]
+          ]
         },
         {
           "apex_m": 3385.0,
           "dt": 0.073,
           "min_cmp": 90.686,
-          "min_ref": 75.428
+          "min_ref": 75.428,
+          "phases": [
+            [
+              "freinage",
+              [
+                3185.0,
+                3375.0
+              ],
+              0.241
+            ],
+            [
+              "entree",
+              [
+                3375.0,
+                3385.0
+              ],
+              -0.016
+            ],
+            [
+              "milieu",
+              [
+                3385.0,
+                3390.0
+              ],
+              -0.042
+            ],
+            [
+              "sortie",
+              [
+                3390.0,
+                3520.0
+              ],
+              -0.109
+            ]
+          ]
         },
         {
           "apex_m": 4130.0,
           "dt": 0.001,
           "min_cmp": 107.303,
-          "min_ref": 103.537
+          "min_ref": 103.537,
+          "phases": [
+            [
+              "freinage",
+              [
+                3915.0,
+                4105.0
+              ],
+              -0.033
+            ],
+            [
+              "entree",
+              [
+                4105.0,
+                4130.0
+              ],
+              -0.017
+            ],
+            [
+              "milieu",
+              [
+                4130.0,
+                4140.0
+              ],
+              -0.005
+            ],
+            [
+              "sortie",
+              [
+                4140.0,
+                4200.0
+              ],
+              0.056
+            ]
+          ]
         },
         {
           "apex_m": 4260.0,
           "dt": 0.015,
           "min_cmp": 117.437,
-          "min_ref": 115.414
+          "min_ref": 115.414,
+          "phases": [
+            [
+              "freinage",
+              [
+                4200.0,
+                4215.0
+              ],
+              0.007
+            ],
+            [
+              "entree",
+              [
+                4215.0,
+                4260.0
+              ],
+              0.034
+            ],
+            [
+              "sortie",
+              [
+                4260.0,
+                4385.0
+              ],
+              -0.025
+            ]
+          ]
         }
       ],
       "delta_end_s": 20.067,
       "insights": [
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -303,6 +785,12 @@
               "13",
               "14",
               "+1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.67 s · entrée +0.03 s · milieu +0.02 s · sortie +15.98 s"
             ]
           ],
           "gain": [
@@ -316,7 +804,7 @@
           "title": "Villeneuve : freinage trop précoce"
         },
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -353,6 +841,12 @@
               "11",
               "9",
               "-2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.12 s · entrée +0.00 s · sortie +0.39 s"
             ]
           ],
           "gain": [
@@ -403,6 +897,12 @@
               "2",
               "4",
               "+2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.05 s · entrée +0.10 s · sortie +0.25 s"
             ]
           ],
           "gain": [
@@ -453,6 +953,12 @@
               "8",
               "14",
               "+6"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.16 s · entrée +0.01 s · sortie +0.15 s"
             ]
           ],
           "gain": [
@@ -503,6 +1009,12 @@
               "7",
               "5",
               "-2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.10 s · entrée +0.00 s · sortie +0.04 s"
             ]
           ],
           "gain": [
@@ -553,6 +1065,12 @@
               "6",
               "11",
               "+5"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.24 s · entrée -0.02 s · milieu -0.04 s · sortie -0.11 s"
             ]
           ],
           "gain": [
@@ -616,6 +1134,49 @@
     "spare_laps": null,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              0.154
+            ],
+            [
+              "entree",
+              0.056
+            ],
+            [
+              "milieu",
+              0.029
+            ],
+            [
+              "sortie",
+              -0.214
+            ]
+          ],
+          "laps_first": 11,
+          "laps_second": 11,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Acque Minerali au freinage +0,09 s, Tosa au freinage +0,05 s, Variante Alta au freinage +0,05 s. Sur tout le tour, 0,15 s au freinage (65 % de la perte).",
+          "top": [
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.092,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Tosa",
+              "drift_s": 0.054,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.049,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": 0.025,
+          "wear_front_pct": null,
+          "wear_rear_pct": null
+        },
         "first_half_s": 95.359,
         "from_lap": 1,
         "laps": 30,
@@ -624,6 +1185,49 @@
         "to_lap": 30
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.089
+            ],
+            [
+              "entree",
+              0.049
+            ],
+            [
+              "milieu",
+              0.026
+            ],
+            [
+              "sortie",
+              -0.041
+            ]
+          ],
+          "laps_first": 9,
+          "laps_second": 9,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Acque Minerali en sortie +0,10 s, Villeneuve en sortie +0,08 s, Tosa au freinage +0,06 s.",
+          "top": [
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.101,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Villeneuve",
+              "drift_s": 0.084,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Tosa",
+              "drift_s": 0.062,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.055,
+          "wear_front_pct": null,
+          "wear_rear_pct": null
+        },
         "first_half_s": 95.235,
         "from_lap": 34,
         "laps": 22,

@@ -79,6 +79,11 @@ export function RaceDebriefCard({ d }: { d: RaceDebrief }) {
           {d.stints.map((s, i) => `${i ? " · " : ""}tours ${s.from_lap}–${s.to_lap} ${lapTime(s.median_s)} (${lapTime(s.first_half_s)} puis ${lapTime(s.second_half_s)})`).join("")}
         </p>
       )}
+      {d.stints.filter((s) => s.drift?.summary).map((s) => (
+        <p key={s.from_lap} className="rd-energy muted">
+          Relais {s.from_lap}–{s.to_lap}, première moitié contre seconde ({s.drift!.laps_first} et {s.drift!.laps_second} tours) : {s.drift!.summary}
+        </p>
+      ))}
 
       {d.missing.map((m) => (
         <p key={m} className="muted rd-missing">Non mesuré. {m}</p>

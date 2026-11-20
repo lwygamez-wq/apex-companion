@@ -1,5 +1,5 @@
 {
-  "ai_context": "Simulateur : iRacing · Circuit : Red Bull Ring (Grand Prix) · Voiture : Mercedes-AMG W13 E Performance · Séance : test · Série : Open\nLongueur du circuit : 4283 m\nTours : 8 au total, 2 propres. Meilleur tour propre : 1:09.749 (tour 6). Tour théorique (meilleurs segments) : 1:09.428.\n\nTOURS (numéro, temps, état) :\n- T0 — sortie de piste, incident, stand, 1.63 L\n- T1 1:18.289 propre, 1.79 L\n- T2 1:23.090 sortie de piste, incident, 1.77 L\n- T3 1:13.115 sortie de piste, incident, 1.77 L\n- T4 1:31.783 sortie de piste, incident, 1.81 L\n- T5 1:26.065 incident, 1.59 L\n- T6 1:09.749 propre, 1.71 L\n- T7 — incident, 0.27 L\n\nCOMPARAISON : ton tour 1 (1:18.289) contre la référence ton tour 6 (1:09.749). Écart final +8.539 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Virage 9 : +2.16 s · freinage plus tôt (-195 m) · vitesse mini 127 vs 220 km/h, gaz -27 m · sortie 192 vs 237 km/h\n- Schlossgold : +1.36 s · freinage plus tôt (-25 m) · vitesse mini 74 vs 98 km/h, gaz -25 m · sortie 215 vs 225 km/h\n- Virage 10 : +0.78 s · freinage plus tôt (-7 m) · vitesse mini 133 vs 171 km/h, gaz -22 m · sortie 212 vs 229 km/h\n- Remus : +0.56 s · freinage plus tôt (-7 m) · vitesse mini 57 vs 65 km/h, gaz +4 m · sortie 212 vs 225 km/h\n- V4 : +0.48 s · freinage plus tôt (-19 m) · vitesse mini 179 vs 194 km/h, gaz +23 m · sortie 227 vs 232 km/h\n- Virage 1 : +0.43 s · freinage plus tôt (-6 m) · vitesse mini 122 vs 141 km/h, gaz -14 m · sortie 225 vs 233 km/h\n- V5 : -0.30 s · freinage plus tôt (-3 m) · vitesse mini 198 vs 192 km/h, gaz -74 m · sortie 245 vs 238 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Virage 1 : sécuriser avant d'attaquer (gain estimé 1.28 à 2.57 s) : Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s. → Prochaine session à Virage 1 : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.\n- Virage 9 : freinage trop précoce (gain estimé 1.08 à 2.16 s) : Tu freines environ 195 m plus tôt que la référence et ta vitesse minimale est inférieure de 94 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 2.16 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 136 m plus loin (réf. : 3711 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 220 km/h au minimum.\n- Schlossgold : freinage trop précoce (gain estimé 0.68 à 1.36 s) : Tu freines environ 25 m plus tôt que la référence et ta vitesse minimale est inférieure de 24 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 1.36 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 18 m plus loin (réf. : 2061 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 98 km/h au minimum.\n- Virage 10 : vitesse minimale insuffisante (gain estimé 0.39 à 0.78 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 38 km/h (133 km/h contre 171 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.78 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 171 km/h vers 3970 m).\n- Remus : vitesse minimale insuffisante (gain estimé 0.28 à 0.56 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 8 km/h (57 km/h contre 65 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.56 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 65 km/h vers 1389 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Priorité : rester en piste. 1 virage(s) à sécuriser, Virage 1 en tête (2 sorties sur 6). Tes sorties te coûtent en moyenne 2.57 s par tour, avant même de parler de rythme.\n- Virage 1 : 2/6 sorties, à prendre 0.23 s en refaisant ton meilleur passage, une sortie coûte 7.7 s · Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s.\n- Remus : 1/6 sorties, à prendre 0.43 s en refaisant ton meilleur passage, une sortie coûte 8.7 s · 1 sortie sur 6 et 0.43 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Schlossgold : 0/6 sorties, à prendre 1.09 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 1.09 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Virage 9 : 0/6 sorties, à prendre 0.74 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 0.74 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- V5 : 1/6 sorties, à prendre 0.67 s en refaisant ton meilleur passage, une sortie coûte -0.4 s · 1 sortie sur 6 et 0.67 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- V4 : 0/6 sorties, à prendre 0.63 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 0.63 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Virage 10 : 1/6 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie(s) sur 6, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nSORTIES DE PISTE :\n- Virage 1 (à 580 m) aux tours [2, 4]\n- hors virage (à 858 m) aux tours [0]\n- Remus (à 1466 m) aux tours [4]\n- V5 (à 3117 m) aux tours [2]\n- Virage 10 (à 3961 m) aux tours [3]\n",
+  "ai_context": "Simulateur : iRacing · Circuit : Red Bull Ring (Grand Prix) · Voiture : Mercedes-AMG W13 E Performance · Séance : test · Série : Open\nLongueur du circuit : 4283 m\nTours : 8 au total, 2 propres. Meilleur tour propre : 1:09.749 (tour 6). Tour théorique (meilleurs segments) : 1:09.428.\n\nTOURS (numéro, temps, état) :\n- T0 — sortie de piste, incident, stand, 1.63 L\n- T1 1:18.289 propre, 1.79 L\n- T2 1:23.090 sortie de piste, incident, 1.77 L\n- T3 1:13.115 sortie de piste, incident, 1.77 L\n- T4 1:31.783 sortie de piste, incident, 1.81 L\n- T5 1:26.065 incident, 1.59 L\n- T6 1:09.749 propre, 1.71 L\n- T7 — incident, 0.27 L\n\nCOMPARAISON : ton tour 1 (1:18.289) contre la référence ton tour 6 (1:09.749). Écart final +8.539 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Virage 9 : +2.16 s · freinage plus tôt (-195 m) · vitesse mini 127 vs 220 km/h, gaz -27 m · sortie 192 vs 237 km/h\n- Schlossgold : +1.36 s · freinage plus tôt (-25 m) · vitesse mini 74 vs 98 km/h, gaz -25 m · sortie 215 vs 225 km/h\n- Virage 10 : +0.78 s · freinage plus tôt (-7 m) · vitesse mini 133 vs 171 km/h, gaz -22 m · sortie 212 vs 229 km/h\n- Remus : +0.56 s · freinage plus tôt (-7 m) · vitesse mini 57 vs 65 km/h, gaz +4 m · sortie 212 vs 225 km/h\n- V4 : +0.48 s · freinage plus tôt (-19 m) · vitesse mini 179 vs 194 km/h, gaz +23 m · sortie 227 vs 232 km/h\n- Virage 1 : +0.43 s · freinage plus tôt (-6 m) · vitesse mini 122 vs 141 km/h, gaz -14 m · sortie 225 vs 233 km/h\n- V5 : -0.30 s · freinage plus tôt (-3 m) · vitesse mini 198 vs 192 km/h, gaz -74 m · sortie 245 vs 238 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Virage 1 : sécuriser avant d'attaquer (gain estimé 1.28 à 2.57 s) : Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s. → Prochaine session à Virage 1 : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.\n- Virage 9 : freinage trop précoce (gain estimé 1.08 à 2.16 s) : Tu freines environ 195 m plus tôt que la référence et ta vitesse minimale est inférieure de 94 km/h. Perte mesurée : 2.16 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 136 m plus loin (réf. : 3711 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 220 km/h au minimum.\n- Schlossgold : freinage trop précoce (gain estimé 0.68 à 1.36 s) : Tu freines environ 25 m plus tôt que la référence et ta vitesse minimale est inférieure de 24 km/h. Perte mesurée : 1.36 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 18 m plus loin (réf. : 2061 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 98 km/h au minimum.\n- Virage 10 : vitesse minimale insuffisante (gain estimé 0.39 à 0.78 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 38 km/h (133 km/h contre 171 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.78 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 171 km/h vers 3970 m).\n- Remus : vitesse minimale insuffisante (gain estimé 0.28 à 0.56 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 8 km/h (57 km/h contre 65 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.56 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 65 km/h vers 1389 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Priorité : rester en piste. 1 virage(s) à sécuriser, Virage 1 en tête (2 sorties sur 6). Tes sorties te coûtent en moyenne 2.57 s par tour, avant même de parler de rythme.\n- Virage 1 : 2/6 sorties, à prendre 0.23 s en refaisant ton meilleur passage, une sortie coûte 7.7 s · Tu sors 2 fois sur 6 (33 %). Une sortie coûte 7.7 s ici, pour 0.23 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s.\n- Remus : 1/6 sorties, à prendre 0.43 s en refaisant ton meilleur passage, une sortie coûte 8.7 s · 1 sortie sur 6 et 0.43 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Schlossgold : 0/6 sorties, à prendre 1.09 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 1.09 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Virage 9 : 0/6 sorties, à prendre 0.74 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 0.74 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- V5 : 1/6 sorties, à prendre 0.67 s en refaisant ton meilleur passage, une sortie coûte -0.4 s · 1 sortie sur 6 et 0.67 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- V4 : 0/6 sorties, à prendre 0.63 s en refaisant ton meilleur passage · Aucune sortie sur 6 passages, et 0.63 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Virage 10 : 1/6 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie(s) sur 6, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nSORTIES DE PISTE :\n- Virage 1 (à 580 m) aux tours [2, 4]\n- hors virage (à 858 m) aux tours [0]\n- Remus (à 1466 m) aux tours [4]\n- V5 (à 3117 m) aux tours [2]\n- Virage 10 (à 3961 m) aux tours [3]\n",
   "analysis_reference": 6,
   "best": 6,
   "comparisons": [
@@ -10,43 +10,225 @@
           "apex_m": 445.0,
           "dt": -0.178,
           "min_cmp": 139.732,
-          "min_ref": 141.155
+          "min_ref": 141.155,
+          "phases": [
+            [
+              "freinage",
+              [
+                320.0,
+                430.0
+              ],
+              -0.165
+            ],
+            [
+              "entree",
+              [
+                430.0,
+                445.0
+              ],
+              -0.013
+            ],
+            [
+              "milieu",
+              [
+                445.0,
+                450.0
+              ],
+              -0.001
+            ],
+            [
+              "sortie",
+              [
+                450.0,
+                650.0
+              ],
+              0.002
+            ]
+          ]
         },
         {
           "apex_m": 1390.0,
           "dt": 1.069,
           "min_cmp": 46.03,
-          "min_ref": 65.245
+          "min_ref": 65.245,
+          "phases": [
+            [
+              "freinage",
+              [
+                1245.0,
+                1375.0
+              ],
+              -0.311
+            ],
+            [
+              "entree",
+              [
+                1375.0,
+                1390.0
+              ],
+              0.103
+            ],
+            [
+              "sortie",
+              [
+                1390.0,
+                1585.0
+              ],
+              1.277
+            ]
+          ]
         },
         {
           "apex_m": 2200.0,
           "dt": -0.019,
           "min_cmp": 99.75,
-          "min_ref": 98.176
+          "min_ref": 98.176,
+          "phases": [
+            [
+              "freinage",
+              [
+                2050.0,
+                2185.0
+              ],
+              -0.073
+            ],
+            [
+              "entree",
+              [
+                2185.0,
+                2200.0
+              ],
+              -0.072
+            ],
+            [
+              "milieu",
+              [
+                2200.0,
+                2205.0
+              ],
+              -0.016
+            ],
+            [
+              "sortie",
+              [
+                2205.0,
+                2395.0
+              ],
+              0.142
+            ]
+          ]
         },
         {
           "apex_m": 2700.0,
           "dt": 0.848,
           "min_cmp": 166.33,
-          "min_ref": 194.449
+          "min_ref": 194.449,
+          "phases": [
+            [
+              "freinage",
+              [
+                2570.0,
+                2645.0
+              ],
+              0.296
+            ],
+            [
+              "entree",
+              [
+                2645.0,
+                2700.0
+              ],
+              0.145
+            ],
+            [
+              "sortie",
+              [
+                2700.0,
+                2885.0
+              ],
+              0.407
+            ]
+          ]
         },
         {
           "apex_m": 3110.0,
           "dt": -0.438,
           "min_cmp": 211.109,
-          "min_ref": 192.668
+          "min_ref": 192.668,
+          "phases": [
+            [
+              "entree",
+              [
+                3010.0,
+                3110.0
+              ],
+              -0.216
+            ],
+            [
+              "sortie",
+              [
+                3110.0,
+                3255.0
+              ],
+              -0.222
+            ]
+          ]
         },
         {
           "apex_m": 3795.0,
           "dt": 1.047,
           "min_cmp": 155.167,
-          "min_ref": 220.518
+          "min_ref": 220.518,
+          "phases": [
+            [
+              "entree",
+              [
+                3665.0,
+                3795.0
+              ],
+              0.708
+            ],
+            [
+              "sortie",
+              [
+                3795.0,
+                3885.0
+              ],
+              0.339
+            ]
+          ]
         },
         {
           "apex_m": 3970.0,
           "dt": 0.395,
           "min_cmp": 158.563,
-          "min_ref": 170.822
+          "min_ref": 170.822,
+          "phases": [
+            [
+              "freinage",
+              [
+                3885.0,
+                3965.0
+              ],
+              0.263
+            ],
+            [
+              "entree",
+              [
+                3965.0,
+                3970.0
+              ],
+              0.006
+            ],
+            [
+              "sortie",
+              [
+                3970.0,
+                4100.0
+              ],
+              0.127
+            ]
+          ]
         }
       ],
       "delta_end_s": 3.364,
@@ -115,6 +297,12 @@
               "2",
               "10",
               "+8"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.31 s · entrée +0.10 s · sortie +1.28 s"
             ]
           ],
           "gain": [
@@ -165,6 +353,12 @@
               "5",
               "4",
               "-1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée +0.71 s · sortie +0.34 s"
             ]
           ],
           "gain": [
@@ -215,6 +409,12 @@
               "7",
               "7",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.30 s · entrée +0.15 s · sortie +0.41 s"
             ]
           ],
           "gain": [
@@ -265,6 +465,12 @@
               "3",
               "5",
               "+2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.26 s · entrée +0.01 s · sortie +0.13 s"
             ]
           ],
           "gain": [
@@ -290,43 +496,225 @@
           "apex_m": 445.0,
           "dt": 7.282,
           "min_cmp": 15.561,
-          "min_ref": 141.155
+          "min_ref": 141.155,
+          "phases": [
+            [
+              "freinage",
+              [
+                320.0,
+                430.0
+              ],
+              -0.065
+            ],
+            [
+              "entree",
+              [
+                430.0,
+                445.0
+              ],
+              -0.005
+            ],
+            [
+              "milieu",
+              [
+                445.0,
+                450.0
+              ],
+              0.0
+            ],
+            [
+              "sortie",
+              [
+                450.0,
+                650.0
+              ],
+              7.352
+            ]
+          ]
         },
         {
           "apex_m": 1390.0,
           "dt": 9.137,
           "min_cmp": 20.075,
-          "min_ref": 65.245
+          "min_ref": 65.245,
+          "phases": [
+            [
+              "freinage",
+              [
+                1245.0,
+                1375.0
+              ],
+              0.036
+            ],
+            [
+              "entree",
+              [
+                1375.0,
+                1390.0
+              ],
+              0.219
+            ],
+            [
+              "sortie",
+              [
+                1390.0,
+                1585.0
+              ],
+              8.882
+            ]
+          ]
         },
         {
           "apex_m": 2200.0,
           "dt": 0.335,
           "min_cmp": 111.942,
-          "min_ref": 98.176
+          "min_ref": 98.176,
+          "phases": [
+            [
+              "freinage",
+              [
+                2050.0,
+                2185.0
+              ],
+              0.099
+            ],
+            [
+              "entree",
+              [
+                2185.0,
+                2200.0
+              ],
+              -0.085
+            ],
+            [
+              "milieu",
+              [
+                2200.0,
+                2205.0
+              ],
+              -0.032
+            ],
+            [
+              "sortie",
+              [
+                2205.0,
+                2395.0
+              ],
+              0.352
+            ]
+          ]
         },
         {
           "apex_m": 2700.0,
           "dt": 0.384,
           "min_cmp": 170.52,
-          "min_ref": 194.449
+          "min_ref": 194.449,
+          "phases": [
+            [
+              "freinage",
+              [
+                2570.0,
+                2645.0
+              ],
+              -0.006
+            ],
+            [
+              "entree",
+              [
+                2645.0,
+                2700.0
+              ],
+              -0.073
+            ],
+            [
+              "sortie",
+              [
+                2700.0,
+                2885.0
+              ],
+              0.463
+            ]
+          ]
         },
         {
           "apex_m": 3110.0,
           "dt": 0.092,
           "min_cmp": 175.686,
-          "min_ref": 192.668
+          "min_ref": 192.668,
+          "phases": [
+            [
+              "entree",
+              [
+                3010.0,
+                3110.0
+              ],
+              -0.129
+            ],
+            [
+              "sortie",
+              [
+                3110.0,
+                3255.0
+              ],
+              0.221
+            ]
+          ]
         },
         {
           "apex_m": 3795.0,
           "dt": 0.403,
           "min_cmp": 198.177,
-          "min_ref": 220.518
+          "min_ref": 220.518,
+          "phases": [
+            [
+              "entree",
+              [
+                3665.0,
+                3795.0
+              ],
+              0.374
+            ],
+            [
+              "sortie",
+              [
+                3795.0,
+                3885.0
+              ],
+              0.028
+            ]
+          ]
         },
         {
           "apex_m": 3970.0,
           "dt": 0.195,
           "min_cmp": 169.177,
-          "min_ref": 170.822
+          "min_ref": 170.822,
+          "phases": [
+            [
+              "freinage",
+              [
+                3885.0,
+                3965.0
+              ],
+              0.162
+            ],
+            [
+              "entree",
+              [
+                3965.0,
+                3970.0
+              ],
+              -0.002
+            ],
+            [
+              "sortie",
+              [
+                3970.0,
+                4100.0
+              ],
+              0.035
+            ]
+          ]
         }
       ],
       "delta_end_s": 22.034,
@@ -395,6 +783,12 @@
               "2",
               "10",
               "+8"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.04 s · entrée +0.22 s · sortie +8.88 s"
             ]
           ],
           "gain": [
@@ -445,6 +839,12 @@
               "5",
               "1",
               "-4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée +0.37 s · sortie +0.03 s"
             ]
           ],
           "gain": [
@@ -495,6 +895,12 @@
               "7",
               "3",
               "-4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.01 s · entrée -0.07 s · sortie +0.46 s"
             ]
           ],
           "gain": [
@@ -545,6 +951,12 @@
               "3",
               "3",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.10 s · entrée -0.08 s · milieu -0.03 s · sortie +0.35 s"
             ]
           ],
           "gain": [
@@ -595,6 +1007,12 @@
               "3",
               "3",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.16 s · entrée -0.00 s · sortie +0.04 s"
             ]
           ],
           "gain": [
@@ -645,6 +1063,12 @@
               "2",
               "5",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée -0.13 s · sortie +0.22 s"
             ]
           ],
           "gain": [

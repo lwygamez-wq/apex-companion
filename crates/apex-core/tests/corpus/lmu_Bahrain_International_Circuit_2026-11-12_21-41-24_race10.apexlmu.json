@@ -10,55 +10,297 @@
           "apex_m": 750.0,
           "dt": 0.215,
           "min_cmp": 66.109,
-          "min_ref": 58.228
+          "min_ref": 58.228,
+          "phases": [
+            [
+              "freinage",
+              [
+                440.0,
+                740.0
+              ],
+              0.36
+            ],
+            [
+              "entree",
+              [
+                740.0,
+                750.0
+              ],
+              -0.239
+            ],
+            [
+              "sortie",
+              [
+                750.0,
+                885.0
+              ],
+              0.094
+            ]
+          ]
         },
         {
           "apex_m": 1520.0,
           "dt": 0.027,
           "min_cmp": 91.017,
-          "min_ref": 90.48
+          "min_ref": 90.48,
+          "phases": [
+            [
+              "freinage",
+              [
+                1325.0,
+                1510.0
+              ],
+              0.05
+            ],
+            [
+              "entree",
+              [
+                1510.0,
+                1520.0
+              ],
+              0.042
+            ],
+            [
+              "sortie",
+              [
+                1520.0,
+                1665.0
+              ],
+              -0.065
+            ]
+          ]
         },
         {
           "apex_m": 1910.0,
           "dt": 0.153,
           "min_cmp": 143.308,
-          "min_ref": 142.193
+          "min_ref": 142.193,
+          "phases": [
+            [
+              "freinage",
+              [
+                1790.0,
+                1875.0
+              ],
+              0.048
+            ],
+            [
+              "entree",
+              [
+                1875.0,
+                1910.0
+              ],
+              0.009
+            ],
+            [
+              "milieu",
+              [
+                1910.0,
+                1915.0
+              ],
+              0.0
+            ],
+            [
+              "sortie",
+              [
+                1915.0,
+                2135.0
+              ],
+              0.096
+            ]
+          ]
         },
         {
           "apex_m": 2270.0,
           "dt": -0.074,
           "min_cmp": 70.007,
-          "min_ref": 67.523
+          "min_ref": 67.523,
+          "phases": [
+            [
+              "freinage",
+              [
+                2135.0,
+                2245.0
+              ],
+              -0.215
+            ],
+            [
+              "entree",
+              [
+                2245.0,
+                2270.0
+              ],
+              0.006
+            ],
+            [
+              "sortie",
+              [
+                2270.0,
+                2410.0
+              ],
+              0.136
+            ]
+          ]
         },
         {
           "apex_m": 2730.0,
           "dt": -0.033,
           "min_cmp": 69.95,
-          "min_ref": 74.244
+          "min_ref": 74.244,
+          "phases": [
+            [
+              "freinage",
+              [
+                2545.0,
+                2700.0
+              ],
+              -0.107
+            ],
+            [
+              "entree",
+              [
+                2700.0,
+                2730.0
+              ],
+              -0.104
+            ],
+            [
+              "sortie",
+              [
+                2730.0,
+                2880.0
+              ],
+              0.178
+            ]
+          ]
         },
         {
           "apex_m": 3455.0,
           "dt": 0.02,
           "min_cmp": 115.921,
-          "min_ref": 117.298
+          "min_ref": 117.298,
+          "phases": [
+            [
+              "freinage",
+              [
+                3285.0,
+                3435.0
+              ],
+              0.074
+            ],
+            [
+              "entree",
+              [
+                3435.0,
+                3455.0
+              ],
+              0.019
+            ],
+            [
+              "sortie",
+              [
+                3455.0,
+                3585.0
+              ],
+              -0.072
+            ]
+          ]
         },
         {
           "apex_m": 3830.0,
           "dt": 0.116,
           "min_cmp": 189.636,
-          "min_ref": 197.535
+          "min_ref": 197.535,
+          "phases": [
+            [
+              "entree",
+              [
+                3720.0,
+                3830.0
+              ],
+              0.025
+            ],
+            [
+              "milieu",
+              [
+                3830.0,
+                3835.0
+              ],
+              0.004
+            ],
+            [
+              "sortie",
+              [
+                3835.0,
+                3965.0
+              ],
+              0.087
+            ]
+          ]
         },
         {
           "apex_m": 4105.0,
           "dt": -0.005,
           "min_cmp": 109.54,
-          "min_ref": 110.747
+          "min_ref": 110.747,
+          "phases": [
+            [
+              "freinage",
+              [
+                3965.0,
+                4080.0
+              ],
+              -0.042
+            ],
+            [
+              "entree",
+              [
+                4080.0,
+                4105.0
+              ],
+              0.003
+            ],
+            [
+              "sortie",
+              [
+                4105.0,
+                4245.0
+              ],
+              0.034
+            ]
+          ]
         },
         {
           "apex_m": 4910.0,
           "dt": -0.042,
           "min_cmp": 102.963,
-          "min_ref": 97.998
+          "min_ref": 97.998,
+          "phases": [
+            [
+              "freinage",
+              [
+                4720.0,
+                4900.0
+              ],
+              0.021
+            ],
+            [
+              "entree",
+              [
+                4900.0,
+                4910.0
+              ],
+              -0.02
+            ],
+            [
+              "sortie",
+              [
+                4910.0,
+                5065.0
+              ],
+              -0.043
+            ]
+          ]
         }
       ],
       "delta_end_s": 0.576,
@@ -101,6 +343,12 @@
               "5",
               "9",
               "+4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.36 s · entrée -0.24 s · sortie +0.09 s"
             ]
           ],
           "gain": [
@@ -151,6 +399,12 @@
               "16",
               "10",
               "-6"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.05 s · entrée +0.01 s · milieu +0.00 s · sortie +0.10 s"
             ]
           ],
           "gain": [
@@ -201,6 +455,12 @@
               "3",
               "3",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée +0.03 s · milieu +0.00 s · sortie +0.09 s"
             ]
           ],
           "gain": [
@@ -224,55 +484,297 @@
           "apex_m": 750.0,
           "dt": 0.688,
           "min_cmp": 61.024,
-          "min_ref": 58.228
+          "min_ref": 58.228,
+          "phases": [
+            [
+              "freinage",
+              [
+                440.0,
+                740.0
+              ],
+              0.625
+            ],
+            [
+              "entree",
+              [
+                740.0,
+                750.0
+              ],
+              -0.172
+            ],
+            [
+              "sortie",
+              [
+                750.0,
+                885.0
+              ],
+              0.235
+            ]
+          ]
         },
         {
           "apex_m": 1520.0,
           "dt": 0.677,
           "min_cmp": 77.166,
-          "min_ref": 90.48
+          "min_ref": 90.48,
+          "phases": [
+            [
+              "freinage",
+              [
+                1325.0,
+                1510.0
+              ],
+              0.076
+            ],
+            [
+              "entree",
+              [
+                1510.0,
+                1520.0
+              ],
+              -0.033
+            ],
+            [
+              "sortie",
+              [
+                1520.0,
+                1665.0
+              ],
+              0.633
+            ]
+          ]
         },
         {
           "apex_m": 1910.0,
           "dt": 0.216,
           "min_cmp": 140.238,
-          "min_ref": 142.193
+          "min_ref": 142.193,
+          "phases": [
+            [
+              "freinage",
+              [
+                1790.0,
+                1875.0
+              ],
+              -0.006
+            ],
+            [
+              "entree",
+              [
+                1875.0,
+                1910.0
+              ],
+              0.011
+            ],
+            [
+              "milieu",
+              [
+                1910.0,
+                1915.0
+              ],
+              0.003
+            ],
+            [
+              "sortie",
+              [
+                1915.0,
+                2135.0
+              ],
+              0.207
+            ]
+          ]
         },
         {
           "apex_m": 2270.0,
           "dt": 0.414,
           "min_cmp": 66.67,
-          "min_ref": 67.523
+          "min_ref": 67.523,
+          "phases": [
+            [
+              "freinage",
+              [
+                2135.0,
+                2245.0
+              ],
+              0.34
+            ],
+            [
+              "entree",
+              [
+                2245.0,
+                2270.0
+              ],
+              0.003
+            ],
+            [
+              "sortie",
+              [
+                2270.0,
+                2410.0
+              ],
+              0.071
+            ]
+          ]
         },
         {
           "apex_m": 2730.0,
           "dt": 0.185,
           "min_cmp": 68.34,
-          "min_ref": 74.244
+          "min_ref": 74.244,
+          "phases": [
+            [
+              "freinage",
+              [
+                2545.0,
+                2700.0
+              ],
+              -0.083
+            ],
+            [
+              "entree",
+              [
+                2700.0,
+                2730.0
+              ],
+              -0.03
+            ],
+            [
+              "sortie",
+              [
+                2730.0,
+                2880.0
+              ],
+              0.298
+            ]
+          ]
         },
         {
           "apex_m": 3455.0,
           "dt": 0.425,
           "min_cmp": 110.159,
-          "min_ref": 117.298
+          "min_ref": 117.298,
+          "phases": [
+            [
+              "freinage",
+              [
+                3285.0,
+                3435.0
+              ],
+              0.306
+            ],
+            [
+              "entree",
+              [
+                3435.0,
+                3455.0
+              ],
+              0.037
+            ],
+            [
+              "sortie",
+              [
+                3455.0,
+                3585.0
+              ],
+              0.082
+            ]
+          ]
         },
         {
           "apex_m": 3830.0,
           "dt": 0.415,
           "min_cmp": 181.144,
-          "min_ref": 197.535
+          "min_ref": 197.535,
+          "phases": [
+            [
+              "entree",
+              [
+                3720.0,
+                3830.0
+              ],
+              0.075
+            ],
+            [
+              "milieu",
+              [
+                3830.0,
+                3835.0
+              ],
+              0.004
+            ],
+            [
+              "sortie",
+              [
+                3835.0,
+                3965.0
+              ],
+              0.336
+            ]
+          ]
         },
         {
           "apex_m": 4105.0,
           "dt": 0.316,
           "min_cmp": 113.453,
-          "min_ref": 110.747
+          "min_ref": 110.747,
+          "phases": [
+            [
+              "freinage",
+              [
+                3965.0,
+                4080.0
+              ],
+              0.205
+            ],
+            [
+              "entree",
+              [
+                4080.0,
+                4105.0
+              ],
+              -0.01
+            ],
+            [
+              "sortie",
+              [
+                4105.0,
+                4245.0
+              ],
+              0.121
+            ]
+          ]
         },
         {
           "apex_m": 4910.0,
           "dt": 0.16,
           "min_cmp": 94.25,
-          "min_ref": 97.998
+          "min_ref": 97.998,
+          "phases": [
+            [
+              "freinage",
+              [
+                4720.0,
+                4900.0
+              ],
+              0.0
+            ],
+            [
+              "entree",
+              [
+                4900.0,
+                4910.0
+              ],
+              0.034
+            ],
+            [
+              "sortie",
+              [
+                4910.0,
+                5065.0
+              ],
+              0.126
+            ]
+          ]
         }
       ],
       "delta_end_s": 4.861,
@@ -315,6 +817,12 @@
               "5",
               "8",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.62 s · entrée -0.17 s · sortie +0.24 s"
             ]
           ],
           "gain": [
@@ -328,7 +836,7 @@
           "title": "Virage 1 : freinage trop précoce"
         },
         {
-          "confidence": "high",
+          "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
@@ -365,6 +873,12 @@
               "7",
               "7",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.08 s · entrée -0.03 s · sortie +0.63 s"
             ]
           ],
           "gain": [
@@ -415,6 +929,12 @@
               "7",
               "3",
               "-4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.31 s · entrée +0.04 s · sortie +0.08 s"
             ]
           ],
           "gain": [
@@ -465,6 +985,12 @@
               "3",
               "6",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "entrée +0.07 s · milieu +0.00 s · sortie +0.34 s"
             ]
           ],
           "gain": [
@@ -478,7 +1004,7 @@
           "title": "Virage 12 : vitesse minimale insuffisante"
         },
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -515,6 +1041,12 @@
               "7",
               "7",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.34 s · entrée +0.00 s · sortie +0.07 s"
             ]
           ],
           "gain": [
@@ -565,6 +1097,12 @@
               "6",
               "14",
               "+8"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.21 s · entrée -0.01 s · sortie +0.12 s"
             ]
           ],
           "gain": [
@@ -615,6 +1153,12 @@
               "16",
               "8",
               "-8"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.01 s · entrée +0.01 s · milieu +0.00 s · sortie +0.21 s"
             ]
           ],
           "gain": [
@@ -628,7 +1172,7 @@
           "title": "Virage 6 : sortie de virage pénalisante"
         },
         {
-          "confidence": "medium",
+          "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
@@ -665,6 +1209,12 @@
               "13",
               "12",
               "-1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.08 s · entrée -0.03 s · sortie +0.30 s"
             ]
           ],
           "gain": [
@@ -715,6 +1265,12 @@
               "5",
               "5",
               "+0"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.00 s · entrée +0.03 s · sortie +0.13 s"
             ]
           ],
           "gain": [
@@ -774,6 +1330,49 @@
     "spare_laps": 0.509,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.203
+            ],
+            [
+              "entree",
+              0.253
+            ],
+            [
+              "milieu",
+              0.012
+            ],
+            [
+              "sortie",
+              -0.262
+            ]
+          ],
+          "laps_first": 9,
+          "laps_second": 9,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Virages 9-10 à l'entrée +0,19 s, Virage 8 au freinage +0,13 s, Virage 12 à l'entrée +0,07 s. Sur tout le tour, 0,25 s à l'entrée (96 % de la perte). Usure par tour : avant 0,87 %, arrière 0,80 %.",
+          "top": [
+            {
+              "corner": "Virages 9-10",
+              "drift_s": 0.187,
+              "phase": "entree"
+            },
+            {
+              "corner": "Virage 8",
+              "drift_s": 0.13,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Virage 12",
+              "drift_s": 0.067,
+              "phase": "entree"
+            }
+          ],
+          "total_s": -0.2,
+          "wear_front_pct": 0.867,
+          "wear_rear_pct": 0.801
+        },
         "first_half_s": 109.804,
         "from_lap": 2,
         "laps": 21,
@@ -782,6 +1381,44 @@
         "to_lap": 22
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.843
+            ],
+            [
+              "entree",
+              -0.287
+            ],
+            [
+              "milieu",
+              -0.006
+            ],
+            [
+              "sortie",
+              0.152
+            ]
+          ],
+          "laps_first": 4,
+          "laps_second": 3,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Virage 4 en sortie +0,25 s, Virages 9-10 au freinage +0,06 s. Sur tout le tour, 0,15 s en sortie (100 % de la perte). Usure par tour : avant 0,86 %, arrière 0,77 %.",
+          "top": [
+            {
+              "corner": "Virage 4",
+              "drift_s": 0.245,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Virages 9-10",
+              "drift_s": 0.064,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.985,
+          "wear_front_pct": 0.855,
+          "wear_rear_pct": 0.768
+        },
         "first_half_s": 110.014,
         "from_lap": 25,
         "laps": 8,

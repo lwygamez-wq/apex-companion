@@ -1,5 +1,5 @@
 {
-  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Enzo e Dino Ferrari · Voiture : Alpine A424 · Séance : course · Série : Open\nLongueur du circuit : 4901 m\nTours : 57 au total, 46 propres. Meilleur tour propre : 1:32.663 (tour 49). Tour théorique (meilleurs segments) : 1:31.937.\nRégularité : écart-type 1.06 s sur 46 tours propres, moyenne 1:33.887.\n\nTOURS (numéro, temps, état) :\n- T0 — stand, 0.40 L\n- T0 1:38.956 propre, 2.69 L\n- T1 1:36.705 incident, 2.60 L\n- T2 1:33.689 propre, 2.64 L\n- T3 1:33.245 propre, 2.59 L\n- T4 1:32.977 propre, 2.55 L\n- T5 1:43.527 sortie de piste, 2.67 L\n- T6 1:34.556 propre, 2.61 L\n- T7 1:33.423 propre, 2.58 L\n- T8 1:58.439 sortie de piste, incident, 2.60 L\n- T9 1:35.207 propre, 2.59 L\n- T10 1:33.941 propre, 2.53 L\n- T11 1:34.643 propre, 2.53 L\n- T12 1:33.359 propre, 2.55 L\n- T13 1:33.410 propre, 2.57 L\n- T14 1:34.675 propre, 2.50 L\n- T15 1:33.354 propre, 2.58 L\n- T16 1:33.420 propre, 2.58 L\n- T17 1:35.499 propre, 2.57 L\n- T18 1:33.749 propre, 2.61 L\n- T19 1:33.172 propre, 2.62 L\n- T20 1:33.027 propre, 2.63 L\n- T21 1:35.180 propre, 2.60 L\n- T22 1:32.771 propre, 2.63 L\n- T23 1:33.753 propre, 2.66 L\n- T24 1:33.280 propre, 2.65 L\n- T25 1:33.765 propre, 2.58 L\n- T26 1:33.668 incident, 2.59 L\n- T27 1:32.894 propre, 2.58 L\n- T28 1:33.595 propre, 2.51 L\n- T29 1:32.800 propre, 2.57 L\n- T30 1:33.266 propre, 2.60 L\n- T31 1:33.419 propre, 2.59 L\n- T32 1:33.556 propre, 2.47 L\n- T33 1:34.460 propre, 2.49 L\n- T34 2:22.497 stand\n- T35 1:49.082 stand, 2.58 L\n- T36 1:34.515 propre, 2.56 L\n- T37 1:34.303 propre, 2.57 L\n- T38 1:33.798 propre, 2.59 L\n- T39 1:43.226 sortie de piste, incident, 2.65 L\n- T40 1:34.485 propre, 2.54 L\n- T41 1:34.203 propre, 2.53 L\n- T42 1:46.983 sortie de piste, 2.65 L\n- T43 1:33.354 propre, 2.61 L\n- T44 1:44.062 sortie de piste, incident, 2.69 L\n- T45 1:34.404 propre, 2.57 L\n- T46 1:33.017 propre, 2.59 L\n- T47 1:33.427 propre, 2.62 L\n- T48 1:33.116 propre, 2.70 L\n- T49 1:32.663 propre, 2.68 L\n- T50 1:33.365 propre, 2.53 L\n- T51 1:33.055 propre, 2.52 L\n- T52 1:45.531 sortie de piste, incident, 2.59 L\n- T53 1:35.322 propre, 2.57 L\n- T54 1:34.165 propre, 2.60 L\n- T55 1:34.574 propre, 2.57 L\n\nCOMPARAISON : ton tour 28 (1:33.595) contre la référence ton tour 49 (1:32.663). Écart final +0.933 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Acque Minerali : +0.66 s · freinage plus tôt (-16 m) · vitesse mini 100 vs 114 km/h, gaz -1 m · sortie 179 vs 183 km/h\n- Variante Alta : +0.13 s · freinage plus tard (+5 m) · vitesse mini 85 vs 88 km/h, gaz -10 m · sortie 182 vs 179 km/h\n- Villeneuve : +0.04 s · freinage au même endroit · vitesse mini 131 vs 132 km/h, gaz +23 m · sortie 186 vs 198 km/h\n- V8 : -0.01 s · freinage plus tôt (-7 m) · vitesse mini 121 vs 117 km/h, gaz -17 m · sortie 188 vs 194 km/h\n- Piratella : -0.05 s · freinage plus tard (+17 m) · vitesse mini 150 vs 150 km/h, gaz -8 m · sortie 209 vs 209 km/h\n- Tamburello : -0.06 s · freinage plus tôt (-4 m) · vitesse mini 129 vs 124 km/h, gaz -8 m · sortie 185 vs 196 km/h\n- Rivazza : -0.06 s · freinage plus tard (+15 m) · vitesse mini 97 vs 99 km/h, gaz -4 m · sortie 140 vs 138 km/h\n- Tosa : -0.08 s · freinage plus tard (+20 m) · vitesse mini 85 vs 88 km/h, gaz +8 m · sortie 176 vs 176 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Acque Minerali : freinage trop précoce (gain estimé 0.33 à 0.66 s) : Tu freines environ 16 m plus tôt que la référence et ta vitesse minimale est inférieure de 14 km/h. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde. Perte mesurée : 0.66 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 11 m plus loin (réf. : 2634 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 114 km/h au minimum.\n- Variante Alta : perte de temps sans cause isolée (gain estimé 0.06 à 0.13 s) : Tu perds 0.13 s sur ce virage, mais freinage, vitesse minimale et remise des gaz restent dans les seuils de détection. Perte mesurée : 0.13 s par rapport à la référence. Confiance : faible. → Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Variante Alta : 0.29 s entre ton passage moyen et ton meilleur, sans sortie.\n- Variante Alta : 0/53 sorties, à prendre 0.29 s en refaisant ton meilleur passage · Aucune sortie sur 53 passages, et 0.29 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Tamburello : 2/53 sorties, à prendre 0.30 s en refaisant ton meilleur passage, une sortie coûte 15.3 s · 2 sortie(s) sur 53, 0.30 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Acque Minerali : 3/53 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 6.5 s · 3 sortie(s) sur 53, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Rivazza : 1/53 sorties, à prendre 0.16 s en refaisant ton meilleur passage, une sortie coûte 9.0 s · 1 sortie(s) sur 53, 0.16 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Tosa : 0/53 sorties, à prendre 0.22 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Villeneuve : 0/53 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V8 : 0/53 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Piratella : 0/53 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,47 s. Le plus gros : Tamburello (0,28 s).\n- Tamburello : −0.28 s possibles (meilleur passage au tour 27). Sur tes meilleurs passages, tu sors 8 km/h plus vite et tu freines 14 m plus tard.\n- Variante Alta : −0.24 s possibles (meilleur passage au tour 49). Sur tes meilleurs passages, tu portes 4 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.\n- Acque Minerali : −0.20 s possibles (meilleur passage au tour 30). Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu freines 20 m plus tard.\n- Tosa : −0.20 s possibles (meilleur passage au tour 47). Sur tes meilleurs passages, tu portes 2 km/h de plus au point le plus lent.\n- Piratella : −0.16 s possibles (meilleur passage au tour 27). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.\n- V8 : −0.14 s possibles (meilleur passage au tour 25). Sur tes meilleurs passages, tu sors 4 km/h plus vite.\n\nSORTIES DE PISTE :\n- Acque Minerali (à 2895 m) aux tours [5, 8, 44, 52]\n- Tamburello (à 870 m) aux tours [8, 42]\n- hors virage (à 1052 m) aux tours [8]\n- Rivazza (à 4143 m) aux tours [39]\n\nCOURSE : P3 → P1 sur 12 pilotes, 0x ; point noir : Acque Minerali\nGrille Some(3), arrivée Some(1), 12 pilotes, 0 incidents.\n- Acque Minerali : 4 incidents, 0x : Incidents aux tours 8, 26, 44, 52. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n",
+  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Enzo e Dino Ferrari · Voiture : Alpine A424 · Séance : course · Série : Open\nLongueur du circuit : 4901 m\nTours : 57 au total, 46 propres. Meilleur tour propre : 1:32.663 (tour 49). Tour théorique (meilleurs segments) : 1:31.937.\nRégularité : écart-type 1.06 s sur 46 tours propres, moyenne 1:33.887.\n\nTOURS (numéro, temps, état) :\n- T0 — stand, 0.40 L\n- T0 1:38.956 propre, 2.69 L\n- T1 1:36.705 incident, 2.60 L\n- T2 1:33.689 propre, 2.64 L\n- T3 1:33.245 propre, 2.59 L\n- T4 1:32.977 propre, 2.55 L\n- T5 1:43.527 sortie de piste, 2.67 L\n- T6 1:34.556 propre, 2.61 L\n- T7 1:33.423 propre, 2.58 L\n- T8 1:58.439 sortie de piste, incident, 2.60 L\n- T9 1:35.207 propre, 2.59 L\n- T10 1:33.941 propre, 2.53 L\n- T11 1:34.643 propre, 2.53 L\n- T12 1:33.359 propre, 2.55 L\n- T13 1:33.410 propre, 2.57 L\n- T14 1:34.675 propre, 2.50 L\n- T15 1:33.354 propre, 2.58 L\n- T16 1:33.420 propre, 2.58 L\n- T17 1:35.499 propre, 2.57 L\n- T18 1:33.749 propre, 2.61 L\n- T19 1:33.172 propre, 2.62 L\n- T20 1:33.027 propre, 2.63 L\n- T21 1:35.180 propre, 2.60 L\n- T22 1:32.771 propre, 2.63 L\n- T23 1:33.753 propre, 2.66 L\n- T24 1:33.280 propre, 2.65 L\n- T25 1:33.765 propre, 2.58 L\n- T26 1:33.668 incident, 2.59 L\n- T27 1:32.894 propre, 2.58 L\n- T28 1:33.595 propre, 2.51 L\n- T29 1:32.800 propre, 2.57 L\n- T30 1:33.266 propre, 2.60 L\n- T31 1:33.419 propre, 2.59 L\n- T32 1:33.556 propre, 2.47 L\n- T33 1:34.460 propre, 2.49 L\n- T34 2:22.497 stand\n- T35 1:49.082 stand, 2.58 L\n- T36 1:34.515 propre, 2.56 L\n- T37 1:34.303 propre, 2.57 L\n- T38 1:33.798 propre, 2.59 L\n- T39 1:43.226 sortie de piste, incident, 2.65 L\n- T40 1:34.485 propre, 2.54 L\n- T41 1:34.203 propre, 2.53 L\n- T42 1:46.983 sortie de piste, 2.65 L\n- T43 1:33.354 propre, 2.61 L\n- T44 1:44.062 sortie de piste, incident, 2.69 L\n- T45 1:34.404 propre, 2.57 L\n- T46 1:33.017 propre, 2.59 L\n- T47 1:33.427 propre, 2.62 L\n- T48 1:33.116 propre, 2.70 L\n- T49 1:32.663 propre, 2.68 L\n- T50 1:33.365 propre, 2.53 L\n- T51 1:33.055 propre, 2.52 L\n- T52 1:45.531 sortie de piste, incident, 2.59 L\n- T53 1:35.322 propre, 2.57 L\n- T54 1:34.165 propre, 2.60 L\n- T55 1:34.574 propre, 2.57 L\n\nCOMPARAISON : ton tour 28 (1:33.595) contre la référence ton tour 49 (1:32.663). Écart final +0.933 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Acque Minerali : +0.66 s · freinage plus tôt (-16 m) · vitesse mini 100 vs 114 km/h, gaz -1 m · sortie 179 vs 183 km/h\n- Variante Alta : +0.13 s · freinage plus tard (+5 m) · vitesse mini 85 vs 88 km/h, gaz -10 m · sortie 182 vs 179 km/h\n- Villeneuve : +0.04 s · freinage au même endroit · vitesse mini 131 vs 132 km/h, gaz +23 m · sortie 186 vs 198 km/h\n- V8 : -0.01 s · freinage plus tôt (-7 m) · vitesse mini 121 vs 117 km/h, gaz -17 m · sortie 188 vs 194 km/h\n- Piratella : -0.05 s · freinage plus tard (+17 m) · vitesse mini 150 vs 150 km/h, gaz -8 m · sortie 209 vs 209 km/h\n- Tamburello : -0.06 s · freinage plus tôt (-4 m) · vitesse mini 129 vs 124 km/h, gaz -8 m · sortie 185 vs 196 km/h\n- Rivazza : -0.06 s · freinage plus tard (+15 m) · vitesse mini 97 vs 99 km/h, gaz -4 m · sortie 140 vs 138 km/h\n- Tosa : -0.08 s · freinage plus tard (+20 m) · vitesse mini 85 vs 88 km/h, gaz +8 m · sortie 176 vs 176 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Acque Minerali : freinage trop précoce (gain estimé 0.33 à 0.66 s) : Tu freines environ 16 m plus tôt que la référence et ta vitesse minimale est inférieure de 14 km/h. Perte mesurée : 0.66 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 11 m plus loin (réf. : 2634 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 114 km/h au minimum.\n- Variante Alta : perte de temps sans cause isolée (gain estimé 0.06 à 0.13 s) : Tu perds 0.13 s sur ce virage, mais freinage, vitesse minimale et remise des gaz restent dans les seuils de détection. Perte mesurée : 0.13 s par rapport à la référence. Confiance : faible. → Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Variante Alta : 0.29 s entre ton passage moyen et ton meilleur, sans sortie.\n- Variante Alta : 0/53 sorties, à prendre 0.29 s en refaisant ton meilleur passage · Aucune sortie sur 53 passages, et 0.29 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Tamburello : 2/53 sorties, à prendre 0.30 s en refaisant ton meilleur passage, une sortie coûte 15.3 s · 2 sortie(s) sur 53, 0.30 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Acque Minerali : 3/53 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 6.5 s · 3 sortie(s) sur 53, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Rivazza : 1/53 sorties, à prendre 0.16 s en refaisant ton meilleur passage, une sortie coûte 9.0 s · 1 sortie(s) sur 53, 0.16 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Tosa : 0/53 sorties, à prendre 0.22 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Villeneuve : 0/53 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V8 : 0/53 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Piratella : 0/53 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 53, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,47 s. Le plus gros : Tamburello (0,28 s).\n- Tamburello : −0.28 s possibles (meilleur passage au tour 27). Sur tes meilleurs passages, tu sors 8 km/h plus vite et tu freines 14 m plus tard.\n- Variante Alta : −0.24 s possibles (meilleur passage au tour 49). Sur tes meilleurs passages, tu portes 4 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.\n- Acque Minerali : −0.20 s possibles (meilleur passage au tour 30). Sur tes meilleurs passages, tu portes 8 km/h de plus au point le plus lent et tu freines 20 m plus tard.\n- Tosa : −0.20 s possibles (meilleur passage au tour 47). Sur tes meilleurs passages, tu portes 2 km/h de plus au point le plus lent.\n- Piratella : −0.16 s possibles (meilleur passage au tour 27). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 2 km/h plus vite.\n- V8 : −0.14 s possibles (meilleur passage au tour 25). Sur tes meilleurs passages, tu sors 4 km/h plus vite.\n\nSORTIES DE PISTE :\n- Acque Minerali (à 2895 m) aux tours [5, 8, 44, 52]\n- Tamburello (à 870 m) aux tours [8, 42]\n- hors virage (à 1052 m) aux tours [8]\n- Rivazza (à 4143 m) aux tours [39]\n\nCOURSE : P3 → P1 sur 12 pilotes, 0x ; point noir : Acque Minerali\nGrille Some(3), arrivée Some(1), 12 pilotes, 0 incidents.\n- Acque Minerali : 4 incidents, 0x : Incidents aux tours 8, 26, 44, 52. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n",
   "analysis_reference": 49,
   "best": 49,
   "comparisons": [
@@ -10,49 +10,265 @@
           "apex_m": 705.0,
           "dt": -0.115,
           "min_cmp": 125.27,
-          "min_ref": 123.882
+          "min_ref": 123.882,
+          "phases": [
+            [
+              "freinage",
+              [
+                465.0,
+                685.0
+              ],
+              0.089
+            ],
+            [
+              "entree",
+              [
+                685.0,
+                705.0
+              ],
+              -0.007
+            ],
+            [
+              "sortie",
+              [
+                705.0,
+                900.0
+              ],
+              -0.197
+            ]
+          ]
         },
         {
           "apex_m": 1415.0,
           "dt": 0.098,
           "min_cmp": 131.685,
-          "min_ref": 132.496
+          "min_ref": 132.496,
+          "phases": [
+            [
+              "freinage",
+              [
+                1185.0,
+                1400.0
+              ],
+              0.164
+            ],
+            [
+              "entree",
+              [
+                1400.0,
+                1415.0
+              ],
+              0.015
+            ],
+            [
+              "sortie",
+              [
+                1415.0,
+                1570.0
+              ],
+              -0.081
+            ]
+          ]
         },
         {
           "apex_m": 1705.0,
           "dt": -0.152,
           "min_cmp": 92.539,
-          "min_ref": 88.232
+          "min_ref": 88.232,
+          "phases": [
+            [
+              "freinage",
+              [
+                1580.0,
+                1685.0
+              ],
+              0.091
+            ],
+            [
+              "entree",
+              [
+                1685.0,
+                1705.0
+              ],
+              -0.093
+            ],
+            [
+              "sortie",
+              [
+                1705.0,
+                1855.0
+              ],
+              -0.15
+            ]
+          ]
         },
         {
           "apex_m": 2335.0,
           "dt": 0.021,
           "min_cmp": 143.577,
-          "min_ref": 150.476
+          "min_ref": 150.476,
+          "phases": [
+            [
+              "freinage",
+              [
+                2175.0,
+                2280.0
+              ],
+              -0.076
+            ],
+            [
+              "entree",
+              [
+                2280.0,
+                2335.0
+              ],
+              0.038
+            ],
+            [
+              "sortie",
+              [
+                2335.0,
+                2490.0
+              ],
+              0.06
+            ]
+          ]
         },
         {
           "apex_m": 2855.0,
           "dt": 0.02,
           "min_cmp": 110.922,
-          "min_ref": 113.792
+          "min_ref": 113.792,
+          "phases": [
+            [
+              "freinage",
+              [
+                2630.0,
+                2735.0
+              ],
+              -0.059
+            ],
+            [
+              "entree",
+              [
+                2735.0,
+                2855.0
+              ],
+              0.062
+            ],
+            [
+              "milieu",
+              [
+                2855.0,
+                2860.0
+              ],
+              0.004
+            ],
+            [
+              "sortie",
+              [
+                2860.0,
+                2990.0
+              ],
+              0.013
+            ]
+          ]
         },
         {
           "apex_m": 3385.0,
           "dt": 0.085,
           "min_cmp": 86.506,
-          "min_ref": 87.73
+          "min_ref": 87.73,
+          "phases": [
+            [
+              "freinage",
+              [
+                3190.0,
+                3345.0
+              ],
+              0.012
+            ],
+            [
+              "entree",
+              [
+                3345.0,
+                3385.0
+              ],
+              0.084
+            ],
+            [
+              "milieu",
+              [
+                3385.0,
+                3390.0
+              ],
+              0.0
+            ],
+            [
+              "sortie",
+              [
+                3390.0,
+                3520.0
+              ],
+              -0.011
+            ]
+          ]
         },
         {
           "apex_m": 4140.0,
           "dt": -0.085,
           "min_cmp": 106.765,
-          "min_ref": 98.84
+          "min_ref": 98.84,
+          "phases": [
+            [
+              "freinage",
+              [
+                3910.0,
+                4125.0
+              ],
+              0.079
+            ],
+            [
+              "entree",
+              [
+                4125.0,
+                4140.0
+              ],
+              -0.068
+            ],
+            [
+              "sortie",
+              [
+                4140.0,
+                4200.0
+              ],
+              -0.096
+            ]
+          ]
         },
         {
           "apex_m": 4270.0,
           "dt": 0.004,
           "min_cmp": 123.138,
-          "min_ref": 117.233
+          "min_ref": 117.233,
+          "phases": [
+            [
+              "entree",
+              [
+                4200.0,
+                4270.0
+              ],
+              -0.063
+            ],
+            [
+              "sortie",
+              [
+                4270.0,
+                4410.0
+              ],
+              0.067
+            ]
+          ]
         }
       ],
       "delta_end_s": 0.108,
@@ -95,6 +311,12 @@
               "12",
               "8",
               "-4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.16 s · entrée +0.01 s · sortie -0.08 s"
             ]
           ],
           "gain": [
@@ -145,6 +367,12 @@
               "7",
               "6",
               "-1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.01 s · entrée +0.08 s · milieu +0.00 s · sortie -0.01 s"
             ]
           ],
           "gain": [
@@ -168,49 +396,265 @@
           "apex_m": 705.0,
           "dt": 19.983,
           "min_cmp": 28.4,
-          "min_ref": 123.882
+          "min_ref": 123.882,
+          "phases": [
+            [
+              "freinage",
+              [
+                465.0,
+                685.0
+              ],
+              0.115
+            ],
+            [
+              "entree",
+              [
+                685.0,
+                705.0
+              ],
+              -0.008
+            ],
+            [
+              "sortie",
+              [
+                705.0,
+                900.0
+              ],
+              19.876
+            ]
+          ]
         },
         {
           "apex_m": 1415.0,
           "dt": 0.678,
           "min_cmp": 128.948,
-          "min_ref": 132.496
+          "min_ref": 132.496,
+          "phases": [
+            [
+              "freinage",
+              [
+                1185.0,
+                1400.0
+              ],
+              0.673
+            ],
+            [
+              "entree",
+              [
+                1400.0,
+                1415.0
+              ],
+              0.014
+            ],
+            [
+              "sortie",
+              [
+                1415.0,
+                1570.0
+              ],
+              -0.008
+            ]
+          ]
         },
         {
           "apex_m": 1705.0,
           "dt": 0.313,
           "min_cmp": 82.902,
-          "min_ref": 88.232
+          "min_ref": 88.232,
+          "phases": [
+            [
+              "freinage",
+              [
+                1580.0,
+                1685.0
+              ],
+              0.216
+            ],
+            [
+              "entree",
+              [
+                1685.0,
+                1705.0
+              ],
+              0.085
+            ],
+            [
+              "sortie",
+              [
+                1705.0,
+                1855.0
+              ],
+              0.012
+            ]
+          ]
         },
         {
           "apex_m": 2335.0,
           "dt": 0.195,
           "min_cmp": 144.951,
-          "min_ref": 150.476
+          "min_ref": 150.476,
+          "phases": [
+            [
+              "freinage",
+              [
+                2175.0,
+                2280.0
+              ],
+              0.112
+            ],
+            [
+              "entree",
+              [
+                2280.0,
+                2335.0
+              ],
+              0.089
+            ],
+            [
+              "sortie",
+              [
+                2335.0,
+                2490.0
+              ],
+              -0.005
+            ]
+          ]
         },
         {
           "apex_m": 2855.0,
           "dt": 0.835,
           "min_cmp": 95.744,
-          "min_ref": 113.792
+          "min_ref": 113.792,
+          "phases": [
+            [
+              "freinage",
+              [
+                2630.0,
+                2735.0
+              ],
+              -0.034
+            ],
+            [
+              "entree",
+              [
+                2735.0,
+                2855.0
+              ],
+              -0.201
+            ],
+            [
+              "milieu",
+              [
+                2855.0,
+                2860.0
+              ],
+              0.002
+            ],
+            [
+              "sortie",
+              [
+                2860.0,
+                2990.0
+              ],
+              1.067
+            ]
+          ]
         },
         {
           "apex_m": 3385.0,
           "dt": 0.37,
           "min_cmp": 83.275,
-          "min_ref": 87.73
+          "min_ref": 87.73,
+          "phases": [
+            [
+              "freinage",
+              [
+                3190.0,
+                3345.0
+              ],
+              0.294
+            ],
+            [
+              "entree",
+              [
+                3345.0,
+                3385.0
+              ],
+              0.054
+            ],
+            [
+              "milieu",
+              [
+                3385.0,
+                3390.0
+              ],
+              0.009
+            ],
+            [
+              "sortie",
+              [
+                3390.0,
+                3520.0
+              ],
+              0.012
+            ]
+          ]
         },
         {
           "apex_m": 4140.0,
           "dt": -0.016,
           "min_cmp": 95.323,
-          "min_ref": 98.84
+          "min_ref": 98.84,
+          "phases": [
+            [
+              "freinage",
+              [
+                3910.0,
+                4125.0
+              ],
+              0.033
+            ],
+            [
+              "entree",
+              [
+                4125.0,
+                4140.0
+              ],
+              -0.005
+            ],
+            [
+              "sortie",
+              [
+                4140.0,
+                4200.0
+              ],
+              -0.045
+            ]
+          ]
         },
         {
           "apex_m": 4270.0,
           "dt": -0.007,
           "min_cmp": 121.824,
-          "min_ref": 117.233
+          "min_ref": 117.233,
+          "phases": [
+            [
+              "entree",
+              [
+                4200.0,
+                4270.0
+              ],
+              -0.002
+            ],
+            [
+              "sortie",
+              [
+                4270.0,
+                4410.0
+              ],
+              -0.005
+            ]
+          ]
         }
       ],
       "delta_end_s": 25.776,
@@ -253,6 +697,12 @@
               "20",
               "22",
               "+2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.12 s · entrée -0.01 s · sortie +19.88 s"
             ]
           ],
           "gain": [
@@ -303,6 +753,12 @@
               "14",
               "16",
               "+2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage -0.03 s · entrée -0.20 s · milieu +0.00 s · sortie +1.07 s"
             ]
           ],
           "gain": [
@@ -353,6 +809,12 @@
               "12",
               "16",
               "+4"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.67 s · entrée +0.01 s · sortie -0.01 s"
             ]
           ],
           "gain": [
@@ -403,6 +865,12 @@
               "7",
               "6",
               "-1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.29 s · entrée +0.05 s · milieu +0.01 s · sortie +0.01 s"
             ]
           ],
           "gain": [
@@ -453,6 +921,12 @@
               "2",
               "5",
               "+3"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.22 s · entrée +0.09 s · sortie +0.01 s"
             ]
           ],
           "gain": [
@@ -503,6 +977,12 @@
               "14",
               "16",
               "+2"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.11 s · entrée +0.09 s · sortie -0.00 s"
             ]
           ],
           "gain": [
@@ -571,6 +1051,49 @@
     "spare_laps": 2.38,
     "stints": [
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              -0.062
+            ],
+            [
+              "entree",
+              0.013
+            ],
+            [
+              "milieu",
+              -0.016
+            ],
+            [
+              "sortie",
+              -0.005
+            ]
+          ],
+          "laps_first": 14,
+          "laps_second": 14,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Variante Alta à l'entrée +0,06 s, Acque Minerali en sortie +0,05 s, Villeneuve au freinage +0,05 s. Usure par tour : avant 0,68 %, arrière 0,82 %.",
+          "top": [
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.059,
+              "phase": "entree"
+            },
+            {
+              "corner": "Acque Minerali",
+              "drift_s": 0.05,
+              "phase": "sortie"
+            },
+            {
+              "corner": "Villeneuve",
+              "drift_s": 0.048,
+              "phase": "freinage"
+            }
+          ],
+          "total_s": -0.07,
+          "wear_front_pct": 0.685,
+          "wear_rear_pct": 0.819
+        },
         "first_half_s": 93.689,
         "from_lap": 1,
         "laps": 33,
@@ -579,6 +1102,49 @@
         "to_lap": 33
       },
       {
+        "drift": {
+          "by_phase": [
+            [
+              "freinage",
+              0.205
+            ],
+            [
+              "entree",
+              0.088
+            ],
+            [
+              "milieu",
+              0.061
+            ],
+            [
+              "sortie",
+              -0.068
+            ]
+          ],
+          "laps_first": 8,
+          "laps_second": 7,
+          "summary": "Ce qui ralentit le plus d'une moitié à l'autre : Variante Alta au freinage +0,09 s, Variante Alta à l'entrée +0,07 s, Variante Alta au milieu du virage +0,06 s. Sur tout le tour, 0,21 s au freinage (58 % de la perte). Usure par tour : avant 0,61 %, arrière 0,72 %.",
+          "top": [
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.095,
+              "phase": "freinage"
+            },
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.074,
+              "phase": "entree"
+            },
+            {
+              "corner": "Variante Alta",
+              "drift_s": 0.062,
+              "phase": "milieu"
+            }
+          ],
+          "total_s": 0.286,
+          "wear_front_pct": 0.609,
+          "wear_rear_pct": 0.719
+        },
         "first_half_s": 94.303,
         "from_lap": 36,
         "laps": 19,

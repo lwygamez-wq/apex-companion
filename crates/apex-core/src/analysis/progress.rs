@@ -3,6 +3,7 @@
 
 use super::compare::{compare_laps_named, CornerName, LapInput};
 use super::insights::Insight;
+use super::phases::{phase_stats, PhaseLoss, PhaseStat};
 use crate::model::{LapMeta, LapTrace, SessionMeta};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -20,6 +21,10 @@ pub struct ProgressZone {
     pub typical_issue: String,
     /// Conseil représentatif (celui de plus forte perte).
     pub example: Insight,
+    /// Perte médiane par phase du virage sur tous les tours comparés.
+    pub phases: Vec<PhaseStat>,
+    /// Phase qui coûte le plus (médiane ≥ 0,03 s et perte sur au moins la moitié des tours).
+    pub main_phase: Option<PhaseStat>,
 }
 
 pub struct SessionLap<'a> {
@@ -35,10 +40,14 @@ pub fn progress_zones(session: &SessionMeta, reference: &SessionLap, laps: &[Ses
 pub fn progress_zones_named(session: &SessionMeta, reference: &SessionLap, laps: &[SessionLap], step_m: f32, names: &[CornerName]) -> Vec<ProgressZone> {
     let rf = LapInput { lap_id: reference.lap_id, session, lap: reference.meta, trace: reference.trace };
     let mut by_seg: BTreeMap<String, Vec<Insight>> = BTreeMap::new();
+    let mut phases_by_seg: BTreeMap<String, Vec<Vec<PhaseLoss>>> = BTreeMap::new();
     let mut compared = 0usize;
     for l in laps.iter().filter(|l| l.lap_id != reference.lap_id && l.meta.is_clean()) {
         let Ok(c) = compare_laps_named(&rf, &LapInput { lap_id: l.lap_id, session, lap: l.meta, trace: l.trace }, step_m, names) else { continue };
         compared += 1;
+        for k in &c.corners {
+            phases_by_seg.entry(k.corner.name.clone()).or_default().push(k.phases.clone());
+        }
         for i in c.insights {
             if let Some(s) = i.segment.clone() {
                 by_seg.entry(s).or_default().push(i);
@@ -59,7 +68,15 @@ pub fn progress_zones_named(session: &SessionMeta, reference: &SessionLap, laps:
                 .max_by(|a, b| a.est_gain_s.map_or(0.0, |g| g[1]).total_cmp(&b.est_gain_s.map_or(0.0, |g| g[1])))
                 .cloned()
                 .unwrap();
+            let phases = phase_stats(phases_by_seg.get(&segment).map_or(&[][..], |v| v.as_slice()));
+            let main_phase = phases
+                .iter()
+                .filter(|p| p.median_s >= 0.03 && p.laps_losing * 2 >= p.laps)
+                .max_by(|a, b| a.median_s.total_cmp(&b.median_s))
+                .cloned();
             ProgressZone {
+                phases,
+                main_phase,
                 range_m: example.segment_range_m.unwrap_or([0.0, 0.0]),
                 segment,
                 occurrences: list.len(),
@@ -93,5 +110,9 @@ mod tests {
         assert_eq!(z[0].segment, "V1", "{:?}", z.iter().map(|z| (&z.segment, z.occurrences)).collect::<Vec<_>>());
         assert_eq!(z[0].occurrences, 2);
         assert!(z[0].typical_issue.contains("précoce"));
+        // Le freinage trop tôt se voit dans la phase de freinage, chiffré.
+        let main = z[0].main_phase.as_ref().expect("phase principale");
+        assert_eq!(main.phase, crate::analysis::phases::CornerPhase::Freinage, "{:?}", z[0].phases);
+        assert!(main.median_s >= 0.03, "{:?}", z[0].phases);
     }
 }

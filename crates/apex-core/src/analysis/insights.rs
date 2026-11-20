@@ -5,6 +5,7 @@
 
 use super::corners::{CornerDef, CornerMetrics};
 use super::goals::{GoalMetric, GoalSuggestion};
+use super::phases::{CornerPhase, PhaseLoss};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -174,7 +175,7 @@ pub fn corner_insight(
         (
             format!("{seg} : freinage trop précoce"),
             format!(
-                "Tu freines environ {be:.0} m plus tôt que la référence{}. Le temps perdu vient surtout de la zone de freinage, avant même le point de corde.",
+                "Tu freines environ {be:.0} m plus tôt que la référence{}.",
                 if vmin_deficit >= th.speed_kmh { format!(" et ta vitesse minimale est inférieure de {vmin_deficit:.0} km/h") } else { String::new() }
             ),
             format!(
@@ -354,6 +355,46 @@ pub fn corner_insight(
     })
 }
 
+/// Phases où un conseil s'attend à trouver la perte (d'après sa cause), `None` = pas d'attente.
+fn expected_phases(title: &str) -> Option<&'static [CornerPhase]> {
+    use CornerPhase::*;
+    if title.ends_with("freinage trop précoce") {
+        Some(&[Freinage, Entree])
+    } else if title.ends_with("vitesse minimale insuffisante") {
+        Some(&[Entree, Milieu, Sortie])
+    } else if title.ends_with("remise des gaz tardive") || title.ends_with("sortie de virage pénalisante") || title.ends_with("remise des gaz trop brutale") {
+        Some(&[Milieu, Sortie])
+    } else {
+        None
+    }
+}
+
+/// Confronte un conseil au temps mesuré phase par phase : la répartition devient une preuve chiffrée,
+/// et si la perte n'est presque pas là où la cause l'attend (moins de 30 %), la confiance baisse d'un
+/// cran avec la raison. Le temps se paie souvent après l'erreur (corde lente payée en sortie) :
+/// les attentes en tiennent compte.
+pub fn apply_phases(i: &mut Insight, phases: &[PhaseLoss]) {
+    let lost: f32 = phases.iter().map(|p| p.delta_s.max(0.0)).sum();
+    if phases.is_empty() || lost < 0.02 {
+        return;
+    }
+    let split = phases.iter().map(|p| format!("{} {:+.2} s", p.phase.label(), p.delta_s)).collect::<Vec<_>>().join(" · ");
+    i.evidence.push(Evidence { label: "Temps par phase".into(), reference: "—".into(), compared: "—".into(), delta: split });
+    let Some(exp) = expected_phases(&i.title) else { return };
+    let there: f32 = phases.iter().filter(|p| exp.contains(&p.phase)).map(|p| p.delta_s.max(0.0)).sum();
+    if there / lost >= 0.3 {
+        return;
+    }
+    let Some(worst) = super::phases::worst_phase(phases, 0.0) else { return };
+    i.confidence = i.confidence.downgrade();
+    i.confidence_notes.push(format!(
+        "la perte mesurée est surtout {} ({:.2} s sur {:.2} s), pas là où cette cause la place : à confirmer",
+        worst.phase.spoken(),
+        worst.delta_s,
+        lost
+    ));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -431,5 +472,41 @@ mod tests {
         let i = corner_insight(&corner(), &rf, &cmp, &good_q(), &Thresholds::default()).unwrap();
         assert_eq!(i.confidence, Confidence::Low);
         assert!(i.title.contains("sans cause isolée"));
+    }
+
+    fn ph(f: f32, e: f32, m: f32, s: f32) -> Vec<PhaseLoss> {
+        [(CornerPhase::Freinage, f), (CornerPhase::Entree, e), (CornerPhase::Milieu, m), (CornerPhase::Sortie, s)]
+            .iter()
+            .enumerate()
+            .map(|(k, &(phase, d))| PhaseLoss { phase, range_m: [k as f32 * 10.0, k as f32 * 10.0 + 10.0], delta_s: d })
+            .collect()
+    }
+
+    /// Cas réel (Imola, Tosa) : « freinage trop précoce » alors que la perte est surtout en sortie.
+    #[test]
+    fn advice_contradicted_by_phases_loses_confidence() {
+        let rf = m(5.00, 1040.0, 95.0, 150.0, 1130.0);
+        let cmp = m(5.38, 1028.0, 90.0, 140.0, 1132.0);
+        let mut i = corner_insight(&corner(), &rf, &cmp, &good_q(), &Thresholds::default()).unwrap();
+        assert!(i.title.contains("précoce"));
+        assert_eq!(i.confidence, Confidence::High);
+        apply_phases(&mut i, &ph(0.02, 0.01, 0.0, 0.35));
+        assert_eq!(i.confidence, Confidence::Medium);
+        assert_eq!(i.evidence.last().unwrap().delta, "freinage +0.02 s · entrée +0.01 s · milieu +0.00 s · sortie +0.35 s");
+        assert_eq!(i.confidence_notes.last().unwrap(), "la perte mesurée est surtout en sortie (0.35 s sur 0.38 s), pas là où cette cause la place : à confirmer");
+    }
+
+    #[test]
+    fn advice_matching_phases_keeps_confidence() {
+        let rf = m(5.00, 1040.0, 95.0, 150.0, 1130.0);
+        let cmp = m(5.30, 1028.0, 90.0, 147.0, 1132.0);
+        let mut i = corner_insight(&corner(), &rf, &cmp, &good_q(), &Thresholds::default()).unwrap();
+        apply_phases(&mut i, &ph(0.15, 0.05, 0.0, 0.10));
+        assert_eq!(i.confidence, Confidence::High);
+        assert_eq!(i.evidence.last().unwrap().label, "Temps par phase");
+        // Pas de phase mesurée : rien ne change.
+        let before = i.clone();
+        apply_phases(&mut i, &[]);
+        assert_eq!(i, before);
     }
 }

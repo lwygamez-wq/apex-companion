@@ -416,6 +416,25 @@ export interface CornerComparison {
   time_delta_s: number;
   /** Écart de trajectoire à l'apex (m) : positif = plus à l'intérieur que la référence. */
   apex_offset_m: number | null;
+  /** Temps perdu par phase (bornes communes aux deux tours) ; la somme vaut `time_delta_s`. */
+  phases: PhaseLoss[];
+}
+
+export type CornerPhase = "freinage" | "entree" | "milieu" | "sortie";
+
+export interface PhaseLoss {
+  phase: CornerPhase;
+  range_m: [number, number];
+  /** Positif = le tour analysé perd du temps dans cette phase. */
+  delta_s: number;
+}
+
+export interface PhaseStat {
+  phase: CornerPhase;
+  /** Perte médiane par tour (s). */
+  median_s: number;
+  laps_losing: number;
+  laps: number;
 }
 
 export interface Evidence {
@@ -616,6 +635,9 @@ export interface ProgressZone {
   max_loss_s: number;
   typical_issue: string;
   example: Insight;
+  phases: PhaseStat[];
+  /** Phase qui coûte le plus à chaque tour (médiane ≥ 0,03 s sur au moins la moitié des tours). */
+  main_phase: PhaseStat | null;
 }
 
 export interface Dashboard {
@@ -885,6 +907,26 @@ export interface StintPace {
   median_s: number;
   first_half_s: number;
   second_half_s: number;
+  /** Où le temps se perd d'une moitié du relais à l'autre (virage, phase), usure des pneus. */
+  drift: StintDrift | null;
+}
+
+export interface PhaseDrift {
+  corner: string;
+  phase: CornerPhase;
+  /** Seconde moitié moins première (s) ; positif = plus lent en fin de relais. */
+  drift_s: number;
+}
+
+export interface StintDrift {
+  laps_first: number;
+  laps_second: number;
+  by_phase: [CornerPhase, number][];
+  top: PhaseDrift[];
+  total_s: number;
+  wear_front_pct: number | null;
+  wear_rear_pct: number | null;
+  summary: string | null;
 }
 
 export interface RaceDebrief {
