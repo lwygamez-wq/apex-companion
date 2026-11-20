@@ -153,6 +153,28 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         })
     });
 
+    // Ingénieur rejoué comme en direct (courses LMU avec fin de chrono, 0.38+) : à chaque arrêt, ce qu'il
+    // annonce à l'entrée des stands, et ce qui serait resté à l'arrivée en le suivant. Cible : 0,3 à 0,8 tour.
+    let engineer = (m.sim == apex_core::model::SimId::Lmu && m.kind == apex_core::model::SessionKind::Race)
+        .then(|| apex_core::ingest::lmu::decode(&std::fs::read(file).unwrap()).unwrap())
+        .filter(|r| r.laps.iter().any(|e| e.time_remain_s.is_some()))
+        .map(|r| {
+            let hint = svc.engineer_hint(m);
+            let rep = apex_core::engineer_replay::replay(&r, hint.plan, hint.pit_loss_s);
+            for s in &rep.stops {
+                match s.spare_laps_if_announced {
+                    Some(x) if (0.3..=0.8).contains(&x) => {}
+                    x => rule.push(format!("{} arrêt T{} : arrivée {x:?} tour(s) en suivant l'ingénieur ({:?} % annoncés, {:.1} nécessaires), hors 0,3–0,8", file.display(), s.lap, s.announced, s.needed)),
+                }
+            }
+            json!({
+                "pit_loss": hint.pit_loss_s,
+                "stops": rep.stops.iter().map(|s| json!({ "lap": s.lap, "set": s.set, "announced": s.announced, "needed": s.needed, "laps_est": s.laps_est, "laps_true": s.laps_true, "per_est": s.per_lap_est, "per_true": s.per_lap_true, "spare_if_announced": s.spare_laps_if_announced, "spare_actual": s.spare_laps_actual })).collect::<Vec<_>>(),
+                "line_exact_errors": rep.line_calls.iter().filter_map(|c| c.exact_est.map(|e| e - c.exact_true)).collect::<Vec<_>>(),
+                "said": rep.said,
+            })
+        });
+
     let strategy = svc
         .race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, None, 0.5, 0.5, &StrategyOverrides::default())
         .ok()
@@ -198,6 +220,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "ai_context": svc.ai_context(id).ok(),
         "strategy": strategy,
         "setup_diag": setup_diag,
+        "engineer_replay": engineer,
         "radio": radio,
         "lap_2": lap_id(2).is_some(),
     }))

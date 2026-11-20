@@ -299,6 +299,8 @@ pub struct LiveCoach {
     /// Dans la voie des stands (canal `OnPitRoad`).
     on_pit_road: bool,
     ve_laps: VecDeque<f64>,
+    /// Consommations de tous les tours de course de la séance (énergie, ou litres), pour le plein.
+    race_use: Vec<f64>,
     /// Limites de piste (Le Mans Ultimate) : avertissements en cours et nombre par pénalité.
     tl_steps: f64,
     tl_per_penalty: f64,
@@ -426,7 +428,7 @@ impl LiveCoach {
         // Catégorie lue dans la séance elle-même : valable même sans historique sur ce circuit.
         let top_class = crate::analysis::strategy::is_top_class(meta.sim, builder.session_info().profile.car.class.as_deref());
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, on_pit_road: false, ve_laps: VecDeque::new(), tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, on_pit_road: false, ve_laps: VecDeque::new(), race_use: vec![], tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -483,6 +485,7 @@ impl LiveCoach {
             self.pending = None;
             self.lap_times.clear();
             self.gaps.clear();
+            self.race_use.clear();
         }
         // Annonce du virage du focus, une fois par tour, quand la voiture passe le point de déclenchement.
         let dist = row[1];
@@ -575,6 +578,9 @@ impl LiveCoach {
                 if let Some(u) = energy {
                     push_consumption(&mut self.ve_laps, u as f64);
                 }
+                if let Some(u) = if self.ve_now > 0.0 { energy } else { fuel } {
+                    self.race_use.push(u as f64);
+                }
                 if let (Some(f), Some(e)) = (fuel, energy) {
                     self.pairs.push_back((f, e));
                     while self.pairs.len() > 5 {
@@ -656,6 +662,16 @@ impl LiveCoach {
         }
     }
 
+    /// Course au temps sans temps d'arrêt connu : le chrono restant compte le temps au stand comme roulé.
+    fn pit_time_unknown(&self) -> bool {
+        self.pit_loss_s.is_none() && self.time_remain > 0.0 && !(self.laps_remain > 0.0 && self.laps_remain < 30_000.0)
+    }
+
+    /// Distance de course restante en tours à cet instant (banc de rejeu de l'ingénieur).
+    pub fn race_laps_left_now(&self) -> Option<f64> {
+        self.race_laps_left()
+    }
+
     /// Avance du leader en secondes, à ton rythme : tours de retard × temps au tour + écart dans le tour.
     /// (Que le jeu donne l'écart dans le tour ou au total, le modulo le ramène dans le tour.)
     fn leader_gap(&self, lt: f64) -> f64 {
@@ -683,6 +699,12 @@ impl LiveCoach {
         let fuel_per = mean(&self.fuel_laps);
         let hint = |u: Unit| self.hint_per.filter(|(hu, _)| *hu == u).map(|(_, p)| p);
         let laps_left = (self.race_laps_left()? - 0.05).ceil().max(0.0) as u32;
+        // Plein : médiane des tours de course (5 au moins), si elle dépasse la moyenne récente.
+        let race_median = (self.race_use.len() >= 5).then(|| {
+            let mut v = self.race_use.clone();
+            v.sort_by(|a, b| a.total_cmp(b));
+            v[v.len() / 2] as f32
+        });
         if self.ve_now > 0.0 {
             let per = mean(&self.ve_laps).or(hint(Unit::Energy))?;
             let ratio_set = ratio.map(|r| r.1).or(self.hint_ratio);
@@ -709,6 +731,8 @@ impl LiveCoach {
                 mfd_laps: self.mfd_laps,
                 in_pits: self.on_pit_road,
                 laps_exact: self.race_laps_left().map(|x| x as f32),
+                per_lap_fill: race_median.map(|m| m.max(per)),
+                pit_time_unknown: self.pit_time_unknown(),
             })
         } else if self.fuel_now > 0.0 {
             let per = fuel_per.or(hint(Unit::Litres))?;
@@ -726,6 +750,8 @@ impl LiveCoach {
                 mfd_laps: None,
                 in_pits: self.on_pit_road,
                 laps_exact: self.race_laps_left().map(|x| x as f32),
+                per_lap_fill: race_median.map(|m| m.max(per)),
+                pit_time_unknown: self.pit_time_unknown(),
             })
         } else {
             None

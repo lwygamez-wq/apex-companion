@@ -30,7 +30,7 @@ const MAT_ASPHALT: u8 = 1;
 const MAT_KERB: u8 = 11;
 const MAT_OFF: u8 = 15;
 /// Bit « jaune » des drapeaux iRacing, repris pour les neutralisations.
-const FLAG_YELLOW: f64 = 8.0;
+pub const FLAG_YELLOW: f64 = 8.0;
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Header {

@@ -20,6 +20,7 @@ pub mod garage61_api;
 pub mod ingest;
 pub mod live_coach;
 pub mod race_engineer;
+pub mod engineer_replay;
 pub mod feedback;
 pub mod mock;
 pub mod service;
