@@ -85,6 +85,15 @@ export function RaceDebriefCard({ d }: { d: RaceDebrief }) {
         </p>
       ))}
 
+      {(d.wear_events ?? []).length > 0 && (
+        <div className="rd-class">
+          <h3 className="rd-title">Usure anormale</h3>
+          {d.wear_events.map((w) => (
+            <p key={`${w.lap}-${w.wheel}`} className="rd-energy">{w.detail}</p>
+          ))}
+        </div>
+      )}
+
       {d.missing.map((m) => (
         <p key={m} className="muted rd-missing">Non mesuré. {m}</p>
       ))}

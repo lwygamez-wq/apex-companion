@@ -713,7 +713,8 @@
     "race_laps": 15,
     "spare_laps": null,
     "stints": [],
-    "stops": []
+    "stops": [],
+    "wear_events": []
   },
   "engineer_replay": null,
   "fastest": 12,

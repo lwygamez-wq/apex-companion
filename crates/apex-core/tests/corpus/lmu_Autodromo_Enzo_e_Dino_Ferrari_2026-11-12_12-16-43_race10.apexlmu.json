@@ -1464,6 +1464,16 @@
         "lap": 30,
         "still_s": 38.86
       }
+    ],
+    "wear_events": [
+      {
+        "at": "Tosa",
+        "detail": "Avant gauche : 4,50 % d'usure au tour 51 (médiane 0,72 %), surtout à Tosa. Sortie de piste sur ce tour.",
+        "lap": 51,
+        "median_pct": 0.717,
+        "wear_pct": 4.499,
+        "wheel": "Avant gauche"
+      }
     ]
   },
   "engineer_replay": null,

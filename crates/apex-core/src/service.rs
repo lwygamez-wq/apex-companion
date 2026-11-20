@@ -1946,14 +1946,20 @@ impl AppService {
         // l'enregistrement d'origine (LMU) quand il est encore sur le disque.
         let debrief = (meta.kind == SessionKind::Race)
             .then(|| {
-                let extras = meta
+                let rec = meta
                     .source_path
                     .as_deref()
                     .filter(|p| meta.sim == SimId::Lmu && p.to_ascii_lowercase().ends_with(".apexlmu"))
                     .and_then(|p| std::fs::read(p).ok())
-                    .and_then(|b| crate::ingest::lmu::decode(&b).ok())
-                    .map(|r| crate::analysis::debrief::race_extras(&r));
-                crate::analysis::debrief::race_debrief(&metas, &off_tracks, extras.as_ref())
+                    .and_then(|b| crate::ingest::lmu::decode(&b).ok());
+                let extras = rec.as_ref().map(crate::analysis::debrief::race_extras);
+                crate::analysis::debrief::race_debrief(&metas, &off_tracks, extras.as_ref()).map(|mut d| {
+                    if let Some(r) = &rec {
+                        let corners: Vec<(String, f32, f32)> = windows.iter().map(|(n, e, _, x)| (n.clone(), *e, *x)).collect();
+                        d.wear_events = crate::analysis::debrief::wear_events(r, &metas, &corners);
+                    }
+                    d
+                })
             })
             .flatten()
             .map(|mut d| {
