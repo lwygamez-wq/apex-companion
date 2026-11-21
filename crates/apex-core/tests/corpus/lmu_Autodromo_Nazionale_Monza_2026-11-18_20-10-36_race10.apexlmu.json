@@ -1081,6 +1081,7 @@
     ]
   },
   "engineer_replay": {
+    "after_last_stop": [],
     "line_exact_errors": [
       -3.0,
       -3.0,

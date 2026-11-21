@@ -2372,54 +2372,7 @@ if per.is_some() {
         let fuel_tank = profile.as_ref().and_then(|p| p.usable_tank_l());
         // Catégorie la plus rapide (Hypercar en LMU) : pas de tour en plus à la fin d'une course au temps.
         let top_class = crate::analysis::strategy::is_top_class(sim, profile.as_ref().and_then(|p| p.car.class.as_deref()).or(facts.as_ref().and_then(|g| g.car_class.as_deref())));
-        // Temps perdu par arrêt, mesuré sur tes courses ici : tour de rentrée + tour de sortie, moins
-        // deux tours normaux de la même course. Médiane des arrêts.
-        // Sans course avec cette voiture ici, les courses d'autres voitures sur le même circuit : la voie
-        // des stands est la même (Alpine à Imola le 12 nov., 0 arrêt mesuré : un tour de trop compté).
-        let mut losses: Vec<f32> = vec![];
-        let same_car_races = sessions.iter().any(|s| s.kind == SessionKind::Race);
-        let other_cars: Vec<SessionSummary> = if same_car_races {
-            vec![]
-        } else {
-            db.list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), ..Default::default() })?.into_iter().filter(|s| s.track_config.as_deref() == track_config).collect()
-        };
-        for s in sessions.iter().chain(other_cars.iter()).filter(|s| s.kind == SessionKind::Race) {
-            let laps = db.laps(s.id)?;
-            let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
-            normal.sort_by(|a, b| a.total_cmp(b));
-            let Some(&med) = normal.get(normal.len() / 2) else { continue };
-            for w in laps.windows(2) {
-                if let (LapKind::InLap, LapKind::OutLap, Some(a), Some(b)) = (w[0].meta.kind, w[1].meta.kind, w[0].meta.lap_time_s, w[1].meta.lap_time_s) {
-                    let loss = (a + b - 2.0 * med) as f32;
-                    if (5.0..600.0).contains(&loss) {
-                        losses.push(loss);
-                    }
-                }
-            }
-        }
-        losses.sort_by(|a, b| a.total_cmp(b));
-        let mut pit_loss_s = losses.get(losses.len() / 2).copied();
-        // Circuit jamais couru : médiane de tes arrêts sur les autres circuits du même simulateur. Moins
-        // juste qu'une mesure ici, mais compter zéro seconde faisait prévoir un tour de trop (Bahreïn, 12 nov.).
-        if pit_loss_s.is_none() {
-            let mut all: Vec<f32> = vec![];
-            for s in db.list_sessions(&SessionFilter { sim: Some(sim), ..Default::default() })?.iter().filter(|s| s.kind == SessionKind::Race) {
-                let laps = db.laps(s.id)?;
-                let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
-                normal.sort_by(|a, b| a.total_cmp(b));
-                let Some(&med) = normal.get(normal.len() / 2) else { continue };
-                for w in laps.windows(2) {
-                    if let (LapKind::InLap, LapKind::OutLap, Some(a), Some(b)) = (w[0].meta.kind, w[1].meta.kind, w[0].meta.lap_time_s, w[1].meta.lap_time_s) {
-                        let loss = (a + b - 2.0 * med) as f32;
-                        if (5.0..600.0).contains(&loss) {
-                            all.push(loss);
-                        }
-                    }
-                }
-            }
-            all.sort_by(|a, b| a.total_cmp(b));
-            pit_loss_s = all.get(all.len() / 2).copied();
-        }
+        let (pit_loss_s, pit_stops_here) = Self::measured_pit_loss(&db, sim, track, track_config, &sessions)?;
         let measured_tank = match unit {
             Unit::Energy => Some(100.0),
             Unit::Litres => fuel_tank,
@@ -2482,7 +2435,7 @@ if per.is_some() {
             fuel_tank_l: fuel_tank,
             top_class,
             pit_loss_s,
-            pit_stops_measured: losses.len(),
+            pit_stops_measured: pit_stops_here,
             game_per_lap: game_per,
             game_minutes,
             lap_time_from_game,
@@ -2514,11 +2467,64 @@ if per.is_some() {
     }
 
     /// Données de départ de l'ingénieur : plan choisi, consommation et ratio mesurés sur tes tours.
+    /// Temps perdu par arrêt, mesuré sur tes courses ici : tour de rentrée + tour de sortie, moins deux tours
+    /// normaux de la même course. Médiane des arrêts. Sans course avec cette voiture ici, les courses d'autres
+    /// voitures sur le même circuit (la voie des stands est la même : Alpine à Imola le 12 nov., 0 arrêt
+    /// mesuré, un tour de trop compté). Circuit jamais couru : médiane des arrêts sur les autres circuits.
+    /// `sessions` : tes séances de cette voiture sur ce circuit.
+    fn measured_pit_loss(db: &Store, sim: SimId, track: &str, track_config: Option<&str>, sessions: &[SessionSummary]) -> Result<(Option<f32>, usize)> {
+        let losses_of = |list: &[&SessionSummary]| -> Result<Vec<f32>> {
+            let mut out = vec![];
+            for s in list.iter().filter(|s| s.kind == SessionKind::Race) {
+                let laps = db.laps(s.id)?;
+                let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
+                normal.sort_by(|a, b| a.total_cmp(b));
+                let Some(&med) = normal.get(normal.len() / 2) else { continue };
+                for w in laps.windows(2) {
+                    if let (LapKind::InLap, LapKind::OutLap, Some(a), Some(b)) = (w[0].meta.kind, w[1].meta.kind, w[0].meta.lap_time_s, w[1].meta.lap_time_s) {
+                        let loss = (a + b - 2.0 * med) as f32;
+                        if (5.0..600.0).contains(&loss) {
+                            out.push(loss);
+                        }
+                    }
+                }
+            }
+            Ok(out)
+        };
+        let median = |mut v: Vec<f32>| {
+            v.sort_by(|a, b| a.total_cmp(b));
+            v.get(v.len() / 2).copied()
+        };
+        let mine: Vec<&SessionSummary> = sessions.iter().collect();
+        let mut losses = losses_of(&mine)?;
+        if !sessions.iter().any(|s| s.kind == SessionKind::Race) {
+            let here: Vec<SessionSummary> = db.list_sessions(&SessionFilter { sim: Some(sim), track: Some(track.to_string()), ..Default::default() })?.into_iter().filter(|s| s.track_config.as_deref() == track_config).collect();
+            losses = losses_of(&here.iter().collect::<Vec<_>>())?;
+        }
+        let n = losses.len();
+        if let Some(m) = median(losses) {
+            return Ok((Some(m), n));
+        }
+        // Les arrêts des autres circuits ne comptent pas comme « mesurés ici » (affichage du calculateur).
+        let all = db.list_sessions(&SessionFilter { sim: Some(sim), ..Default::default() })?;
+        Ok((median(losses_of(&all.iter().collect::<Vec<_>>())?), 0))
+    }
+
     pub fn engineer_hint(&self, meta: &SessionMeta) -> EngineerHint {
         let plan = self.engineer_plan(meta);
         match self.race_strategy(meta.sim, &meta.track, meta.track_config.as_deref(), &meta.car, meta.setup, None, plan.margin_laps, 0.0, &StrategyOverrides::default()) {
             Ok(v) => EngineerHint { plan, per_lap: v.per_lap_measured, unit: Some(v.unit), fuel_ratio: v.fuel_ratio_suggested, top_class: v.top_class, pit_loss_s: v.pit_loss_s },
-            Err(_) => EngineerHint { plan, ..Default::default() },
+            // Pas encore de mesure avec cette voiture ici : le temps d'arrêt du circuit (ou des autres circuits)
+            // reste connu. Sans lui, le chrono restant compte un tour de trop (rejeu Monza 18 nov. : +4,3 %).
+            Err(_) => {
+                let db = self.db();
+                let sessions: Vec<SessionSummary> = db
+                    .list_sessions(&SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() })
+                    .map(|v| v.into_iter().filter(|s| s.track_config == meta.track_config).collect())
+                    .unwrap_or_default();
+                let pit_loss_s = Self::measured_pit_loss(&db, meta.sim, &meta.track, meta.track_config.as_deref(), &sessions).ok().and_then(|x| x.0);
+                EngineerHint { plan, pit_loss_s, ..Default::default() }
+            }
         }
     }
 
@@ -3895,5 +3901,29 @@ mod zone_tests {
         assert!(!ask(&StrategyOverrides { lap_time_s: Some(110.0), ..Default::default() }).unwrap().lap_time_from_game);
         // Une autre voiture sur ce circuit n'hérite pas de ces chiffres.
         assert!(svc.race_strategy(SimId::Lmu, "Bahrain International Circuit", None, "Peugeot 9x8", None, None, 0.5, 0.5, &StrategyOverrides { lap_time_s: Some(108.0), ..Default::default() }).is_err());
+    }
+
+    /// Données synthétiques (séance de démo transformée en course avec un arrêt) : une voiture sans aucun
+    /// tour sur ce circuit reçoit quand même le temps d'arrêt mesuré ici avec une autre voiture. Avant,
+    /// l'ingénieur partait sans temps d'arrêt et comptait un tour de trop.
+    #[test]
+    fn engineer_hint_keeps_the_track_pit_loss_for_a_new_car() {
+        use crate::model::{LapKind, SessionKind};
+        let svc = super::AppService::in_memory().unwrap();
+        let mut s = crate::mock::demo_session(3, 1_790_000_000);
+        s.meta.kind = SessionKind::Race;
+        let n = s.laps.len();
+        let base = s.laps.iter().filter_map(|l| l.meta.lap_time_s).fold(f64::MAX, f64::min);
+        s.laps[n / 2].meta.kind = LapKind::InLap;
+        s.laps[n / 2].meta.lap_time_s = Some(base + 30.0);
+        s.laps[n / 2 + 1].meta.kind = LapKind::OutLap;
+        s.laps[n / 2 + 1].meta.lap_time_s = Some(base + 25.0);
+        svc.insert_imported(&s).unwrap();
+        let mut other = s.meta.clone();
+        other.car = "Voiture jamais roulée".into();
+        let h = svc.engineer_hint(&other);
+        assert!(h.per_lap.is_none(), "pas de mesure avec cette voiture");
+        let loss = h.pit_loss_s.expect("temps d'arrêt du circuit");
+        assert!((40.0..70.0).contains(&loss), "{loss}");
     }
 }

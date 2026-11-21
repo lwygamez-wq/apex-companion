@@ -315,12 +315,20 @@ impl Engineer {
         let n = s.laps_left;
         let t = |r: u32| target(s.level, s.cap, reserve, n, r);
         let needed = stops_needed(s.level, s.cap, reserve, n, s.per_lap, tol)?;
+        // Finir sans aucune réserve en économisant au plus `SAVE_MAX` : la réserve est un confort, pas une
+        // nécessité. Monza, 21 nov. : 0,27 tour de marge à l'arrivée (sous la demi-tour de réserve) faisait
+        // ajouter un arrêt et dire « box » à 4 tours de la fin, alors que l'énergie suffisait.
+        let finishes_dry = |r: u32| target(s.level, s.cap, 0.0, n, r).is_some_and(|x| x.per_lap >= s.per_lap * (1.0 - SAVE_MAX));
         let mut parts: Vec<String> = vec![];
         let r = match self.stops_left {
+            // À 2 tours de la fin, un arrêt ne fait que perdre du temps : on économise au maximum.
+            None if n <= 2 => 0,
             None => needed,
-            // Il faudrait un arrêt de plus : on garde le plan tant qu'un peu plus d'économie suffit.
+            // Il faudrait un arrêt de plus : on garde le plan tant qu'un peu plus d'économie suffit, qu'on peut
+            // finir sans réserve en levant le pied (≤ 8 %), ou qu'il reste 2 tours ou moins (un arrêt ne
+            // ferait que perdre du temps).
             Some(cur) if cur < needed => {
-                if t(cur).is_some_and(|x| x.per_lap >= s.per_lap * (1.0 - tol - 0.02)) {
+                if t(cur).is_some_and(|x| x.per_lap >= s.per_lap * (1.0 - tol - 0.02)) || finishes_dry(cur) || n <= 2 {
                     cur
                 } else {
                     let save = t(cur).map(|x| (1.0 - x.per_lap / s.per_lap) * 100.0).unwrap_or(100.0);
@@ -342,7 +350,11 @@ impl Engineer {
             Some(cur) => cur,
         };
         self.stops_left = Some(r);
-        let tg = t(r)?;
+        // Cible : avec la réserve si l'économie reste tenable, sinon sans réserve (on finit sur la marge).
+        let tg = match t(r) {
+            Some(x) if x.per_lap >= s.per_lap * (1.0 - SAVE_MAX) => x,
+            other => target(s.level, s.cap, 0.0, n, r).filter(|d| d.per_lap >= s.per_lap * (1.0 - SAVE_MAX)).or(other)?,
+        };
         let ratio = tg.per_lap / s.per_lap;
         let verdict = if ratio < 0.995 {
             Verdict::Lift
@@ -566,6 +578,76 @@ mod tests {
         e.on_lap(&st);
         let low = RaceState { mfd_energy: Some(54.0), ..pit };
         assert!(e.on_pit_entry(&low).unwrap().ends_with("Ton MFD est à 54 %, il manque 4 : monte à 58, sinon panne avant l'arrivée."));
+    }
+
+    /// Données SYNTHÉTIQUES reprenant les chiffres de la course de Monza du 21 nov. (fichier non versé au
+    /// corpus) : arrêt fin du tour 21, 65 % réglés, 4,5 % par tour puis 4,7 % sur les 3 derniers tours,
+    /// arrivée avec ≈ 0,3 tour d'énergie. Avant correction, la marge fine (sous la demi-tour de réserve)
+    /// faisait basculer le plan : « 1 arrêt au lieu de 0 », « un arrêt de moins », puis « Box, box » à
+    /// 4 tours de l'arrivée.
+    fn final_stint(mode: EngineerMode) -> Vec<(i32, String)> {
+        let mut e = Engineer::new(EngineerPlan { mode, margin_laps: 0.5 });
+        let mut said = vec![];
+        // Fin du premier relais : un arrêt prévu.
+        if let Some(m) = e.on_lap(&state(9.0, 4.4, 15, 21)) {
+            said.push((21, m));
+        }
+        // Ravitaillement : 4 % → 65 %.
+        e.observe(4.0);
+        e.observe(30.0);
+        e.observe(65.0);
+        e.observe(64.9);
+        // 14,5 tours après l'arrêt à 4,4 % : 63,8 % consommés, 1,2 % (0,27 tour) à l'arrivée.
+        let mut level = 65.0 - 0.5 * 4.4f32;
+        for lap in 22..=35 {
+            let c = if lap >= 33 { 4.55 } else { 4.35 };
+            level -= c;
+            let st = RaceState { per_lap_fill: Some(4.4), ..state(level, if lap >= 34 { 4.5 } else { 4.4 }, (35 - lap) as u32, lap) };
+            if let Some(m) = e.on_lap(&st) {
+                said.push((lap, m));
+            }
+        }
+        said
+    }
+
+    #[test]
+    fn thin_final_margin_never_adds_a_stop_after_the_last_one() {
+        for mode in [EngineerMode::Auto, EngineerMode::Attack, EngineerMode::Save] {
+            let said = final_stint(mode);
+            let after: Vec<&(i32, String)> = said.iter().filter(|(l, _)| *l >= 22).collect();
+            assert!(after.iter().all(|(_, m)| !m.contains("Changement de plan") && !m.contains("Box")), "{mode:?} : {said:?}");
+            // La marge fine se gère en levant le pied, avec une cible chiffrée et tenable (≤ 8 % d'économie).
+            for (_, m) in &after {
+                if let Some(t) = m.split("cible ").nth(1).and_then(|r| r.split(' ').next()).and_then(|v| v.replace(',', ".").parse::<f32>().ok()) {
+                    assert!((4.4 * (1.0 - 0.08) - 0.01..=4.4 * 1.2).contains(&t), "{mode:?} : cible {t} dans « {m} »");
+                }
+            }
+        }
+    }
+
+    /// Données synthétiques : vraiment court (il manque 20 % à 6 tours de l'arrivée). Un arrêt de plus reste
+    /// annoncé ; à 2 tours de l'arrivée, plus jamais de « box » : économiser au maximum.
+    #[test]
+    fn a_real_shortfall_still_calls_a_stop_but_never_in_the_last_two_laps() {
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Auto, margin_laps: 0.5 });
+        assert!(e.on_lap(&state(9.0, 4.5, 16, 21)).is_some());
+        e.observe(4.0);
+        e.observe(30.0);
+        e.observe(50.0);
+        e.observe(49.9);
+        let m = e.on_lap(&state(22.0, 4.5, 6, 31)).unwrap();
+        assert!(m.contains("Changement de plan"), "{m}");
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Auto, margin_laps: 0.5 });
+        e.on_lap(&state(9.0, 4.5, 16, 21));
+        e.observe(4.0);
+        e.observe(50.0);
+        e.observe(49.9);
+        let m = e.on_lap(&state(7.0, 4.5, 2, 35)).unwrap_or_default();
+        assert!(!m.contains("Box") && !m.contains("Changement de plan"), "{m}");
+        // Apex démarré à 2 tours de la fin (pas de plan) : pas de « box » non plus.
+        let mut e = Engineer::new(EngineerPlan { mode: EngineerMode::Auto, margin_laps: 0.5 });
+        let m = e.on_lap(&state(7.0, 4.5, 2, 35)).unwrap_or_default();
+        assert!(!m.contains("Box"), "{m}");
     }
 
     /// Données synthétiques sur le schéma de Monza (18 nov.) : « box » dit, le pilote reste en piste deux

@@ -67,6 +67,8 @@ pub struct ReplayReport {
     /// Messages de stratégie dits pendant le rejeu (tour, texte).
     pub said: Vec<(i32, String)>,
     pub finish_level: f32,
+    /// Consignes « box » ou « changement de plan » données après le dernier arrêt effectué (doit rester vide).
+    pub after_last_stop: Vec<(i32, String)>,
     pub missing: Vec<String>,
 }
 
@@ -200,7 +202,9 @@ pub fn replay(r: &Recording, plan: EngineerPlan, pit_loss_s: Option<f32>) -> Rep
                 }
             }
         }
-        if crossed {
+        // Passé la fin du chrono, l'ingénieur ne recalcule plus (`race_laps_left` vaut `None`) : sa dernière
+        // consigne n'est plus d'actualité, elle n'est pas relevée (sinon des « +1 / +2 » fantômes en fin de course).
+        if crossed && coach_laps_exact(&coach).is_some() {
             if let Some(c) = coach.fuel_snapshot().and_then(|f| f.engineer) {
                 let left_true = crossings.iter().filter(|(j, _)| *j > i).count() as u32;
                 rep.line_calls.push(LineCall { lap: rep.line_calls.len() as i32 + 1, laps_left: c.laps_left, laps_left_true: left_true.min(crossings.len() as u32), exact_est: coach_laps_exact(&coach), exact_true: laps_after(i), per_lap: c.per_lap, fill: c.fill, laps_after_stop: c.laps_after_stop });
@@ -211,6 +215,10 @@ pub fn replay(r: &Recording, plan: EngineerPlan, pit_loss_s: Option<f32>) -> Rep
     let fin = t[finish_i.saturating_sub(1)..].iter().chain(t[crossings.iter().rev().nth(1).map(|c| c.0).unwrap_or(0)..finish_i].iter()).filter(|k| !k.pit).map(&level).fold(f32::MAX, f32::min);
     rep.finish_level = if fin == f32::MAX { 0.0 } else { fin };
 
+    if let Some(last) = stops.last() {
+        let lap = t[last.exit].lap;
+        rep.after_last_stop = rep.said.iter().filter(|(l, m)| *l >= lap && (m.contains("Box") || m.contains("Changement de plan"))).cloned().collect();
+    }
     for s in &stops {
         let used_after = level(&t[s.exit]) - rep.finish_level;
         let laps_true = laps_after(s.entry);

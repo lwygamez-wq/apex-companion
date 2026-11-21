@@ -1030,6 +1030,7 @@
     ]
   },
   "engineer_replay": {
+    "after_last_stop": [],
     "line_exact_errors": [
       -1.0,
       -1.0,

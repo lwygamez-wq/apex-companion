@@ -15,8 +15,14 @@ fn main() {
             (apex_core::model::LapKind::InLap, apex_core::model::LapKind::OutLap, Some(a), Some(b)) => Some((a + b - 2.0 * med) as f32),
             _ => None,
         }).collect();
-        let loss = std::env::var("PIT_LOSS").ok().and_then(|v| v.parse::<f32>().ok()).or(own.first().copied().filter(|_| std::env::var("OWN").is_ok()));
-        println!("perte mesurée sur la course : {own:?} ; rejouée avec {loss:?}");
+        // Le rejeu n'a pas la base de l'app : par défaut, le temps d'arrêt mesuré sur cette course tient lieu
+        // d'historique du circuit (`PIT_LOSS=…` pour en imposer un, `PIT_LOSS=0` pour rejouer sans).
+        let loss = match std::env::var("PIT_LOSS").ok().and_then(|v| v.parse::<f32>().ok()) {
+            Some(v) if v > 0.0 => Some(v),
+            Some(_) => None,
+            None => own.first().copied(),
+        };
+        println!("temps d'arrêt mesuré sur la course : {own:?} ; rejoué avec {loss:?} (l'app en direct lit l'historique du circuit)");
         let rep = replay(&r, EngineerPlan::default(), loss);
         println!("\n=== {} · {} · {} tours · arrivée {:.1}", p.rsplit('/').next().unwrap_or(&p), r.header.car, rep.laps, rep.finish_level);
         for m in &rep.missing {
@@ -27,6 +33,9 @@ fn main() {
         }
         for (l, s) in &rep.said {
             println!("  [T{l}] {s}");
+        }
+        for (l, m) in &rep.after_last_stop {
+            println!("  ÉCART après le dernier arrêt, T{l} : {m}");
         }
         for s in &rep.stops {
             println!("  ARRÊT T{} : réglé {:.1}, annoncé {:?} (entrée {}), fallait {:.1} | distance est {:?} vraie {:.2} | conso est {:?} vraie {:.2} | utilisé {:.1} | reste si annoncé {:?} tours, réel {:.2} tours | erreurs : distance {:?} conso {:?} arrondi {:?}",
