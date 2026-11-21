@@ -56,7 +56,23 @@ Distance exacte estimée par l'ingénieur contre réelle, à chaque passage (tem
 
 À l'entrée des stands, l'estimation est exacte sur les deux courses. L'écart d'un tour aux passages de ligne vient de la conversion chrono → tours près de la limite (passage du leader juste avant ou après la fin du chrono). Le rejeu ne connaît l'écart au leader qu'aux passages de ligne, donc il peut exagérer cet écart. Le banc ne sait pas trancher : à vérifier sur un rejeu avec écart au leader continu (enregistrement à ajouter).
 
+## Monza 21 nov. (17:09, Cadillac, 37 tours, arrêt fin du tour 21) : causes et correctifs 0.47
+
+Le fichier de la course et le journal d'Apex ne sont pas encore dans le corpus : la course n'est pas rejouée ici. Ce qui suit est reproduit sur une course synthétique qui reprend ses chiffres (plein 4 → 65 %, 4,35 puis 4,55 %/tour, 14 tours après l'arrêt), test `thin_final_margin_never_adds_a_stop_after_the_last_one`.
+
+| Symptôme (relevé par Alex) | Cause | Statut | Correctif 0.47 |
+|---|---|---|---|
+| T23 « 1 arrêt au lieu de 0, cible 10,81 % » puis T26 « un arrêt de moins » | Dernier relais : le nombre d'arrêts compare la cible (réserve d'un demi-tour comprise) à la consommation, à la tolérance du mode + 2 % près. Avec une marge d'arrivée sous le demi-tour de réserve, le manque divisé par les tours restants grossit à l'approche de l'arrivée et le plan bascule d'un côté à l'autre. | Reproduit (synthétique) | Hystérésis : on ne rajoute pas d'arrêt tant que le niveau finit la course sans réserve avec au plus 8 % d'économie (`SAVE_MAX`). La cible annoncée reste bornée à 8 % d'économie par tour (réserve rognée au besoin) : plus de « 10,81 % ». |
+| T32 « Box, box ce tour, règle l'énergie à 15 % » à 4 tours de la fin | Même règle, manque plus grand près de la fin. Exemple dans la reproduction au tour 33 : 10,4 % pour 2 tours, réserve 2,2 → cible 4,10 < 4,4 × 0,94 = 4,14, donc « Changement de plan… Box », alors que 10,4 % couvrent 2,36 tours sans réserve. | Reproduit (synthétique) | Jamais d'arrêt ajouté dans les deux derniers tours, ni quand finir à sec avec ≤ 8 % d'économie est possible. Un vrai manque (plus de 8 %) déclenche toujours l'arrêt (test `a_real_shortfall_still_calls_a_stop_but_never_in_the_last_two_laps`). |
+| Tours restants +1 aux T36, +2 au T37 | Le banc retenait encore la dernière annonce de ligne après la fin du chrono (le calcul exact n'existe plus : `race_laps_left` = aucun). | Probable (artefact du banc, pas une annonce) ; à vérifier sur le fichier | Le banc ne compte un passage que si l'ingénieur a une distance exacte. Sur les courses du 18 nov., aucun chiffre ne change. |
+| Tours restants +1 aux T6, T11–13, T19, T24 | Conversion chrono → tours près de la limite (même phénomène que le 18 nov. : 9 passages sur 34–35). | Non reproductible sans le fichier | Aucun ici ; la consigne d'entrée des stands reste exacte. |
+| « Temps d'arrêt inconnu » à Monza | (1) Le banc `engineer_replay` partait sans temps d'arrêt par défaut. (2) En direct, avec une voiture sans tour sur le circuit, l'ingénieur n'avait pas le temps d'arrêt mesuré du circuit avec une autre voiture. | (1) vérifié ; (2) vérifié dans le code, test `engineer_hint_keeps_the_track_pit_loss_for_a_new_car`. Pour la Cadillac, déjà roulée à Monza, l'annonce en direct n'avait probablement pas ce défaut (pas de journal pour le dire). | Le banc prend le temps d'arrêt mesuré de la course (`PIT_LOSS=x` pour forcer, `PIT_LOSS=0` pour le rejeu sans). En direct, même repli que le calculateur (circuit, puis autres circuits). |
+| 65 % réglés pour 67 % annoncés | Inconnue : il faut le journal (`coach :`, `jeu : MFD énergie`) pour savoir si 67 % a été annoncé à la ligne ou à l'entrée des stands, et ce qu'affichait le MFD. | Non vérifiable ici | Aucun. |
+
+Banc : `real_corpus` vérifie désormais qu'aucune consigne « Box » ni « Changement de plan » n'est donnée après le dernier arrêt fait (`after_last_stop`, vide sur les 18 nov.). Une fois le fichier du 21 nov. versé au corpus : vérifier l'arrivée (0,3 à 0,8 tour en suivant l'annonce) et cette règle sur la vraie course.
+
 ## Ce qui manque
 
+- La course du 21 nov. (17:09) et le journal d'Apex de ce soir-là : à verser au corpus (`corpus_prepare`) pour rejouer les tableaux ci-dessus sur la vraie course.
 - La course du 20 nov. (20:09), les essais de 19:37 et le journal d'Apex de ce soir : à déposer dans le corpus privé (`corpus_prepare`) et à côté, pour rejouer et vérifier si Alex a réglé selon Apex ou selon le MFD.
 - Réponse brute de `GET /rest/strategy/pitstop-estimate` (déjà enregistrée par la sonde dans `sonde-lmu/<séance>/strategy-pitstop.json` sur le PC d'Alex) : nécessaire pour l'utiliser sur un circuit sans historique sans deviner son format.
