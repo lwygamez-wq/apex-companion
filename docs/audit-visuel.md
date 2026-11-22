@@ -147,3 +147,23 @@ Captures : `docs/audit/apres-0.51/`.
 - « Au volant » : refonte de lecture à distance (lot 0.54). Les chiffres sont toujours à 28 px.
 - App iPhone : `mobile.css` garde ses propres valeurs (lot 0.54).
 - Vérification à faire sur le PC d'Alex : rendu des couleurs `color-mix` dans WebView2. WebView2 suit Chrome et le prend en charge depuis Chrome 111, mais ce n'est vérifié qu'en Chromium Linux.
+
+## 5. Lot 0.52 : Setups, Références, Séances
+
+- **Séances** :
+  - filtre par type de séance en onglets (composant Tabs) ;
+  - chargement en squelette, erreur avec « Réessayer », état vide qui dit quoi faire ;
+  - message d'import en alerte avec « OK ».
+- **Références** : chargement, erreur avec « Réessayer », état vide (« roule une séance avec au moins un tour propre complet »).
+- **Setups** :
+  - le diagnostic de séance, avec son setup recommandé, passe en premier. C'est la carte qui sert à décider. Le comparateur de fichiers `.svm` passe en second : c'est un outil, et il demande le dossier Steam ;
+  - « Lecture de l'enregistrement… » devient un squelette ;
+  - « Deux voitures différentes » et les erreurs deviennent des alertes.
+
+| Mesure, 1280 → 2560, états données / vide / chargement / erreur | Résultat |
+|---|---|
+| Cibles < 32 px sur Setups, Séances, Références | 0 (Séances : 17 avant la 0.51, 4 en 0.51) |
+| Défilement horizontal | aucun |
+| Erreurs JavaScript | aucune |
+
+Captures : `docs/audit/apres-0.52/`.

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/hooks";
 import { SetupDiagCard } from "../components/SetupDiagCard";
+import { Alert } from "../components/ui";
 import type { SetupComparison, SetupEntry } from "../lib/types";
 
 const DIR_KEY = "apex.setups.dir";
@@ -70,7 +71,7 @@ function ComparisonTable({ c }: { c: SetupComparison }) {
       <div className="su-summary">
         <b>{c.changes.length}</b> réglage{c.changes.length > 1 ? "s" : ""} différent{c.changes.length > 1 ? "s" : ""} · {c.unchanged} identiques
       </div>
-      {!c.same_car && <div className="fc-warn">Deux voitures différentes ({carLabel(c.vehicle_a)} / {carLabel(c.vehicle_b)}) : les crans ne se comparent pas.</div>}
+      {!c.same_car && <Alert tone="warn" title="Deux voitures différentes">{carLabel(c.vehicle_a)} / {carLabel(c.vehicle_b)} : les crans ne se comparent pas.</Alert>}
       {c.changes.length === 0 && <div className="muted">Les deux setups sont identiques.</div>}
       {groups.map(([g, list]) => (
         <div key={g} className="su-group">
@@ -153,6 +154,7 @@ export function SetupsPage() {
       <div className="page-title">
         <h1>Setups</h1>
       </div>
+      <SetupDiagCard />
       <div className="card">
         <h2>Comparer deux setups</h2>
         <div className="su-dir">
@@ -169,11 +171,10 @@ export function SetupsPage() {
             <SetupPicker label="Setup B" files={filesB} value={b} onChange={setB} />
           </div>
         )}
-        {err && <div className="fc-warn">{err}</div>}
+        {err && <Alert tone="danger" title="Comparaison impossible">{err}</Alert>}
         {cmp && <ComparisonTable c={cmp} />}
         <p className="muted su-note">Apex lit les fichiers sans les modifier. Les valeurs viennent du jeu ; l'effet indiqué est le sens habituel, son ampleur dépend de la voiture et se vérifie en piste.</p>
       </div>
-      <SetupDiagCard />
     </div>
   );
 }

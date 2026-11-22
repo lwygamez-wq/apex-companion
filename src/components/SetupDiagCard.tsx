@@ -5,6 +5,7 @@ import { useAsync } from "../lib/hooks";
 import type { BalancePhase, BalanceTrend, BalanceZone, DiagStat, SessionSummary, SetupDiagnosis, SetupRow, SetupTrialReport } from "../lib/types";
 import { lapTime } from "../lib/format";
 import { SetupMemoryCard } from "./SetupMemoryCard";
+import { Alert, Skeleton } from "./ui";
 
 /** « 58,7 °C » ; « — » sans mesure. */
 export function fmtStat(s: DiagStat | null | undefined, digits = 1): string {
@@ -220,7 +221,7 @@ export function TrialView({ r, afterChoices, after, onAfter }: { r: SetupTrialRe
           <p className="sd-trial-what"><b>{r.proposal.what}</b></p>
           <p className="muted sd-note">Pourquoi : {r.proposal.why}</p>
           <p className="muted sd-note">Comment : {r.proposal.protocol} Aucun gain de temps n'est promis : on mesure l'effet.</p>
-          <label className="su-pick" style={{ marginTop: 10 }}>
+          <label className="su-pick mt-12">
             <span>Séance d'après</span>
             <select value={after ?? ""} onChange={(e) => onAfter(e.target.value ? Number(e.target.value) : null)}>
               <option value="">Choisir la séance avec le nouveau réglage…</option>
@@ -300,7 +301,7 @@ export function SetupDiagCard() {
   return (
     <div className="card">
       <h2>Diagnostic de séance</h2>
-      <p className="muted sd-note" style={{ marginTop: 0 }}>Ce que la voiture a fait, mesuré sur tes tours. Aucun conseil de réglage ici.</p>
+      <p className="muted sd-note m-0">Ce que la voiture a fait, mesuré sur tes tours. Aucun conseil de réglage ici.</p>
       {list.length === 0 ? (
         <div className="muted">Aucune séance Le Mans Ultimate enregistrée.</div>
       ) : (
@@ -313,8 +314,8 @@ export function SetupDiagCard() {
           </select>
         </label>
       )}
-      {busy && <div className="muted" style={{ marginTop: 10 }}>Lecture de l'enregistrement…</div>}
-      {err && <div className="fc-warn">{err}</div>}
+      {busy && <Skeleton lines={4} label="Lecture de l'enregistrement" />}
+      {err && <Alert tone="danger" title="Diagnostic impossible">{err}</Alert>}
       {d && <Diagnosis d={d} />}
       {d && trial && <TrialView r={trial} afterChoices={afterChoices} after={after} onAfter={setAfter} />}
       {d && chosen != null && <SetupMemoryCard sessionId={chosen} />}

@@ -2,6 +2,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Route } from "../App";
 import { ImportActions } from "../components/ImportActions";
+import { Alert, Button, EmptyState, LoadError, Skeleton, Tabs } from "../components/ui";
 import { SetupChip, SetupSelect } from "../components/SetupChip";
 import { api } from "../lib/api";
 import { lapTime } from "../lib/format";
@@ -90,18 +91,19 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
         <h1>Séances</h1>
         <ImportActions compact onDone={reload} />
       </div>
-      {msg && <div className="warning" onClick={() => setMsg(null)}>{msg}</div>}
+      {msg && <Alert action={<Button variant="quiet" onClick={() => setMsg(null)}>OK</Button>}>{msg}</Alert>}
 
       <div className="toolbar">
         <select value={track} onChange={(e) => setTrack(e.target.value)} aria-label="Circuit">
           <option value="">Tous les circuits</option>
           {tracks.map((t) => <option key={t}>{t}</option>)}
         </select>
-        <div className="seg">
-          {([["", "Tout"], ["practice", "Essais"], ["qualifying", "Qualif"], ["race", "Course"]] as const).map(([k, l]) => (
-            <button key={k} className={kind === k ? "on" : ""} onClick={() => setKind(k as SessionKind | "")}>{l}</button>
-          ))}
-        </div>
+        <Tabs<SessionKind | "">
+          label="Type de séance"
+          value={kind}
+          onChange={setKind}
+          options={[{ value: "", label: "Tout" }, { value: "practice", label: "Essais" }, { value: "qualifying", label: "Qualif" }, { value: "race", label: "Course" }]}
+        />
         {empties > 0 && (
           <label className="muted toolbar-check">
             <input type="checkbox" checked={showEmpty} onChange={(e) => setShowEmpty(e.target.checked)} /> sessions sans tour chronométré ({empties})
@@ -109,8 +111,13 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
         )}
       </div>
 
-      {all.error && <div className="error">{all.error}</div>}
-      {all.data?.length === 0 && <div className="card empty"><h2>Aucune session</h2><p>Importe tes fichiers iRacing, ou laisse la synchro automatique faire (iRacing et Le Mans Ultimate).</p><ImportActions onDone={reload} /></div>}
+      {all.error && <LoadError error={all.error} onRetry={reload} />}
+      {all.loading && !all.data && <Skeleton lines={6} label="Chargement des séances" />}
+      {all.data?.length === 0 && (
+        <EmptyState title="Aucune séance" action={<ImportActions onDone={reload} />}>
+          Roule avec Apex ouvert : les séances Le Mans Ultimate (et iRacing) arrivent ici toutes seules. Tu peux aussi importer des fichiers.
+        </EmptyState>
+      )}
 
       {days.map(([day, list]) => (
         <section key={day} className="day">
@@ -142,7 +149,7 @@ export function SessionsPage({ navigate }: { navigate: (r: Route) => void }) {
         <details className="card refs" open={untyped > 0}>
           <summary>
             Références d'autres pilotes ({refs.data!.length})
-            {untyped > 0 && <span className="chip warn" style={{ marginLeft: 8 }}>{untyped} sans série</span>}
+            {untyped > 0 && <span className="chip warn ml-8">{untyped} sans série</span>}
           </summary>
           <p className="muted small-note">Une référence en <b>setup imposé</b> ne sert qu'à tes sessions en setup imposé, une en <b>setup libre</b> qu'à tes sessions en setup libre. Le fichier Garage 61 ne dit pas la série : choisis-la.</p>
           {refs.data!.map((r) => (

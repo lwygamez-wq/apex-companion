@@ -928,3 +928,5 @@ select:hover, input[type="text"]:hover, input[type="number"]:hover { border-colo
 /* Cases à cocher : la cible est l'étiquette entière (≥ 32 px). */
 input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; accent-color: var(--accent); }
 label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; }
+.ml-8 { margin-left: 8px; }
+.mt-12 { margin-top: 12px; }
