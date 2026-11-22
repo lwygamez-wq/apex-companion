@@ -314,6 +314,9 @@ pub struct LiveCoach {
     /// Avant le premier tour mesuré : consommation et ratio mesurés sur tes séances précédentes.
     hint_per: Option<(crate::analysis::strategy::Unit, f32)>,
     hint_ratio: Option<f32>,
+    /// Plan de course comparé (« Plan : un arrêt, … »), dit une fois au premier passage de ligne en course.
+    options_radio: Option<String>,
+    options_said: bool,
     top_class: bool,
     pit_loss_s: Option<f64>,
     /// Retard sur le leader (tours, secondes) : maintenant, et à chacun des derniers passages de ligne.
@@ -428,7 +431,7 @@ impl LiveCoach {
         // Catégorie lue dans la séance elle-même : valable même sans historique sur ce circuit.
         let top_class = crate::analysis::strategy::is_top_class(meta.sim, builder.session_info().profile.car.class.as_deref());
         (
-            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, on_pit_road: false, ve_laps: VecDeque::new(), race_use: vec![], tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
+            Self { builder, meta, reference, self_reference, history: VecDeque::new(), last_focus: None, last_session_num: -1.0, user_names, offs: Default::default(), callout: None, callout_done: false, last_dist: 0.0, best_lap: None, last_delta: None, last_advice: None, last_cue: None, plan_text, plan_apexes, beeps: None, beep_stage: 0, fuel_now: 0.0, fuel_laps: VecDeque::new(), tank_l, time_remain: -1.0, laps_remain: -1.0, lap_pct: 0.0, brake_pts: (None, vec![]), ve_now: 0.0, mfd_energy: None, mfd_laps: None, on_pit_road: false, ve_laps: VecDeque::new(), race_use: vec![], tl_steps: 0.0, tl_per_penalty: 0.0, engineer: crate::race_engineer::Engineer::new(Default::default()), pending: None, lap_times: VecDeque::new(), pairs: VecDeque::new(), hint_per: None, hint_ratio: None, options_radio: None, options_said: false, top_class, pit_loss_s: None, gap_now: (0.0, 0.0), gaps: VecDeque::new() },
             CoachMessage { kind: CoachMessageKind::Info, lap: 0, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None },
         )
     }
@@ -451,6 +454,11 @@ impl LiveCoach {
         // La catégorie de la séance prime : l'historique peut manquer (nouvelle voiture).
         self.top_class |= top_class;
         self.pit_loss_s = pit_loss_s.filter(|p| *p > 0.0).map(f64::from);
+    }
+
+    /// Plan de course comparé (`race_options`), annoncé une fois au premier passage de ligne en course.
+    pub fn set_race_plan(&mut self, radio: Option<String>) {
+        self.options_radio = radio.filter(|r| !r.is_empty());
     }
 
     /// Nouveau plan choisi pendant la séance.
@@ -483,6 +491,7 @@ impl LiveCoach {
             self.tl_steps = row[23];
             self.engineer.reset();
             self.pending = None;
+            self.options_said = false;
             self.lap_times.clear();
             self.gaps.clear();
             self.race_use.clear();
@@ -598,7 +607,13 @@ impl LiveCoach {
                 let msg = if self.current_kind() == SessionKind::Race { race_voice(msg) } else { Some(msg) };
                 // Ingénieur de course : consigne recalculée à chaque passage de la ligne, en course.
                 if let Some(st) = self.race_state(number) {
-                    if let Some(text) = self.engineer.on_lap(&st) {
+                    let plan = if self.options_said { None } else { self.options_radio.clone() };
+                    self.options_said = true;
+                    let text = match (plan, self.engineer.on_lap(&st)) {
+                        (Some(p), Some(e)) => Some(format!("{p} {e}")),
+                        (p, e) => p.or(e),
+                    };
+                    if let Some(text) = text {
                         let strategy = CoachMessage { kind: CoachMessageKind::Strategy, lap: number, text, focus: None, focus_loss_s: None, lap_delta_s: None, lap_time_s: None };
                         // Rien d'autre à dire sur ce tour : la consigne part tout de suite.
                         if msg.is_none() {
@@ -1189,6 +1204,37 @@ mod tests {
         let t = coach.fuel_text();
         assert!(t.starts_with("Énergie : "), "{t}");
         assert!(t.contains("5,0 % par tour"), "{t}");
+    }
+
+    /// Le plan comparé (`race_options`) est dit une seule fois, devant la première consigne de l'ingénieur.
+    #[test]
+    fn race_plan_is_said_once_at_the_first_line_crossing() {
+        use crate::ingest::lmu::{live_yaml, testkit::*, LiveState};
+        let y = live_yaml(&frame(0.0, 0.0, 0.0, 0.0, 10)).unwrap();
+        let (mut coach, _) = LiveCoach::new(&y, None, vec![], None);
+        coach.set_race_plan(Some("Plan : un arrêt, arrêt entre les tours 4 et 6.".into()));
+        let mut live = LiveState::default();
+        let mut said = vec![];
+        let mut et = 0.0f64;
+        while et < 330.0 {
+            let d = 1500.0 + et * 50.0;
+            let sc_et = (et * 5.0).floor() / 5.0;
+            let mut f = frame(100.0 + et, d, 100.0 + sc_et, 1500.0 + sc_et * 50.0, 10);
+            f.info.mEndET = 100.0 + 40.0 * 30.0;
+            if let Some(r) = live.row(&f) {
+                if let Some(m) = coach.push(r) {
+                    if m.kind == CoachMessageKind::Strategy {
+                        said.push(m.text);
+                    }
+                }
+            }
+            if let Some(m) = coach.take_engineer() {
+                said.push(m.text);
+            }
+            et += 0.02;
+        }
+        assert!(said.first().is_some_and(|m| m.starts_with("Plan : un arrêt, arrêt entre les tours 4 et 6. Relais 1 sur 2.")), "{said:?}");
+        assert_eq!(said.iter().filter(|m| m.contains("Plan : ")).count(), 1, "{said:?}");
     }
 
     /// Course LMU au temps (20 min, tours de 40 s, 5 % d'énergie et 2 l par tour) : l'ingénieur annonce

@@ -266,6 +266,7 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
                                     let hint = svc.engineer_hint(&meta);
                                     c.set_engineer(hint.plan, hint.unit.zip(hint.per_lap), hint.fuel_ratio);
                                     c.set_race_context(hint.top_class, hint.pit_loss_s);
+                                    c.set_race_plan(hint.options_radio);
                                     if let Ok(mut s) = status.lock() {
                                         s.coach_plan = Some(c.plan_text());
                                         s.coach_repeat = None;

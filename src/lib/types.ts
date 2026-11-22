@@ -197,6 +197,8 @@ export interface RaceStrategyView {
   game_minutes: number | null;
   /** Temps au tour pris dans l'estimation du jeu (aucun tour mesuré). */
   lap_time_from_game: boolean;
+  /** Comparaison des stratégies possibles (temps au stand mesuré, incertitude). */
+  options: RaceOptions | null;
 }
 
 export interface StrategyOverrides {
@@ -1149,4 +1151,44 @@ export interface AutoReference {
 export interface ReferenceEntry extends AutoReference {
   lap_id: number | null;
   history: AutoReference[];
+}
+
+/** Temps d'un arrêt, mesuré sur les arrêts enregistrés (miroir de `race_options::PitModel`). */
+export interface PitModel {
+  lane_s: number;
+  lane_sd_s: number;
+  refill_s_per_unit: number;
+  stops: number;
+}
+
+/** Une stratégie candidate (miroir de `race_options::Candidate`). */
+export interface RaceCandidate {
+  stops: number;
+  saving: number;
+  target_per_lap: number;
+  laps: number;
+  window: [number, number] | null;
+  fills: number[];
+  pit_time_s: number | null;
+  pit_time_sd_s: number | null;
+  arrival_laps: number;
+  arrival_sd_laps: number;
+  breakeven_s_per_lap: number | null;
+  wear_left_pct: number | null;
+}
+
+export type RaceVerdict =
+  | { kind: "clear"; best: number; second: number; delta_s: number; sd_s: number }
+  | { kind: "equivalent"; safest: number; others: number[]; delta_s: number; sd_s: number }
+  | { kind: "only"; best: number }
+  | { kind: "unknown"; reason: string };
+
+/** Comparaison des stratégies (miroir de `race_options::Options`). */
+export interface RaceOptions {
+  unit: FuelUnit;
+  candidates: RaceCandidate[];
+  verdict: RaceVerdict;
+  missing: string[];
+  radio: string;
+  pit_model: PitModel | null;
 }

@@ -775,6 +775,7 @@
       ]
     }
   ],
+  "options": null,
   "race": {
     "field": 12,
     "finish": 6,
