@@ -69,10 +69,31 @@ Le fichier de la course et le journal d'Apex ne sont pas encore dans le corpus :
 | « Temps d'arrêt inconnu » à Monza | (1) Le banc `engineer_replay` partait sans temps d'arrêt par défaut. (2) En direct, avec une voiture sans tour sur le circuit, l'ingénieur n'avait pas le temps d'arrêt mesuré du circuit avec une autre voiture. | (1) vérifié ; (2) vérifié dans le code, test `engineer_hint_keeps_the_track_pit_loss_for_a_new_car`. Pour la Cadillac, déjà roulée à Monza, l'annonce en direct n'avait probablement pas ce défaut (pas de journal pour le dire). | Le banc prend le temps d'arrêt mesuré de la course (`PIT_LOSS=x` pour forcer, `PIT_LOSS=0` pour le rejeu sans). En direct, même repli que le calculateur (circuit, puis autres circuits). |
 | 65 % réglés pour 67 % annoncés | Inconnue : il faut le journal (`coach :`, `jeu : MFD énergie`) pour savoir si 67 % a été annoncé à la ligne ou à l'entrée des stands, et ce qu'affichait le MFD. | Non vérifiable ici | Aucun. |
 
+### Ce que dit le journal d'Apex (versé le 22 nov.)
+
+Lignes `coach :` et `jeu : MFD énergie` de la course (Apex 0.46, heures du journal) :
+
+| Heure | Annonce ou lecture |
+|---|---|
+| 16:12:56 | « Relais 1 sur 2. Box à la fin du tour 17. Cible 5,35 %… » |
+| 16:27:28–16:27:48 | MFD réglé en piste : 62 → 60 → 63 % |
+| 16:42:20 | « Box à la fin du prochain tour. Prépare le MFD : énergie 70 %, il est à 63 %. » |
+| 16:42:50 | MFD lu à **65 %** (dernière lecture du MFD de la course) |
+| 16:43:57 | « Box, box, ce tour. Règle l'énergie à 70 %… Ton MFD est à 65 %, il manque 5. » |
+| 16:45:34 | « Toujours en piste : règle l'énergie à 67 % pour 15 tours après l'arrêt. » (pas d'arrêt à ce tour) |
+| 16:47:14 | Entrée des stands : « Dans la voie : règle l'énergie à 67 %… Ton MFD est à 65 %, il manque 2 : monte à 67. » |
+| 16:49:45 → 17:09:18 | 4 bascules du plan : « 1 arrêt au lieu de 0 », cibles 9,79 %, 15,73 %, 7,30 % |
+
+**Cause des 65 % pour 67 % (vérifiée dans le journal) :** le MFD est passé de 63 à 65 % un tour avant l'appel « Box, box ». Il n'a plus bougé ensuite : aucune lecture après 16:42:50, et le MFD est relu toutes les 5 s en piste. La consigne exacte (67 %) n'est arrivée qu'à l'entrée des stands, en même temps que « il manque 2 », trop tard pour corriger au MFD. Les annonces de ligne d'avant (70 %) comptaient l'arrêt un tour plus tôt que celui fait.
+
+**Bascules du plan (vérifiées dans le journal) :** ce sont exactement les messages reproduits sur la course synthétique et corrigés en 0.47 (« Changement de plan », cible au-delà de 8 % d'économie). Il reste à rejouer l'enregistrement de la course avec la 0.47 pour le confirmer chiffre par chiffre.
+
+**Toujours manquant :** l'enregistrement `lmu_Autodromo_Nazionale_Monza_2026-11-21_17-09-26_race10.apexlmu` (dossier `enregistrements-lmu`). Le zip versé contenait le dossier `sonde-lmu` du même nom. Les réponses de l'API ont été lues au départ (tour 0) : `strategy-pitstop.json` est à zéro partout, donc inutilisable pour le temps d'arrêt.
+
 Banc : `real_corpus` vérifie désormais qu'aucune consigne « Box » ni « Changement de plan » n'est donnée après le dernier arrêt fait (`after_last_stop`, vide sur les 18 nov.). Une fois le fichier du 21 nov. versé au corpus : vérifier l'arrivée (0,3 à 0,8 tour en suivant l'annonce) et cette règle sur la vraie course.
 
 ## Ce qui manque
 
-- La course du 21 nov. (17:09) et le journal d'Apex de ce soir-là : à verser au corpus (`corpus_prepare`) pour rejouer les tableaux ci-dessus sur la vraie course.
+- La course du 21 nov. (17:09) : l'enregistrement `.apexlmu` reste à verser (le journal l'a été le 22 nov.) (`corpus_prepare`) pour rejouer les tableaux ci-dessus sur la vraie course.
 - La course du 20 nov. (20:09), les essais de 19:37 et le journal d'Apex de ce soir : à déposer dans le corpus privé (`corpus_prepare`) et à côté, pour rejouer et vérifier si Alex a réglé selon Apex ou selon le MFD.
 - Réponse brute de `GET /rest/strategy/pitstop-estimate` (déjà enregistrée par la sonde dans `sonde-lmu/<séance>/strategy-pitstop.json` sur le PC d'Alex) : nécessaire pour l'utiliser sur un circuit sans historique sans deviner son format.

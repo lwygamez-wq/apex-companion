@@ -37,7 +37,7 @@ export function ImportActions({ onDone, compact = false }: { onDone: () => void;
   return (
     <div>
       <div className="row">
-        <button className="btn primary" disabled={busy} onClick={() => run(async () => {
+        <button className={compact ? "btn" : "btn primary"} disabled={busy} onClick={() => run(async () => {
           const sel = await open({ multiple: true, filters: [{ name: "Télémétrie iRacing (.ibt), séance Le Mans Ultimate (.apexlmu) ou tour Garage 61 (.csv)", extensions: ["ibt", "apexlmu", "csv"] }] });
           if (!sel) return "Import annulé.";
           return summarize(await api.importFiles(Array.isArray(sel) ? sel : [sel]));
@@ -50,7 +50,7 @@ export function ImportActions({ onDone, compact = false }: { onDone: () => void;
           })}>Charger une session démo</button>
         )}
       </div>
-      {msg && <div className="muted" style={{ marginTop: 8 }}>{msg}</div>}
+      {msg && <div className="muted mt-8">{msg}</div>}
     </div>
   );
 }

@@ -50,8 +50,8 @@ function PitConverter({ combo }: { combo: Combo }) {
 
   return (
     <div className="card pitconv">
-      <h2 style={{ margin: 0 }}>Convertisseur du stand</h2>
-      <p className="muted" style={{ margin: "4px 0 12px" }}>Tape l'énergie, les litres ou le nombre de tours : le reste suit. Carburant = énergie × ratio.</p>
+      <h2 className="m-0">Convertisseur du stand</h2>
+      <p className="muted pc-intro">Tape l'énergie, les litres ou le nombre de tours : le reste suit. Carburant = énergie × ratio.</p>
       <div className="pc-grid">
         <label className={from === "energy" ? "src" : ""}>
           <span>Énergie</span>
@@ -129,8 +129,8 @@ export function StrategyPage() {
           {facts.data.fuel_ratio != null ? ` · ratio réglé ${n2(facts.data.fuel_ratio)}` : ""}. Tes tours remplacent ces chiffres dès qu'ils sont mesurés.
         </p>
       )}
-      <PitConverter combo={combo} />
       <FuelCalculator combo={combo} title="Plan de course" />
+      <PitConverter combo={combo} />
     </div>
   );
 }

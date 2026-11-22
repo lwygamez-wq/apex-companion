@@ -1,0 +1,149 @@
+# Audit visuel et refonte (0.51 →)
+
+22 nov. 2026. L'aperçu local fait tourner l'app complète sur une vraie base, construite à partir du corpus (13 séances, dont 7 LMU). Les commandes IPC sont servies par le vrai `AppService` : outil `examples/zz_preview_server.rs` et `src/preview.tsx`, exclus de git. Captures Playwright à 1280×720, 1920×1080 et 2560×1440, en quatre états : données, vide, chargement sans fin et erreur. L'écran « Au volant » est aussi capturé avec une séance LMU simulée en piste.
+
+## 1. Constat « avant » (0.50.0)
+
+### Mesures sur `styles.css` et les composants
+
+| Mesure | Valeur | Cible |
+|---|---|---|
+| Tailles de texte distinctes | **20** (11 à 40 px, dont 12,5 px) | ≤ 6 |
+| Valeurs d'espacement distinctes (px) | **26** (1 à 50 px, dont 3, 5, 7, 9, 11, 13) | une échelle 4/8 |
+| Rayons distincts | **15** (0 à 999 px) | ≤ 3 |
+| Couleurs écrites en dur dans le CSS | **91** distinctes, 149 occurrences | 0 hors jetons |
+| Couleurs écrites en dur dans les composants TSX | **138** (carte 71, graphiques 28, progression 15) | 0 hors jetons |
+| `:focus-visible` / `:hover` / `:disabled` | 2 / 19 / 1 | sur chaque composant de base |
+| `prefers-reduced-motion` | 1 | toutes les animations |
+
+### Contrastes des jetons (WCAG)
+
+| Jeton | sur fond (#111318) | sur carte (#1a1d24) | sur carte claire (#242833) |
+|---|---|---|---|
+| texte #f2f4f8 | 16,9 | 15,3 | 13,4 |
+| secondaire #a3aab8 | 8,0 | 7,2 | 6,3 |
+| violet #a78bfa | 6,8 | 6,2 | 5,4 |
+| vert #3dd9b3 | 10,4 | 9,5 | 8,3 |
+| « jaune » #ff9a5c | 8,9 | 8,1 | 7,0 |
+| accent #ff7a45 | 7,2 | 6,5 | 5,7 |
+| **rouge #e10600** | **3,7** | **3,4** | **3,0** (texte : échoue) |
+| **trait #2e3340** | 1,5 | 1,3 | 1,2 (élément graphique : échoue) |
+
+Le texte courant passe partout. Le rouge de marque échoue comme couleur de texte. Les traits de séparation et les bords des champs échouent comme éléments graphiques (< 3:1).
+
+### Sens des couleurs ambigus
+
+- **« Jaune » = orange** : la perte (#ff9a5c) et l'accent de marque, celui des boutons principaux (#ff7a45), ont presque la même teinte. Un bouton « Importer » et une perte de temps ont la même couleur.
+- **Rouge** : il sert à la fois de marque (logo, soulignement des titres, barre de navigation active, meilleure option de course) et d'erreur.
+- **Violet** : il est réservé au « meilleur absolu », mais il colore aussi le badge « Setup libre » sur toutes les séances et dans Progression.
+
+### Par page (1280×720 sauf mention)
+
+| Page | Défauts mesurés |
+|---|---|
+| Briefing | La bannière iRacing « Alt+L » occupe le premier écran, alors que LMU est le simulateur principal. Deux boutons d'en-tête de même poids (Importer, Scanner iRacing) : pas d'action principale claire. Chargement : page vide, sans indicateur. |
+| Stratégie | Bonne hiérarchie, mais 3 niveaux d'encadrés imbriqués (carte, consigne, options). La note « Non mesuré… » fait 3 lignes en gris. 5 à 8 cibles sous 32 px (boutons « min / tours », bascule d'unité). |
+| Setups | Sans dossier Steam, la carte montre un message et un bouton : correct. « Lecture de l'enregistrement… » est un texte sans indicateur visuel. |
+| Séances | 17 cibles sous 32 px : bouton « ··· » de 32×24, filtres de 24 px de haut. Badge « Setup libre » violet. Erreur : bloc rouge sans action (« Réessayer » absent). |
+| Références | Lisible. Pas d'état vide illustré (texte seul). |
+| Progression | « −7.574 s » passe à la ligne dans sa carte (texte coupé). 8 cartes et 5 483 px de haut à 1280. Les records sont en violet italique (cohérent). 11 cibles sous 32 px. |
+| Au volant | Chiffres principaux à 28 px. Le relais, la radio, la voix, le volume, la clé Azure et le bouton radio sont sur le même écran : 2 088 px de haut, au moins 6 informations à la fois. Le bouton « Choisir le bouton » est coupé sur 3 lignes. |
+| Réglages | 3 867 px de haut, 9 cartes, 10 cibles sous 32 px. |
+
+Aucun défilement horizontal mesuré de 1280 à 2560 px de large. Aucune erreur JavaScript de l'app (les erreurs relevées venaient de l'aperçu, corrigé).
+
+Captures : `docs/audit/avant/`.
+
+## 2. Direction visuelle retenue : « écran de chronométrage »
+
+Une seule direction, celle des écrans de timing et des outils de télémétrie sombres. Le fond reste neutre et calme, les chiffres sont la matière première, la couleur ne sert qu'à dire quelque chose. Raisons :
+
+1. Alex est débutant : la couleur doit être un signal fiable, jamais de la décoration. On garde la convention qu'il verra sur tous les écrans de course : violet = meilleur absolu, vert = gain, jaune = perte.
+2. L'app sert surtout de près, sur un écran de PC, entre deux séances. Mais « Au volant » se lit de loin, à distance de volant. Il faut donc deux régimes : dense et aligné sur les écrans d'analyse, très gros et très peu d'informations « Au volant ».
+3. L'identité « Paddock » actuelle reste : Archivo large et grasse pour les chiffres, Manrope pour le texte, fonds asphalte, angles légèrement biseautés. Elle est déjà lisible (texte courant ≥ 6,3:1). Il manque la discipline : trop de valeurs, couleurs ambiguës, états absents.
+
+### Règles
+
+- **Couleurs à sens unique.**
+
+  | Couleur | Rôle unique |
+  |---|---|
+  | Orange (accent) | action principale et repère de navigation |
+  | Rouge | erreur et danger seulement (il n'est plus la couleur de marque des titres) |
+  | Jaune | perte |
+  | Vert | gain, réussite |
+  | Violet | meilleur absolu |
+  | Bleu | tour comparé et information |
+  | Gris | tout le reste, badges neutres compris (« Setup libre » devient gris) |
+
+- **Six tailles de texte** : 12, 14, 16, 20, 28, 48 px. Le 48 sert aux chiffres héros et à l'écran « Au volant ».
+- **Espacements** sur une grille de 4 : 2, 4, 8, 12, 16, 24, 32, 48 px.
+- **Trois rayons** : 6 px (contrôles et badges), 12 px (cartes), 999 px (pastilles).
+- **Trois niveaux de surface** : fond, carte, élément dans une carte. Bords à ≥ 3:1 sur les contrôles.
+- **Une action principale par page**, en haut à droite, en orange. Les autres boutons sont secondaires (contour) ou discrets (texte).
+- **États** : chaque chargement montre un squelette, chaque erreur une alerte avec « Réessayer », chaque liste vide un état vide qui dit quoi faire.
+- **Mouvement** : transitions de 120 ms sur la couleur et le contour seulement, toutes coupées par `prefers-reduced-motion`.
+
+## 3. Plan de migration
+
+| Version | Lot |
+|---|---|
+| 0.51 | Jetons et composants de base ; Briefing et Stratégie |
+| 0.52 | Setups, Références, Séances |
+| 0.53 | Analyse, Comparaison, Progression (graphiques et carte de piste sur les jetons) |
+| 0.54 | Au volant (lecture à distance), Réglages, app iPhone |
+
+Chaque lot ajoute ici ses captures « après » et ses mesures.
+
+## 4. Lot 0.51 : jetons, composants de base, Briefing et Stratégie
+
+### Ce qui change
+
+- **Jetons** (`:root` de `styles.css`) :
+  - surfaces (fond, carte, élément, survol) et traits (décoratif, fort) ;
+  - couleurs à sens unique ;
+  - 6 tailles de texte, grille de 4, 3 rayons, 3 élévations, transition de 120 ms ;
+  - les anciens noms (`--panel`, `--yellow`…) restent comme alias.
+- **Tout `styles.css` passe sur les jetons** : les 20 tailles, 26 espacements, 15 rayons et 149 couleurs en dur sont ramenés à l'échelle. Toutes les pages en profitent dès ce lot.
+- **Sens des couleurs** :
+  - la perte devient un vrai jaune (#f5c542, au lieu de l'orange #ff9a5c, presque identique à l'accent) ;
+  - le rouge ne sert plus qu'aux erreurs ; les repères (titre, navigation, sélection, onglet actif) passent à l'orange de l'accent ;
+  - « Setup libre / imposé » devient neutre ;
+  - « la plus rapide » (options de course) passe au violet.
+- **Composants de base** (`components/ui.tsx`) : Button (primaire, secondaire, discret), Card, Stat, Badge, Alert, LoadError (avec « Réessayer »), EmptyState, Skeleton, Tabs, Tooltip. Tous ont focus visible, survol et désactivé. Les contrôles font 32 px au moins, et la cible d'une case à cocher est son étiquette entière.
+- **Briefing** :
+  - une seule action principale, « Analyser ma dernière séance » ; « Importer » et « Scanner iRacing » passent en secondaire ;
+  - chargement en squelette, erreur avec « Réessayer », état vide qui dit quoi faire ;
+  - le bandeau iRacing « Alt+L » descend en bas de page, en alerte discrète : la fonction est gardée ;
+  - l'objectif du prochain run passe à 28 px, en couleur d'action et non plus de perte.
+- **Stratégie** :
+  - le plan de course (la décision) passe avant le convertisseur du stand (l'outil) ;
+  - chargement en squelette, message « Pas encore de plan » en alerte.
+- **Garde-fous en CI** (`src/design.test.ts`) : contrastes calculés sur les jetons, 6 tailles, échelle d'espacement, 3 rayons, aucune couleur en dur dans le CSS ni dans les composants. 7 fichiers restent à migrer (carte, graphiques, Progression, course, rejeu) : la liste ne peut que rétrécir.
+
+### Mesures (vérifiées)
+
+| Critère | Avant | Après 0.51 |
+|---|---|---|
+| Tailles de texte (CSS) | 20 | **6** (12, 14, 16, 20, 28, 48) |
+| Espacements (CSS) | 26 valeurs | **8** (2, 4, 8, 12, 16, 24, 32, 48) |
+| Rayons | 15 | **3** (8, 12, pilule) |
+| Couleurs en dur dans le CSS | 149 | **0** |
+| Couleurs en dur dans les TSX | 138 dans 9 fichiers | 0 hors des 7 fichiers listés (lots 0.52–0.54) |
+| Contraste texte, tous jetons × toutes surfaces | rouge 3,0 à 3,7 | **≥ 4,5** (plus bas : danger sur survol, 4,52) |
+| Contraste bords de contrôles | 1,2 à 1,5 | **≥ 3,36** |
+| Cibles < 32 px, Briefing / Stratégie (1280) | 1 / 5 à 8 | **0 / 0** |
+| Cibles < 32 px, Séances (1280) | 17 | 4, en état erreur (filtres) |
+| Défilement horizontal, 1280 → 2560 | aucun | aucun |
+| Chargement Briefing | page vide | squelette |
+| Erreur Briefing | bloc rouge sans action | alerte avec « Réessayer » |
+
+Captures : `docs/audit/apres-0.51/`.
+
+### Reste (listé, non fait)
+
+- Tailles de texte écrites dans le code des composants (`style={{ fontSize }}`) : 28 occurrences dans 19 fichiers, migrées page par page aux lots suivants.
+- Carte de piste, graphiques, Progression, rejeu : couleurs en dur (lot 0.53).
+- « Au volant » : refonte de lecture à distance (lot 0.54). Les chiffres sont toujours à 28 px.
+- App iPhone : `mobile.css` garde ses propres valeurs (lot 0.54).
+- Vérification à faire sur le PC d'Alex : rendu des couleurs `color-mix` dans WebView2. WebView2 suit Chrome et le prend en charge depuis Chrome 111, mais ce n'est vérifié qu'en Chromium Linux.

@@ -4,6 +4,7 @@ import { lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { consigne } from "../lib/strategy";
 import { RaceOptionsCard } from "./RaceOptionsCard";
+import { Alert, Skeleton } from "./ui";
 import type { CircuitOverview, EngineerMode, FuelUnit, PlanOption, RaceLength, RaceStrategyView } from "../lib/types";
 
 type Combo = Pick<CircuitOverview, "sim" | "track" | "track_config" | "car" | "setup">;
@@ -190,7 +191,8 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
         </label>
       </div>
 
-      {view.error && !s && <div className="muted" style={{ marginTop: 8 }}>{view.error}</div>}
+      {view.loading && !s && !view.error && <Skeleton block lines={3} label="Calcul du plan de course" />}
+      {view.error && !s && <Alert tone="warn" title="Pas encore de plan">{view.error}</Alert>}
 
       {s && v && chosen && (
         <>
