@@ -10,6 +10,7 @@ pub mod phases;
 pub mod plan;
 pub mod progress;
 pub mod race;
+pub mod race_options;
 pub mod references;
 pub mod regularity;
 pub mod resample;

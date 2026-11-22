@@ -787,3 +787,11 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .su-group.ref-group .su-table th:nth-child(6) { width: 14%; }
 .su-group.ref-group .su-table th:nth-child(7) { width: 9%; }
 .su-group.ref-group .su-table td:last-child { text-align: right; }
+
+/* Options de course (comparatif des stratégies). */
+.ro-card { margin: 14px 0 4px; }
+.ro-card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 6px; }
+.ro-verdict { margin: 0 0 8px; font-weight: 600; }
+.ro-table td.num, .ro-table th:nth-child(n+2):nth-child(-n+6) { text-align: right; }
+.ro-table tr.ro-best td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+.ro-role { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }

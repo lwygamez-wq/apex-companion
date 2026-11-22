@@ -1676,6 +1676,57 @@
       ]
     }
   ],
+  "options": {
+    "candidates": [
+      {
+        "breakeven": null,
+        "fills": [
+          62.419
+        ],
+        "laps": 36,
+        "pit_s": 53.535,
+        "pit_sd": 2.0,
+        "saving": 0.0,
+        "stops": 1,
+        "wear_left": 84.86,
+        "window": [
+          14,
+          22
+        ]
+      },
+      {
+        "breakeven": null,
+        "fills": [
+          32.286,
+          32.286
+        ],
+        "laps": 36,
+        "pit_s": 83.53,
+        "pit_sd": 2.828,
+        "saving": 0.0,
+        "stops": 2,
+        "wear_left": 89.907,
+        "window": [
+          1,
+          22
+        ]
+      }
+    ],
+    "done": {
+      "spare_laps": 0.64,
+      "still_s": 26.1,
+      "stops": 1
+    },
+    "gain_s": 0.249,
+    "radio": "Plan : un arrêt, arrêt entre les tours 14 et 22. 30 secondes de moins au stand que l'option suivante.",
+    "verdict": {
+      "best": 0,
+      "delta_s": 29.995,
+      "kind": "clear",
+      "sd_s": 2.0,
+      "second": 1
+    }
+  },
   "race": {
     "field": 38,
     "finish": 9,

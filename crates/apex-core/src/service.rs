@@ -374,9 +374,10 @@ pub struct RaceStrategyView {
     pub game_minutes: Option<f32>,
     /// Le temps au tour utilisé est l'estimation du jeu (aucun tour mesuré, rien de saisi).
     pub lap_time_from_game: bool,
+    /// Comparaison des stratégies possibles (temps au stand mesuré, incertitude, seuil du lift and coast).
+    pub options: Option<crate::analysis::race_options::Options>,
 }
 
-/// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
 /// Bilan d'une mise à jour de la bibliothèque de références.
 #[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct RefreshReport {
@@ -396,6 +397,7 @@ pub struct ReferenceEntry {
     pub history: Vec<crate::storage::AutoReference>,
 }
 
+/// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
 #[derive(Debug, Clone, Default)]
 pub struct EngineerHint {
     pub plan: crate::race_engineer::EngineerPlan,
@@ -407,6 +409,8 @@ pub struct EngineerHint {
     /// Catégorie la plus rapide (pas de tour en plus) et temps perdu par arrêt mesuré.
     pub top_class: bool,
     pub pit_loss_s: Option<f32>,
+    /// Plan de course comparé, phrase radio (vide si les options ne se départagent pas faute de mesure).
+    pub options_radio: Option<String>,
 }
 
 /// Valeurs saisies à la main dans le calculateur (remplacent la mesure).
@@ -618,6 +622,8 @@ pub struct AppService {
     voice: Option<crate::voice_cmd::VoiceRecognizer>,
     /// Fichiers déjà gardés (ou déjà importés) pendant ce lancement : évite de retoucher la base à chaque tour de boucle.
     guarded: Mutex<std::collections::HashSet<String>>,
+    /// Arrêts mesurés par séance de course (lus une fois dans l'enregistrement `.apexlmu`).
+    stop_cache: Mutex<std::collections::HashMap<i64, Vec<crate::analysis::race_options::StopSample>>>,
 }
 
 const SETTINGS_KEY: &str = "app_settings";
@@ -779,6 +785,7 @@ impl AppService {
             tts_cache: Mutex::new(Default::default()),
             voice: db.parent().map(|d| crate::voice_cmd::VoiceRecognizer::new(d.join("voix"))),
             guarded: Mutex::new(Default::default()),
+            stop_cache: Mutex::new(Default::default()),
         })
     }
 
@@ -798,6 +805,7 @@ impl AppService {
             tts_cache: Mutex::new(Default::default()),
             voice: None,
             guarded: Mutex::new(Default::default()),
+            stop_cache: Mutex::new(Default::default()),
         })
     }
 
@@ -2451,6 +2459,42 @@ if per.is_some() {
             let n = wear.len() as f32;
             [0, 1, 2, 3].map(|k| wear.iter().map(|w| w[k]).sum::<f32>() / n)
         });
+        // Comparateur d'options : arrêts mesurés (ce circuit pour la voie des stands, tous pour le service).
+        let options = {
+            let key = format!("{track}|{}", track_config.unwrap_or_default());
+            let all = self.stop_samples(&db, sim).unwrap_or_default();
+            let pick = |x: &crate::analysis::race_options::StopSample| crate::analysis::race_options::StopSample { added_energy: if unit == Unit::Energy { x.added_energy } else { x.added_fuel }, ..*x };
+            let here: Vec<_> = all.iter().filter(|(k, _)| *k == key).map(|(_, x)| pick(x)).collect();
+            let every: Vec<_> = all.iter().map(|(_, x)| pick(x)).collect();
+            let series = match unit {
+                Unit::Energy => &energy,
+                Unit::Litres => &fuel,
+            };
+            let sd = if series.len() >= 3 {
+                let m = series.iter().sum::<f32>() / series.len() as f32;
+                (series.iter().map(|x| (x - m).powi(2)).sum::<f32>() / (series.len() - 1) as f32).sqrt()
+            } else {
+                per * 0.03
+            };
+            crate::analysis::race_options::compare(&crate::analysis::race_options::OptionsInput {
+                strategy: StrategyInput {
+                    length: length.unwrap_or(default_length),
+                    unit,
+                    per_lap: per,
+                    lap_time_s: lap_time,
+                    tank,
+                    margin_laps,
+                    formation_laps,
+                    fuel_ratio,
+                    fuel_tank: fuel_tank.filter(|_| unit == Unit::Energy),
+                    top_class,
+                    pit_loss_s,
+                },
+                per_lap_sd: sd,
+                pit: crate::analysis::race_options::pit_model_for(&here, &every),
+                wear_per_lap: tyre_wear_per_lap.map(|w| w.iter().copied().fold(0.0, f32::max)),
+            })
+        };
         Ok(RaceStrategyView {
             strategy,
             unit,
@@ -2478,6 +2522,7 @@ if per.is_some() {
             pit_stops_measured: pit_stops_here,
             game_per_lap: game_per,
             game_minutes,
+            options: Some(options),
             lap_time_from_game,
             // Même verrou que ci-dessus : `engineer_plan_for` le reprendrait (blocage).
             engineer: db.get_setting(&engineer_key(sim, track, track_config, car)).ok().flatten().and_then(|j| serde_json::from_str(&j).ok()).unwrap_or_default(),
@@ -2550,10 +2595,61 @@ if per.is_some() {
         Ok((median(losses_of(&all.iter().collect::<Vec<_>>())?), 0))
     }
 
+    /// Arrêts mesurés dans les courses LMU enregistrées (circuit, arrêt) : temps perdu hors service
+    /// (tour de rentrée + tour de sortie − deux tours normaux − temps à l'arrêt), temps à l'arrêt,
+    /// énergie et carburant remis. Les arrêts d'une séance sont associés dans l'ordre aux paires
+    /// tour de rentrée / tour de sortie de la base ; si les nombres diffèrent, la séance est ignorée.
+    fn stop_samples(&self, db: &Store, sim: SimId) -> Result<Vec<(String, crate::analysis::race_options::StopSample)>> {
+        use crate::analysis::race_options::StopSample;
+        let mut out = vec![];
+        for s in db.list_sessions(&SessionFilter { sim: Some(sim), ..Default::default() })?.into_iter().filter(|s| s.kind == SessionKind::Race && s.external_driver.is_none()) {
+            let cached = self.stop_cache.lock().ok().and_then(|c| c.get(&s.id).cloned());
+            let samples = match cached {
+                Some(v) => v,
+                None => {
+                    let laps = db.laps(s.id)?;
+                    let mut normal: Vec<f64> = laps.iter().filter(|l| l.clean && l.meta.kind == LapKind::Flying).filter_map(|l| l.meta.lap_time_s).collect();
+                    normal.sort_by(f64::total_cmp);
+                    let losses: Vec<f64> = match normal.get(normal.len() / 2) {
+                        Some(&med) => laps
+                            .windows(2)
+                            .filter_map(|w| match (w[0].meta.kind, w[1].meta.kind, w[0].meta.lap_time_s, w[1].meta.lap_time_s) {
+                                (LapKind::InLap, LapKind::OutLap, Some(a), Some(b)) => Some(a + b - 2.0 * med),
+                                _ => None,
+                            })
+                            .collect(),
+                        None => vec![],
+                    };
+                    let rec = db
+                        .session_meta(s.id)?
+                        .source_path
+                        .filter(|p| p.to_ascii_lowercase().ends_with(".apexlmu"))
+                        .and_then(|p| std::fs::read(p).ok())
+                        .and_then(|b| crate::ingest::lmu::decode(&b).ok());
+                    let v: Vec<StopSample> = match rec.map(|r| crate::analysis::debrief::race_extras(&r).stops) {
+                        Some(stops) if stops.len() == losses.len() => stops
+                            .iter()
+                            .zip(&losses)
+                            .map(|(st, loss)| StopSample { lane_extra_s: (*loss - st.still_s) as f32, still_s: st.still_s as f32, added_energy: st.energy_out - st.energy_in, added_fuel: st.fuel_out_l - st.fuel_in_l })
+                            .collect(),
+                        _ => vec![],
+                    };
+                    if let Ok(mut c) = self.stop_cache.lock() {
+                        c.insert(s.id, v.clone());
+                    }
+                    v
+                }
+            };
+            let key = format!("{}|{}", s.track, s.track_config.clone().unwrap_or_default());
+            out.extend(samples.into_iter().map(|x| (key.clone(), x)));
+        }
+        Ok(out)
+    }
+
     pub fn engineer_hint(&self, meta: &SessionMeta) -> EngineerHint {
         let plan = self.engineer_plan(meta);
         match self.race_strategy(meta.sim, &meta.track, meta.track_config.as_deref(), &meta.car, meta.setup, None, plan.margin_laps, 0.0, &StrategyOverrides::default()) {
-            Ok(v) => EngineerHint { plan, per_lap: v.per_lap_measured, unit: Some(v.unit), fuel_ratio: v.fuel_ratio_suggested, top_class: v.top_class, pit_loss_s: v.pit_loss_s },
+            Ok(v) => EngineerHint { plan, per_lap: v.per_lap_measured, unit: Some(v.unit), fuel_ratio: v.fuel_ratio_suggested, top_class: v.top_class, pit_loss_s: v.pit_loss_s, options_radio: v.options.map(|o| o.radio).filter(|r| !r.is_empty()) },
             // Pas encore de mesure avec cette voiture ici : le temps d'arrêt du circuit (ou des autres circuits)
             // reste connu. Sans lui, le chrono restant compte un tour de trop (rejeu Monza 18 nov. : +4,3 %).
             Err(_) => {

@@ -179,6 +179,55 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
             })
         });
 
+    // Banc de stratégie (courses LMU) : options comparées sur la distance réellement courue, contre
+    // ce qui a été fait (arrêts, temps au stand mesuré, énergie restante à l'arrivée).
+    let options = (m.sim == apex_core::model::SimId::Lmu && m.kind == apex_core::model::SessionKind::Race)
+        .then(|| apex_core::ingest::lmu::decode(&std::fs::read(file).unwrap()).unwrap())
+        .and_then(|r| {
+            let ex = apex_core::analysis::debrief::race_extras(&r);
+            let laps = d.laps.iter().filter(|l| l.meta.lap_time_s.is_some()).count() as u32;
+            let v = svc.race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, Some(apex_core::analysis::strategy::RaceLength::Laps(laps)), 0.5, 0.0, &StrategyOverrides::default()).ok()?;
+            let o = v.options?;
+            let pick = |i: &usize| o.candidates.get(*i);
+            let rec = match &o.verdict {
+                apex_core::analysis::race_options::Verdict::Clear { best, .. } | apex_core::analysis::race_options::Verdict::Only { best } => pick(best),
+                apex_core::analysis::race_options::Verdict::Equivalent { safest, .. } => pick(safest),
+                apex_core::analysis::race_options::Verdict::Unknown { .. } => None,
+            };
+            let done_stops = ex.stops.iter().filter(|s| s.energy_out > s.energy_in + 2.0 || s.fuel_out_l > s.fuel_in_l + 1.0).count();
+            let done_still: f64 = ex.stops.iter().map(|s| s.still_s).sum();
+            let done_spare = ex.energy_finish.zip(ex.energy_per_lap).map(|(e, c)| e / c);
+            if let Some(c) = rec {
+                if c.pit_time_s.is_some() && c.saving > 0.0 {
+                    rule.push(format!("{} : stratégie recommandée avec économie (coût non mesuré)", file.display()));
+                }
+            }
+            println!(
+                "BANC stratégie {} : fait {} arrêt(s), {:.1} s à l'arrêt, arrivée {} ; recommandé {:?}",
+                file.file_name().unwrap().to_string_lossy(),
+                done_stops,
+                done_still,
+                done_spare.map(|x| format!("{x:.2} tour")).unwrap_or("?".into()),
+                rec.map(|c| (c.stops, c.pit_time_s, c.pit_time_sd_s, c.fills.clone()))
+            );
+            // Gain estimé en suivant la recommandation : énergie remise en trop (arrivée au-delà de la marge
+            // visée de 0,5 tour) fois le temps de service mesuré par unité. Jamais présenté comme garanti.
+            let rate = o.candidates.iter().find_map(|c| c.pit_time_s.map(|_| ())).and(Some(v.per_lap));
+            let overfill_laps = done_spare.map(|x| (x - 0.5).max(0.0));
+            let gain_s = match (overfill_laps, rate, o.pit_model) {
+                (Some(x), Some(c), Some(p)) => Some(x * c * p.refill_s_per_unit),
+                _ => None,
+            };
+            println!("BANC gain estimé {} : {:?} s (plein en trop {:?} tour)", file.file_name().unwrap().to_string_lossy(), gain_s, overfill_laps);
+            Some(json!({
+                "gain_s": gain_s,
+                "verdict": o.verdict,
+                "candidates": o.candidates.iter().map(|c| json!({ "stops": c.stops, "saving": c.saving, "laps": c.laps, "window": c.window, "fills": c.fills, "pit_s": c.pit_time_s, "pit_sd": c.pit_time_sd_s, "breakeven": c.breakeven_s_per_lap, "wear_left": c.wear_left_pct })).collect::<Vec<_>>(),
+                "radio": o.radio,
+                "done": { "stops": done_stops, "still_s": done_still, "spare_laps": done_spare },
+            }))
+        });
+
     let strategy = svc
         .race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, None, 0.5, 0.5, &StrategyOverrides::default())
         .ok()
@@ -227,6 +276,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "comparisons": comparisons,
         "ai_context": svc.ai_context(id).ok(),
         "strategy": strategy,
+        "options": options,
         "setup_diag": setup_diag,
         "engineer_replay": engineer,
         "radio": radio,

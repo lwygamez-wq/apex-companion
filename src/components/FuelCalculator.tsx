@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import { consigne } from "../lib/strategy";
+import { RaceOptionsCard } from "./RaceOptionsCard";
 import type { CircuitOverview, EngineerMode, FuelUnit, PlanOption, RaceLength, RaceStrategyView } from "../lib/types";
 
 type Combo = Pick<CircuitOverview, "sim" | "track" | "track_config" | "car" | "setup">;
@@ -226,6 +227,7 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
               <p className="fc-order-why">{order.why}</p>
             </div>
           )}
+          {v.options && <RaceOptionsCard o={v.options} />}
 
           <div className="fc-plan" role="group" aria-label="Plan suivi en course">
             <span className="muted">Plan suivi en course</span>
