@@ -21,20 +21,20 @@ function PositionChart({ r }: { r: RaceReport }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="race-chart" role="img" aria-label="Position tour par tour">
       {ticks.map((p) => (
         <g key={p}>
-          <line x1={P.l} x2={W - P.r} y1={y(p)} y2={y(p)} stroke="#25252f" />
-          <text x={P.l - 8} y={y(p) + 4} textAnchor="end" fontSize={11} fill="#8c8c9c">P{p}</text>
+          <line x1={P.l} x2={W - P.r} y1={y(p)} y2={y(p)} stroke="var(--surface-2)" />
+          <text x={P.l - 8} y={y(p) + 4} textAnchor="end" fontSize={12} fill="var(--text-2)">P{p}</text>
         </g>
       ))}
-      <path d={path} stroke="#ffffff" strokeWidth={2.2} fill="none" />
-      {r.positions.map(([l, p]) => <circle key={l} cx={x(l)} cy={y(p)} r={2.6} fill="#ffffff" />)}
+      <path d={path} stroke="var(--text)" strokeWidth={2.2} fill="none" />
+      {r.positions.map(([l, p]) => <circle key={l} cx={x(l)} cy={y(p)} r={2.6} fill="var(--text)" />)}
       {[...byLap.entries()].map(([lap, pts]) => (
         <g key={lap}>
-          <circle cx={x(lap)} cy={y(posAt(lap))} r={pts >= 4 ? 8 : pts >= 2 ? 6.5 : 5} fill="none" stroke={pts >= 4 ? "#ff5a4e" : "#ff8a00"} strokeWidth={2} />
-          <text x={x(lap)} y={y(posAt(lap)) - 10} textAnchor="middle" fontSize={11} fill={pts >= 4 ? "#ff5a4e" : "#ff8a00"}>{pts}x</text>
+          <circle cx={x(lap)} cy={y(posAt(lap))} r={pts >= 4 ? 8 : pts >= 2 ? 6.5 : 5} fill="none" stroke={pts >= 4 ? "var(--danger)" : "var(--loss)"} strokeWidth={2} />
+          <text x={x(lap)} y={y(posAt(lap)) - 10} textAnchor="middle" fontSize={12} fill={pts >= 4 ? "var(--danger)" : "var(--loss)"}>{pts}x</text>
         </g>
       ))}
-      <text x={P.l} y={H - 6} fontSize={11} fill="#8c8c9c">grille</text>
-      <text x={W - P.r} y={H - 6} textAnchor="end" fontSize={11} fill="#8c8c9c">tour {maxLap}</text>
+      <text x={P.l} y={H - 6} fontSize={12} fill="var(--text-2)">grille</text>
+      <text x={W - P.r} y={H - 6} textAnchor="end" fontSize={12} fill="var(--text-2)">tour {maxLap}</text>
     </svg>
   );
 }

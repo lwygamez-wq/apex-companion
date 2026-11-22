@@ -60,8 +60,8 @@ describe("système de design", () => {
   });
 });
 
-/** Fichiers TSX encore à migrer vers les jetons (lots 0.52–0.54) : la liste ne peut que rétrécir. */
-const PENDING = new Set(["components/TrackMap.tsx", "components/TelemetryCharts.tsx", "pages/HistoryPage.tsx", "components/RaceCard.tsx", "components/ReplayStudio.tsx", "components/ReplayPanel.tsx", "components/SessionTrend.tsx"]);
+/** Fichiers TSX encore à migrer vers les jetons : vide depuis la 0.53, à garder vide. */
+const PENDING = new Set<string>([]);
 const walk = (d: string): string[] => readdirSync(d).flatMap((f: string) => (statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [join(d, f)]));
 describe("couleurs dans les composants", () => {
   it("aucune couleur en dur hors des fichiers encore à migrer", () => {

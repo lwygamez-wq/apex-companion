@@ -1,3 +1,4 @@
+import { EmptyState, LoadError, Skeleton } from "../components/ui";
 import { useEffect, useMemo, useState } from "react";
 import type { Route } from "../App";
 import { InsightCard } from "../components/InsightCard";
@@ -197,8 +198,9 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
           <button className="btn" onClick={() => navigate({ page: "sessions" })}>← Toutes les séances</button>
         </div>
       </div>
-      {sessions.data?.length === 0 && <div className="card empty"><h2>Aucune session</h2><p>Importe une session depuis l'écran Sessions.</p></div>}
-      {detail.error && <div className="error">{detail.error}</div>}
+      {sessions.data?.length === 0 && <EmptyState title="Aucune séance">Roule avec Apex ouvert, ou importe une séance depuis l'écran Séances.</EmptyState>}
+      {detail.error && <LoadError error={detail.error} onRetry={detail.reload} />}
+      {detail.loading && !d && sessionId != null && <Skeleton block lines={5} label="Chargement de la séance" />}
       {d && (
         <>
           <div className="session-strip">
@@ -266,7 +268,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   {g61Msg && <div className="muted" style={{ fontSize: 13 }}>{g61Msg}</div>}
                 </div>
                 <div className="duel-gap">
-                  <button className="btn ghost small" title="Inverser référence et tour analysé" onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
+                  <button className="btn ghost small" title="Inverser référence et tour analysé" aria-label="Inverser référence et tour analysé" style={{ minWidth: 32 }} onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>
                   {c && <div className={`duel-delta mono ${(endGap ?? 0) > 0 ? "pos" : "neg"}`}>{fmtGap(endGap, gapUnit, gapUnit === "s" ? 3 : 0)}</div>}
                   {c && store && <button className="btn primary" onClick={() => setMapSize("full")} title="Carte et télémétrie synchronisées, en plein écran">▶ Relecture</button>}
                 </div>
@@ -280,7 +282,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 </div>
               </div>
 
-              {cmp.error && <div className="error">{cmp.error}</div>}
+              {cmp.error && <LoadError error={cmp.error} onRetry={cmp.reload} />}
               {refId === cmpId && <div className="warning">Choisis deux tours différents.</div>}
               {c && c.warnings.length > 0 && (
                 <details className="notes">
@@ -301,7 +303,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   <RaceDebriefCard d={d.debrief} />
                 </div>
               )}
-              {!c && !cmp.error && refId !== cmpId && <div className="card muted">Comparaison des deux tours en cours…</div>}
+              {!c && !cmp.error && refId !== cmpId && <Skeleton block lines={3} label="Comparaison des deux tours" />}
 
               {c && store && current === "summary" && (
                 <>
@@ -328,7 +330,6 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     </div>
                   </div>
 
-                  <h3 className="section-title">Virage par virage</h3>
                   <CornerList corners={c.corners} selected={corner} onSelect={(id) => setCorner(id)} onRename={(apex, name) => void saveName(apex, name)} />
                   {(d.risk.length > 0 || d.off_tracks.length > 0) && (
                     <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>

@@ -15,7 +15,7 @@ function Bars({ values, fmt, higherIsBetter, color }: { values: (number | null)[
       {values.map((x, i) => {
         const at = (N - values.length + i) * bw;
         return x == null ? (
-          <rect key={i} x={at + 3} y={H - 3} width={bw - 6} height={3} fill="#383848"><title>pas de mesure</title></rect>
+          <rect key={i} x={at + 3} y={H - 3} width={bw - 6} height={3} fill="var(--surface-3)"><title>pas de mesure</title></rect>
         ) : (
           <rect key={i} x={at + 3} y={H - q(x) * H} width={bw - 6} height={q(x) * H} rx={2} fill={color} opacity={i === values.length - 1 ? 1 : 0.55}>
             <title>{fmt(x)}</title>
@@ -36,9 +36,9 @@ export function SessionTrend({ points }: { points: SessionPoint[] }) {
   const last = points.slice(-N);
   if (last.length < 2) return null;
   const cards: { title: string; values: (number | null)[]; fmt: (v: number) => string; hib: boolean; color: string; hint: string }[] = [
-    { title: "Rester en piste", values: last.map((p) => p.clean_rate), fmt: (v) => `${Math.round(v * 100)} % de tours propres`, hib: true, color: "#3dd9b3", hint: "part de tours propres" },
-    { title: "Régularité", values: last.map((p) => p.spread_s), fmt: (v) => `± ${v.toFixed(2).replace(".", ",")} s entre tes tours`, hib: false, color: "#5cc8ff", hint: "écart entre tes tours propres" },
-    { title: "Rythme", values: last.map((p) => p.best_s), fmt: (v) => `meilleur tour propre ${lapTime(v)}`, hib: false, color: "#a78bfa", hint: "meilleur tour propre" },
+    { title: "Rester en piste", values: last.map((p) => p.clean_rate), fmt: (v) => `${Math.round(v * 100)} % de tours propres`, hib: true, color: "var(--gain)", hint: "part de tours propres" },
+    { title: "Régularité", values: last.map((p) => p.spread_s), fmt: (v) => `± ${v.toFixed(2).replace(".", ",")} s entre tes tours`, hib: false, color: "var(--info)", hint: "écart entre tes tours propres" },
+    { title: "Rythme", values: last.map((p) => p.best_s), fmt: (v) => `meilleur tour propre ${lapTime(v)}`, hib: false, color: "var(--best)", hint: "meilleur tour propre" },
   ];
   return (
     <div className="card" style={{ marginBottom: 12 }}>

@@ -5,6 +5,7 @@ import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { CircuitOverview, HistoryLap } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
+import { EmptyState, LoadError, Skeleton } from "../components/ui";
 import { FuelCalculator } from "../components/FuelCalculator";
 import { SessionTrend } from "../components/SessionTrend";
 import { sessionTrend } from "../lib/trend";
@@ -46,35 +47,35 @@ function LapChart({ laps, best, external }: { laps: HistoryLap[]; best: number |
     <svg viewBox={`0 0 ${W} ${H}`} className="history-chart" role="img" aria-label="Temps au tour dans l'ordre chronologique">
       {ticks.map((t) => (
         <g key={t}>
-          <line x1={P.l} x2={W - P.r} y1={y(t)} y2={y(t)} stroke="#25252f" />
-          <text x={P.l - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill="#8c8c9c">{lapTime(t)}</text>
+          <line x1={P.l} x2={W - P.r} y1={y(t)} y2={y(t)} stroke="var(--surface-2)" />
+          <text x={P.l - 8} y={y(t) + 4} textAnchor="end" fontSize={12} fill="var(--text-2)">{lapTime(t)}</text>
         </g>
       ))}
       {seps.map((i) => (
-        <line key={i} x1={(x(i) + x(i - 1)) / 2} x2={(x(i) + x(i - 1)) / 2} y1={P.t} y2={H - P.b} stroke="#383848" strokeDasharray="3 4" />
+        <line key={i} x1={(x(i) + x(i - 1)) / 2} x2={(x(i) + x(i - 1)) / 2} y1={P.t} y2={H - P.b} stroke="var(--surface-3)" strokeDasharray="3 4" />
       ))}
       {external && (
         <g>
-          <line x1={P.l} x2={W - P.r} y1={y(external[1])} y2={y(external[1])} stroke="#a78bfa" strokeDasharray="6 5" opacity={0.7} />
-          <text x={W - P.r} y={y(external[1]) - 5} textAnchor="end" fontSize={11} fill="#c4b5fd">{external[0]} {lapTime(external[1])}</text>
+          <line x1={P.l} x2={W - P.r} y1={y(external[1])} y2={y(external[1])} stroke="var(--best)" strokeDasharray="6 5" opacity={0.7} />
+          <text x={W - P.r} y={y(external[1]) - 5} textAnchor="end" fontSize={12} fill="var(--best-text)">{external[0]} {lapTime(external[1])}</text>
         </g>
       )}
-      <path d={pbPath} stroke="#a78bfa" strokeWidth={2} fill="none" />
+      <path d={pbPath} stroke="var(--best)" strokeWidth={2} fill="none" />
       {timed.map((l, i) => (
         <circle
           key={l.lap_id}
           cx={x(i)}
           cy={y(l.lap_time_s!)}
           r={l.personal_best_at_time ? 4.5 : 3.2}
-          fill={l.personal_best_at_time ? "#a78bfa" : l.clean ? "#ffffff" : "none"}
-          stroke={l.clean ? "none" : l.off_track ? "#ff8a00" : "#8c8c9c"}
+          fill={l.personal_best_at_time ? "var(--best)" : l.clean ? "var(--text)" : "none"}
+          stroke={l.clean ? "none" : l.off_track ? "var(--danger)" : "var(--text-2)"}
           strokeWidth={1.5}
         >
           <title>{`${dateTime(l.started_at_unix)} · tour ${l.number} · ${lapTime(l.lap_time_s)}${l.clean ? "" : l.off_track ? " · hors piste" : " · perturbé"}`}</title>
         </circle>
       ))}
-      <text x={P.l} y={H - 6} fontSize={11} fill="#8c8c9c">plus ancien</text>
-      <text x={W - P.r} y={H - 6} textAnchor="end" fontSize={11} fill="#8c8c9c">plus récent</text>
+      <text x={P.l} y={H - 6} fontSize={12} fill="var(--text-2)">plus ancien</text>
+      <text x={W - P.r} y={H - 6} textAnchor="end" fontSize={12} fill="var(--text-2)">plus récent</text>
     </svg>
   );
 }
@@ -112,8 +113,9 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
   return (
     <>
       <div className="page-title"><h1>Progression</h1></div>
-      {circuits.error && <div className="error">{circuits.error}</div>}
-      {circuits.data?.length === 0 && <div className="card empty"><h2>Aucun circuit</h2><p>Roule une session iRacing ou Le Mans Ultimate : elle apparaîtra ici automatiquement.</p></div>}
+      {circuits.error && <LoadError error={circuits.error} onRetry={circuits.reload} />}
+      {circuits.loading && !circuits.data && <Skeleton block lines={5} label="Chargement de la progression" />}
+      {circuits.data?.length === 0 && <EmptyState title="Aucun circuit">Roule une séance Le Mans Ultimate (ou iRacing) avec Apex ouvert : ta progression apparaîtra ici toute seule.</EmptyState>}
       {current && (
         <div className="history">
           <div className="history-list">
@@ -144,9 +146,9 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <h2>Tous tes tours, du plus ancien au plus récent</h2>
                 <span className="legend">
-                  <span><i style={{ background: "#a78bfa" }} />record (évolution)</span>
-                  <span><i style={{ background: "#ffffff" }} />propre</span>
-                  <span><i style={{ background: "#ff8a00" }} />hors piste</span>
+                  <span><i style={{ background: "var(--best)" }} />record (évolution)</span>
+                  <span><i style={{ background: "var(--text)" }} />propre</span>
+                  <span><i style={{ background: "var(--danger)" }} />hors piste</span>
                 </span>
               </div>
               <LapChart laps={history.data ?? []} best={current.best_clean_s ?? current.best_any_s} external={current.external_reference} />

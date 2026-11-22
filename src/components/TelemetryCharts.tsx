@@ -3,18 +3,22 @@ import uPlot from "uplot";
 import { buildView, type Axis, type CompareView, type GapUnit } from "../lib/compareView";
 import { at, positionsAt, type ReplayStore } from "../lib/replay";
 import type { Comparison } from "../lib/types";
+import { alpha, tok } from "../lib/palette";
 
 /** Vrai pendant qu'on place le curseur par programme (relecture) : on ignore alors l'événement. */
 let programmatic = false;
 
-export const REF_COLOR = "#b4b4c6";
-export const CMP_COLOR = "#5cc8ff";
-const THR = "#3dd9b3";
-const BRK = "#ff5a4e";
-const LOSS = "#ff9a5c";
-const GRID = { stroke: "#22222c", width: 1 };
-const FONT = "13px 'Archivo Variable', system-ui, sans-serif";
-const AXIS = { stroke: "#8c8c9c", grid: GRID, ticks: { show: false }, font: FONT };
+// Couleurs lues dans les jetons au moment du dessin (canvas : pas de variables CSS).
+const C = {
+  get ref() { return tok("ref"); },
+  get cmp() { return tok("info"); },
+  get thr() { return tok("pedal-full"); },
+  get brk() { return tok("pedal-brake"); },
+  get loss() { return tok("loss"); },
+  get grid() { return { stroke: tok("surface-2"), width: 1 }; },
+  get axis() { return { stroke: tok("text-2"), grid: this.grid, ticks: { show: false }, font: FONT }; },
+};
+const FONT = "12px 'Archivo Variable', system-ui, sans-serif";
 /** Largeur de la fenêtre glissante pendant la relecture. */
 const WINDOW = { distance: 700, time: 12 };
 
@@ -91,8 +95,8 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
       legend: { show: false },
       scales: { x: { time: false }, y: spec.range ? { range: spec.range } : { auto: true } },
       axes: [
-        showX ? { ...AXIS, size: 24, space: 80, values: (_u, v) => v.map(xFmt) } : { ...AXIS, size: 0, values: () => [] },
-        { ...AXIS, size: spec.key === "pedals" ? 62 : 40, space: 30, values: (_u, v) => v.map((n) => (spec.key === "pedals" ? (n > 0 ? `gaz ${n}` : n < 0 ? `frein ${-n}` : "0") : `${n}`)) },
+        showX ? { ...C.axis, size: 24, space: 80, values: (_u, v) => v.map(xFmt) } : { ...C.axis, size: 0, values: () => [] },
+        { ...C.axis, size: spec.key === "pedals" ? 62 : 40, space: 30, values: (_u, v) => v.map((n) => (spec.key === "pedals" ? (n > 0 ? `gaz ${n}` : n < 0 ? `frein ${-n}` : "0") : `${n}`)) },
       ],
       series: [
         {},
@@ -120,7 +124,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
               const a = u.valToPos(b.from, "x", true);
               const z = u.valToPos(b.to, "x", true);
               if (z < u.bbox.left || a > u.bbox.left + u.bbox.width) continue;
-              ctx.fillStyle = sel.current === b.id ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.035)";
+              ctx.fillStyle = sel.current === b.id ? alpha("text", 0.1) : alpha("text", 0.035);
               ctx.fillRect(Math.max(a, u.bbox.left), u.bbox.top, Math.min(z, u.bbox.left + u.bbox.width) - Math.max(a, u.bbox.left), u.bbox.height);
             }
             ctx.restore();
@@ -132,7 +136,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
             ctx.save();
             if (spec.zeroLine) {
               const y = u.valToPos(0, "y", true);
-              ctx.strokeStyle = "rgba(255,255,255,0.25)";
+              ctx.strokeStyle = alpha("text", 0.25);
               ctx.beginPath();
               ctx.moveTo(u.bbox.left, y);
               ctx.lineTo(u.bbox.left + u.bbox.width, y);
@@ -148,7 +152,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
                 const w = ctx.measureText(b.label).width;
                 // Pas de chevauchement : un nom trop proche du précédent est omis (sauf le virage choisi).
                 if (px - w / 2 < lastEnd + 4 * devicePixelRatio && sel.current !== b.id) continue;
-                ctx.fillStyle = sel.current === b.id ? "#ffffff" : "#8c8c9c";
+                ctx.fillStyle = sel.current === b.id ? tok("text") : tok("text-2");
                 ctx.fillText(b.label, px, u.bbox.top - 5 * devicePixelRatio);
                 lastEnd = px + w / 2;
               }
@@ -230,20 +234,20 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
     const pos = (a: (number | null)[]) => a.map((v) => (v == null ? null : Math.max(0, v)));
     const below = (a: (number | null)[]) => a.map((v) => (v == null ? null : Math.min(0, v)));
     if (variant === "studio") {
-      const REFD = "rgba(255,255,255,0.75)";
+      const REFD = alpha("text", 0.75);
       const dash = [2, 3];
       const st: ChartSpec[] = [
         { key: "gap", title: gapUnit === "s" ? "Écart (s)" : "Écart (m)", unit: gapUnit, digits: gapUnit === "s" ? 2 : 0, height: 1.2, zeroLine: true, signed: true, labels: true, series: [
-          { label: "", color: "transparent", data: pos(view.gap), fill: "rgba(255,154,92,0.16)", width: 0, silent: true },
-          { label: "", color: "transparent", data: below(view.gap), fill: "rgba(61,217,179,0.18)", width: 0, silent: true },
-          { label: "Écart", color: LOSS, data: view.gap, width: 1.6 },
+          { label: "", color: "transparent", data: pos(view.gap), fill: alpha("loss", 0.16), width: 0, silent: true },
+          { label: "", color: "transparent", data: below(view.gap), fill: alpha("gain", 0.18), width: 0, silent: true },
+          { label: "Écart", color: C.loss, data: view.gap, width: 1.6 },
         ] },
-        { key: "thr", title: "Gaz", unit: "%", digits: 0, height: 1, range: [0, 105], series: [{ label: "Réf.", color: REFD, data: view.ref.throttle, dash, width: 1.2 }, { label: "Toi", color: THR, data: view.cmp.throttle, width: 1.6, fill: "rgba(61,217,179,0.16)" }] },
-        { key: "brk", title: "Frein", unit: "%", digits: 0, height: 1, range: [0, 105], series: [{ label: "Réf.", color: REFD, data: view.ref.brake, dash, width: 1.2 }, { label: "Toi", color: BRK, data: view.cmp.brake, width: 1.6, fill: "rgba(255,90,78,0.16)" }] },
-        { key: "spd", title: "Vitesse", unit: "km/h", digits: 0, height: 1.3, series: [{ label: "Réf.", color: REFD, data: view.ref.speed, dash, width: 1.2 }, { label: "Toi", color: "#5cc8ff", data: view.cmp.speed, width: 1.6, fill: "rgba(92,200,255,0.12)" }] },
+        { key: "thr", title: "Gaz", unit: "%", digits: 0, height: 1, range: [0, 105], series: [{ label: "Réf.", color: REFD, data: view.ref.throttle, dash, width: 1.2 }, { label: "Toi", color: C.thr, data: view.cmp.throttle, width: 1.6, fill: alpha("gain", 0.16) }] },
+        { key: "brk", title: "Frein", unit: "%", digits: 0, height: 1, range: [0, 105], series: [{ label: "Réf.", color: REFD, data: view.ref.brake, dash, width: 1.2 }, { label: "Toi", color: C.brk, data: view.cmp.brake, width: 1.6, fill: alpha("pedal-brake", 0.16) }] },
+        { key: "spd", title: "Vitesse", unit: "km/h", digits: 0, height: 1.3, series: [{ label: "Réf.", color: REFD, data: view.ref.speed, dash, width: 1.2 }, { label: "Toi", color: tok("info"), data: view.cmp.speed, width: 1.6, fill: alpha("info", 0.12) }] },
       ];
-      if (view.ref.steer && view.cmp.steer) st.push({ key: "str", title: "Volant", unit: "°", digits: 0, height: 0.9, zeroLine: true, series: [{ label: "Réf.", color: REFD, data: view.ref.steer, dash, width: 1.1 }, { label: "Toi", color: "#c9c9d4", data: view.cmp.steer, width: 1.4 }] });
-      if (view.ref.gear && view.cmp.gear) st.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 0.8, series: [{ label: "Réf.", color: REFD, data: view.ref.gear, dash, width: 1.1 }, { label: "Toi", color: "#5aa0ff", data: view.cmp.gear, width: 1.6, fill: "rgba(90,160,255,0.12)" }] });
+      if (view.ref.steer && view.cmp.steer) st.push({ key: "str", title: "Volant", unit: "°", digits: 0, height: 0.9, zeroLine: true, series: [{ label: "Réf.", color: REFD, data: view.ref.steer, dash, width: 1.1 }, { label: "Toi", color: tok("ref"), data: view.cmp.steer, width: 1.4 }] });
+      if (view.ref.gear && view.cmp.gear) st.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 0.8, series: [{ label: "Réf.", color: REFD, data: view.ref.gear, dash, width: 1.1 }, { label: "Toi", color: tok("info"), data: view.cmp.gear, width: 1.6, fill: alpha("info", 0.12) }] });
       // Hauteurs relatives → pixels : chaque piste a un titre (≈ 22 px), la dernière l'axe (24 px).
       const total = st.reduce((a, x) => a + x.height, 0);
       const avail = Math.max(st.length * 50, (fitHeight ?? 640) - st.length * 24 - 24);
@@ -262,9 +266,9 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
         signed: true,
         labels: true,
         series: [
-          { label: "", color: "transparent", data: pos(view.gap), fill: "rgba(255,154,92,0.16)", width: 0, silent: true },
-          { label: "", color: "transparent", data: below(view.gap), fill: "rgba(61,217,179,0.18)", width: 0, silent: true },
-          { label: "Écart", color: LOSS, data: view.gap, width: 1.8 },
+          { label: "", color: "transparent", data: pos(view.gap), fill: alpha("loss", 0.16), width: 0, silent: true },
+          { label: "", color: "transparent", data: below(view.gap), fill: alpha("gain", 0.18), width: 0, silent: true },
+          { label: "Écart", color: C.loss, data: view.gap, width: 1.8 },
         ],
       },
       {
@@ -274,8 +278,8 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
         digits: 0,
         height: 160,
         series: [
-          { label: "Réf.", color: REF_COLOR, data: view.ref.speed, dash: [5, 4], width: 1.4 },
-          { label: "Toi", color: CMP_COLOR, data: view.cmp.speed, width: 2 },
+          { label: "Réf.", color: C.ref, data: view.ref.speed, dash: [5, 4], width: 1.4 },
+          { label: "Toi", color: C.cmp, data: view.cmp.speed, width: 2 },
         ],
       },
       {
@@ -288,21 +292,21 @@ export function TelemetryCharts({ cmp, onCursorTime, axis = "distance", gapUnit 
         range: [-100, 100],
         zeroLine: true,
         series: [
-          { label: "Gaz réf.", color: "rgba(180,180,198,0.9)", data: view.ref.throttle, dash: [5, 4], width: 1.2 },
-          { label: "Frein réf.", color: "rgba(180,180,198,0.9)", data: neg(view.ref.brake), dash: [5, 4], width: 1.2, abs: true },
-          { label: "Gaz", color: THR, data: view.cmp.throttle, width: 1.8 },
-          { label: "Frein", color: BRK, data: neg(view.cmp.brake), width: 1.8, abs: true, fill: "rgba(255,90,78,0.12)" },
+          { label: "Gaz réf.", color: alpha("ref", 0.9), data: view.ref.throttle, dash: [5, 4], width: 1.2 },
+          { label: "Frein réf.", color: alpha("ref", 0.9), data: neg(view.ref.brake), dash: [5, 4], width: 1.2, abs: true },
+          { label: "Gaz", color: C.thr, data: view.cmp.throttle, width: 1.8 },
+          { label: "Frein", color: C.brk, data: neg(view.cmp.brake), width: 1.8, abs: true, fill: alpha("pedal-brake", 0.12) },
         ],
       },
     ];
     if (more && view.line) {
-      s.push({ key: "line", title: "Trajectoire", hint: "écart latéral, au-dessus = plus à gauche que la réf.", unit: "m", digits: 1, height: 90, zeroLine: true, series: [{ label: "Écart", color: CMP_COLOR, data: view.line, fill: "rgba(92,200,255,0.08)" }] });
+      s.push({ key: "line", title: "Trajectoire", hint: "écart latéral, au-dessus = plus à gauche que la réf.", unit: "m", digits: 1, height: 90, zeroLine: true, series: [{ label: "Écart", color: C.cmp, data: view.line, fill: alpha("info", 0.08) }] });
     }
     if (more && view.ref.gear && view.cmp.gear) {
-      s.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 64, series: [{ label: "Réf.", color: REF_COLOR, data: view.ref.gear, dash: [5, 4] }, { label: "Toi", color: CMP_COLOR, data: view.cmp.gear, width: 1.8 }] });
+      s.push({ key: "gear", title: "Rapport", unit: "", digits: 0, height: 64, series: [{ label: "Réf.", color: C.ref, data: view.ref.gear, dash: [5, 4] }, { label: "Toi", color: C.cmp, data: view.cmp.gear, width: 1.8 }] });
     }
     if (more && view.ref.steer && view.cmp.steer) {
-      s.push({ key: "steer", title: "Volant", unit: "°", digits: 0, height: 90, zeroLine: true, series: [{ label: "Réf.", color: REF_COLOR, data: view.ref.steer, dash: [5, 4] }, { label: "Toi", color: CMP_COLOR, data: view.cmp.steer, width: 1.8 }] });
+      s.push({ key: "steer", title: "Volant", unit: "°", digits: 0, height: 90, zeroLine: true, series: [{ label: "Réf.", color: C.ref, data: view.ref.steer, dash: [5, 4] }, { label: "Toi", color: C.cmp, data: view.cmp.steer, width: 1.8 }] });
     }
     return s;
   }, [view, gapUnit, more, variant, fitHeight]);

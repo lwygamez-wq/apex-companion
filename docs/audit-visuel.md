@@ -167,3 +167,27 @@ Captures : `docs/audit/apres-0.51/`.
 | Erreurs JavaScript | aucune |
 
 Captures : `docs/audit/apres-0.52/`.
+
+## 6. Lot 0.53 : Analyse, Comparaison, Progression (graphiques et carte)
+
+- **Plus aucune couleur en dur dans les composants desktop.** Il y en avait 138 dans 9 fichiers avant la 0.51. Le test `design.test.ts` impose désormais zéro, sans liste d'exceptions.
+  - Carte de piste (SVG) : nouveaux jetons pour la piste, l'herbe, la peinture, les vibreurs, la voiture, les pédales (frein, gaz partiel, plein gaz, roue libre) et la vitesse en 6 paliers.
+  - Graphiques uPlot (canvas) : couleurs lues dans les jetons au moment du dessin (`lib/palette.ts`).
+- **Corrections de sens** :
+  - sur la carte en mode « écart », la perte passe de l'orange au jaune, comme partout ailleurs ;
+  - le gaz partiel a désormais la même couleur (vert clair) dans les deux modes de la carte : il était orange dans l'un, vert clair dans l'autre ;
+  - le « hors piste » de Progression passe en rouge (incident) au lieu d'orange ;
+  - sur la course, les incidents de 4x et plus sont rouges, les autres jaunes.
+- **Analyse** :
+  - chargement de la séance et de la comparaison en squelette, erreurs avec « Réessayer » ;
+  - le titre « Virage par virage » n'est plus affiché deux fois ;
+  - boutons de zoom de la carte et bouton d'inversion à 32 px.
+- **Progression** : chargement, erreur avec « Réessayer », état vide.
+
+| Mesure (Analyse et Progression, 1280 et 1920 ; Progression aussi 2560, vide, chargement, erreur) | Résultat |
+|---|---|
+| Cibles < 32 px | 0 (Analyse : 3 avant ce lot ; Progression : 11 avant la 0.51) |
+| Défilement horizontal | aucun |
+| Couleurs en dur dans les composants desktop | 0 |
+
+Captures : `docs/audit/apres-0.53/`.
