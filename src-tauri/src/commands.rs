@@ -151,6 +151,11 @@ pub async fn set_reference(state: State<'_, AppState>, lap_id: i64) -> R<()> {
     blocking(state.svc.clone(), move |s| s.set_reference(lap_id)).await
 }
 
+#[tauri::command]
+pub async fn references(state: State<'_, AppState>) -> R<Vec<apex_core::service::ReferenceEntry>> {
+    blocking(state.svc.clone(), |s| s.references()).await
+}
+
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn race_strategy(

@@ -1,6 +1,7 @@
 {
   "ai_context": "Simulateur : iRacing · Circuit : Autódromo José Carlos Pace (Grand Prix) · Voiture : FIA F4 · Séance : qualification · Série : Fixed\nLongueur du circuit : 4223 m\nTours : 3 au total, 0 propres. Meilleur tour propre : — (tour 0). Tour théorique (meilleurs segments) : —.\n\nTOURS (numéro, temps, état) :\n- T0 — sortie de piste, incident, stand, 0.89 L\n- T1 1:59.307 sortie de piste, incident, 0.99 L\n- T2 — sortie de piste, incident, stand\n\nCARTE DE RISQUE (toutes tes séances ici) :\n- S do Senna : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Descida do Lago : 1/1 sorties · 1 passage(s) : pas assez pour juger (il en faut 4).\n- V2 : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Ferradura : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Laranjinha : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Pinheirinho : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Bico de Pato : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n- Junção : 0/1 sorties, à prendre 0.00 s en refaisant ton meilleur passage · 1 passage(s) : pas assez pour juger (il en faut 4).\n\nSORTIES DE PISTE :\n- S do Senna (à 383 m) aux tours [2]\n- V2 (à 1443 m) aux tours [1]\n- Junção (à 3202 m) aux tours [0]\n",
   "analysis_reference": 1,
+  "analysis_reference_time": null,
   "best": null,
   "comparisons": [],
   "consistency": null,
@@ -37,6 +38,7 @@
       "validity": "unknown"
     }
   ],
+  "library": [],
   "off_tracks": [
     {
       "at_m": 383.226,

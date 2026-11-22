@@ -48,6 +48,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
+            commands::references,
             commands::ai_chat,
             commands::ai_context,
             commands::ai_check,

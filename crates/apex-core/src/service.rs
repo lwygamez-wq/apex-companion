@@ -377,6 +377,25 @@ pub struct RaceStrategyView {
 }
 
 /// Données de départ de l'ingénieur de course, avant le premier tour mesuré de la course.
+/// Bilan d'une mise à jour de la bibliothèque de références.
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct RefreshReport {
+    pub combos: usize,
+    pub elected: usize,
+    /// Tours plus rapides que la référence mais écartés (incomplets, chrono incohérent…).
+    pub rejected: usize,
+    pub retired: usize,
+}
+
+/// Une combinaison de la bibliothèque : référence active, tour à ouvrir et versions précédentes.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReferenceEntry {
+    #[serde(flatten)]
+    pub reference: crate::storage::AutoReference,
+    pub lap_id: Option<i64>,
+    pub history: Vec<crate::storage::AutoReference>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct EngineerHint {
     pub plan: crate::race_engineer::EngineerPlan,
@@ -900,10 +919,21 @@ impl AppService {
                 let decoded = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| imp.import_file(p)))
                     .unwrap_or_else(|_| Err(crate::connectors::ConnectorError::Import("fichier illisible (erreur interne du décodeur)".into())));
                 match decoded {
-                    Ok(s) => match self.db().insert_session(&s) {
-                        Ok(o) => ImportReport { path, outcome: Some(o), laps: s.laps.len(), error: None },
-                        Err(e) => ImportReport { path, outcome: None, laps: 0, error: Some(e.to_string()) },
-                    },
+                    Ok(s) => {
+                        let inserted = self.db().insert_session(&s);
+                        match inserted {
+                            Ok(o) => {
+                                // Bibliothèque de références : la séance peut apporter un meilleur tour propre.
+                                if matches!(o, InsertOutcome::Inserted(_)) {
+                                    if let Err(e) = self.refresh_references(Some(&s.meta)) {
+                                        log::warn!("bibliothèque de références : {e}");
+                                    }
+                                }
+                                ImportReport { path, outcome: Some(o), laps: s.laps.len(), error: None }
+                            }
+                            Err(e) => ImportReport { path, outcome: None, laps: 0, error: Some(e.to_string()) },
+                        }
+                    }
                     Err(e) => ImportReport { path, outcome: None, laps: 0, error: Some(e.to_string()) },
                 }
             })
@@ -1894,7 +1924,10 @@ impl AppService {
             .min_by(|a, b| a.meta.lap_time_s.unwrap().total_cmp(&b.meta.lap_time_s.unwrap()))
             .map(|l| l.id);
         let best_id = best.map(|i| laps[i].id);
-        let analysis_ref = personal.or(best_id).or(fastest);
+        // Ton choix (ou une référence importée) d'abord, puis la référence élue de la bibliothèque
+        // (meilleur tour propre ici, même série, mêmes conditions), sinon le meilleur tour de la séance.
+        let library = if personal.is_none() { Self::library_reference(&db, &meta)? } else { None };
+        let analysis_ref = personal.or(library).or(best_id).or(fastest);
 
         // Sorties de piste, rattachées aux virages de la référence d'analyse.
         let mut spans = Vec::new();
@@ -1908,6 +1941,12 @@ impl AppService {
                 if Some(l.id) == analysis_ref {
                     ref_trace = Some(t);
                 }
+            }
+        }
+        // Référence prise dans une autre séance (choix manuel ou bibliothèque) : sa trace donne les virages.
+        if ref_trace.is_none() {
+            if let Some(r) = analysis_ref.filter(|r| !laps.iter().any(|l| l.id == *r)) {
+                ref_trace = db.trace(r).ok();
             }
         }
         // Fenêtres de virage de la référence d'analyse (nom, entrée, apex, sortie).
@@ -2013,7 +2052,7 @@ impl AppService {
                 }
                 d
             });
-        let reference_label = match personal.filter(|p| !laps.iter().any(|l| l.id == *p)) {
+        let reference_label = match personal.or(library).filter(|p| !laps.iter().any(|l| l.id == *p)) {
             Some(p) => {
                 let l = db.lap(p)?;
                 let time = l.meta.lap_time_s.map(fmt_lap).unwrap_or_default();
@@ -2023,7 +2062,8 @@ impl AppService {
                 };
                 Some(match db.external_driver(l.session_id)? {
                     Some(d) => format!("{d} (référence externe{series}), {time}"),
-                    None => format!("Ta référence perso (autre session), {time}"),
+                    None if personal.is_some() => format!("Ta référence perso (autre session), {time}"),
+                    None => format!("Ta référence auto (meilleur tour propre ici{series}), {time}"),
                 })
             }
             None => None,
@@ -2644,7 +2684,7 @@ if per.is_some() {
     /// à toi), sinon ton meilleur tour propre ici. `None` si tu n'as jamais roulé cette combinaison.
     pub fn live_reference(&self, meta: &SessionMeta) -> Result<Option<crate::live_coach::ReferenceLap>> {
         let db = self.db();
-        let lap_id = match Self::personal_reference(&db, meta)? {
+        let lap_id = match Self::personal_reference(&db, meta)?.or(Self::library_reference(&db, meta)?) {
             Some(id) => Some(id),
             None => {
                 let f = SessionFilter { sim: Some(meta.sim), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() };
@@ -2669,10 +2709,153 @@ if per.is_some() {
         let label = match db.external_driver(l.session_id)? {
             Some(d) => format!("{d}{}, {}", meta.setup.map(|s| format!(" en {}", s.label())).filter(|_| db.session_meta(l.session_id).is_ok_and(|m| m.setup == meta.setup)).unwrap_or_default(), spoken_lap(l.meta.lap_time_s)),
             None if l.is_reference => format!("ta référence perso, {}", spoken_lap(l.meta.lap_time_s)),
+            None if db.active_auto_reference(&Self::auto_ref_key(meta)).ok().flatten().is_some_and(|r| r.session_id == l.session_id && r.lap_number == l.meta.number) => format!("ta référence auto, {}", spoken_lap(l.meta.lap_time_s)),
             None => format!("ton meilleur tour ici, {}", spoken_lap(l.meta.lap_time_s)),
         };
         let names = self.names_for(&db, meta, Some(&trace), db.corner_names(&track_key(meta))?);
         Ok(Some(crate::live_coach::ReferenceLap { label, meta: l.meta, trace, names }))
+    }
+
+    /// Sonde de la télémétrie écrite par LMU (dossier `UserData\Telemetry`) : inventaire en lecture seule,
+    /// écrit dans `sonde-lmu/telemetrie-jeu.json`. `None` si LMU n'est pas trouvé dans Steam.
+    pub fn probe_game_telemetry(&self) -> Option<crate::connectors::game_telemetry::GameTelemetryReport> {
+        let ud = crate::connectors::game_telemetry::find_userdata_dirs().into_iter().next()?;
+        let r = crate::connectors::game_telemetry::probe(&ud);
+        if let Some(dir) = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("sonde-lmu")) {
+            let _ = std::fs::create_dir_all(&dir);
+            if let Ok(j) = serde_json::to_string_pretty(&r) {
+                let _ = std::fs::write(dir.join("telemetrie-jeu.json"), j);
+            }
+        }
+        Some(r)
+    }
+
+    /// Combinaison de la bibliothèque de références d'une séance.
+    pub fn auto_ref_key(meta: &SessionMeta) -> crate::storage::AutoRefKey {
+        crate::storage::AutoRefKey {
+            sim: meta.sim,
+            track: meta.track.clone(),
+            track_config: meta.track_config.clone(),
+            car: meta.car.clone(),
+            setup: meta.setup,
+            conditions: crate::analysis::references::Conditions::from_wet(meta.weather.wet),
+        }
+    }
+
+    /// Met à jour la bibliothèque de références : toutes les combinaisons (`only` = `None`, rattrapage de
+    /// la base au démarrage) ou celle d'une séance qui vient d'être importée. Idempotent : relancé sans
+    /// nouvelle séance, il ne change rien. Les tours d'autres pilotes ne sont jamais élus.
+    pub fn refresh_references(&self, only: Option<&SessionMeta>) -> Result<RefreshReport> {
+        use crate::analysis::references::{check, clean_median, replaces};
+        let mut db = self.db();
+        let filter = SessionFilter { sim: only.map(|m| m.sim), track: only.map(|m| m.track.clone()), car: only.map(|m| m.car.clone()), ..Default::default() };
+        let mut groups: std::collections::BTreeMap<String, (crate::storage::AutoRefKey, Vec<SessionSummary>)> = Default::default();
+        for s in db.list_sessions(&filter)?.into_iter().filter(|s| s.external_driver.is_none() && s.sim != SimId::Demo) {
+            let key = crate::storage::AutoRefKey {
+                sim: s.sim,
+                track: s.track.clone(),
+                track_config: s.track_config.clone(),
+                car: s.car.clone(),
+                setup: s.setup,
+                conditions: crate::analysis::references::Conditions::from_wet(s.weather.wet),
+            };
+            if only.is_some_and(|m| Self::auto_ref_key(m) != key) {
+                continue;
+            }
+            groups.entry(serde_json::to_string(&key).unwrap_or_default()).or_insert_with(|| (key, vec![])).1.push(s);
+        }
+        let mut rep = RefreshReport::default();
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
+        // Une référence dont la séance a disparu (ou dont le tour a changé au recalcul) est retirée.
+        for r in db.auto_references(false)? {
+            if only.is_some_and(|m| Self::auto_ref_key(m) != r.key) {
+                continue;
+            }
+            let alive = db.laps(r.session_id).ok().is_some_and(|ls| ls.iter().any(|l| l.meta.number == r.lap_number && l.clean && l.meta.lap_time_s.is_some_and(|t| (t - r.lap_time_s).abs() < 1e-3)));
+            if !alive {
+                db.retire_auto_reference(r.id, "séance supprimée ou recalculée")?;
+                rep.retired += 1;
+            }
+        }
+        for (_, (key, sessions)) in groups {
+            rep.combos += 1;
+            let current = db.active_auto_reference(&key)?;
+            // (temps, id du tour, numéro, séance, longueur du circuit, médiane des tours propres, tour)
+            type Cand = (f64, i64, i32, i64, Option<f32>, Option<f64>, LapMeta);
+            let mut cands: Vec<Cand> = vec![];
+            for s in &sessions {
+                let laps = db.laps(s.id)?;
+                let metas: Vec<LapMeta> = laps.iter().map(|l| l.meta.clone()).collect();
+                let median = clean_median(&metas);
+                let len = db.session_meta(s.id)?.track_length_m;
+                for l in laps.into_iter().filter(|l| l.clean) {
+                    if let Some(t) = l.meta.lap_time_s {
+                        cands.push((t, l.id, l.meta.number, s.id, len, median, l.meta));
+                    }
+                }
+            }
+            cands.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+            for (t, lap_id, number, sid, len, median, meta) in cands {
+                if !replaces(current.as_ref().map(|c| c.lap_time_s), t) {
+                    break;
+                }
+                let Ok(trace) = db.trace(lap_id) else { continue };
+                match check(&meta, &trace, len, median) {
+                    Ok(()) => {
+                        let started = sessions.iter().find(|s| s.id == sid).map(|s| s.started_at_unix).unwrap_or(0);
+                        let class = db.session_profile(sid).ok().flatten().and_then(|p| p.car.class);
+                        let r = crate::storage::AutoReference {
+                            id: 0,
+                            key: key.clone(),
+                            car_class: class,
+                            session_id: sid,
+                            lap_number: number,
+                            lap_time_s: t,
+                            session_started_at: started,
+                            elected_at: now,
+                            active: true,
+                            retired_reason: None,
+                        };
+                        let reason = match &current {
+                            Some(c) => format!("battue de {:.3} s", c.lap_time_s - t),
+                            None => "première référence".into(),
+                        };
+                        db.elect_auto_reference(&r, &reason)?;
+                        rep.elected += 1;
+                        break;
+                    }
+                    Err(_) => rep.rejected += 1,
+                }
+            }
+        }
+        drop(db);
+        if rep.elected > 0 || rep.retired > 0 {
+            if let Ok(mut c) = self.risk_cache.lock() {
+                *c = None;
+            }
+        }
+        Ok(rep)
+    }
+
+    /// Bibliothèque de références, pour l'écran « Références » : la référence active de chaque combinaison
+    /// et le nombre de versions précédentes.
+    pub fn references(&self) -> Result<Vec<ReferenceEntry>> {
+        let db = self.db();
+        let all = db.auto_references(true)?;
+        Ok(all
+            .iter()
+            .filter(|r| r.active)
+            .map(|r| {
+                let history: Vec<crate::storage::AutoReference> = all.iter().filter(|h| !h.active && h.key == r.key).cloned().collect();
+                ReferenceEntry { reference: r.clone(), lap_id: db.laps(r.session_id).ok().and_then(|ls| ls.into_iter().find(|l| l.meta.number == r.lap_number).map(|l| l.id)), history }
+            })
+            .collect())
+    }
+
+    /// Tour de la bibliothèque pour la combinaison de `meta` (même série, mêmes conditions), s'il existe encore.
+    fn library_reference(db: &Store, meta: &SessionMeta) -> Result<Option<i64>> {
+        let Some(r) = db.active_auto_reference(&Self::auto_ref_key(meta))? else { return Ok(None) };
+        Ok(db.laps(r.session_id)?.into_iter().find(|l| l.meta.number == r.lap_number && l.clean).map(|l| l.id))
     }
 
     /// Référence perso (à toi ou externe) du circuit et de la voiture, pour le type de série de `meta` :
@@ -2783,6 +2966,11 @@ if per.is_some() {
         Ok(self.db().set_corner_name(&track_key(&meta), apex_m, name)?)
     }
 
+    /// Un tour (métadonnées et drapeaux), sans sa télémétrie.
+    pub fn lap_row(&self, lap_id: i64) -> Result<crate::storage::LapRow> {
+        Ok(self.db().lap(lap_id)?)
+    }
+
     pub fn set_reference(&self, lap_id: i64) -> Result<()> {
         let l = self.db().lap(lap_id)?;
         if l.meta.kind != LapKind::Flying || l.meta.lap_time_s.is_none() {
@@ -2800,11 +2988,19 @@ if per.is_some() {
     }
 
     pub fn delete_session(&self, id: i64) -> Result<()> {
-        Ok(self.db().delete_session(id)?)
+        let meta = self.db().session_meta(id).ok();
+        self.db().delete_session(id)?;
+        // La référence élue dans cette séance laisse la place au meilleur tour restant.
+        if let Some(m) = meta {
+            self.refresh_references(Some(&m))?;
+        }
+        Ok(())
     }
 
     pub fn delete_all(&self) -> Result<()> {
-        Ok(self.db().delete_all()?)
+        self.db().delete_all()?;
+        self.refresh_references(None)?;
+        Ok(())
     }
 
     /// Pertes récurrentes des tours propres d'une séance face à son meilleur tour.
@@ -3926,4 +4122,117 @@ mod zone_tests {
         let loss = h.pit_loss_s.expect("temps d'arrêt du circuit");
         assert!((40.0..70.0).contains(&loss), "{loss}");
     }
+
+    /// Données synthétiques (séances de démo présentées comme LMU) : la bibliothèque de références.
+    mod library_tests {
+        use crate::model::{LapKind, SimId, Validity};
+        use crate::service::{AppService, InsertOutcome};
+
+        fn lmu(seed: u64, t0: i64) -> crate::model::ImportedSession {
+            let mut s = crate::mock::demo_session(seed, t0);
+            s.meta.sim = SimId::Lmu;
+            s.meta.weather.wet = Some(false);
+            s.meta.source_fingerprint = format!("lib-{seed}");
+            s
+        }
+        fn insert(svc: &AppService, s: &crate::model::ImportedSession) -> i64 {
+            let InsertOutcome::Inserted(id) = svc.insert_imported(s).unwrap() else { panic!() };
+            id
+        }
+        fn best_clean(s: &crate::model::ImportedSession) -> (i32, f64) {
+            s.laps.iter().filter(|l| l.meta.is_clean()).map(|l| (l.meta.number, l.meta.lap_time_s.unwrap())).min_by(|a, b| a.1.total_cmp(&b.1)).unwrap()
+        }
+
+        #[test]
+        fn the_best_clean_lap_is_elected_once_and_kept_on_refresh() {
+            let svc = AppService::in_memory().unwrap();
+            let s = lmu(11, 1_790_000_000);
+            let sid = insert(&svc, &s);
+            let r = svc.refresh_references(None).unwrap();
+            assert_eq!((r.combos, r.elected), (1, 1));
+            let refs = svc.references().unwrap();
+            assert_eq!(refs.len(), 1);
+            let (n, t) = best_clean(&s);
+            assert_eq!((refs[0].reference.session_id, refs[0].reference.lap_number, refs[0].reference.lap_time_s), (sid, n, t));
+            assert!(refs[0].history.is_empty());
+            // Relecture : rien ne change, la même référence reste active.
+            let again = svc.refresh_references(None).unwrap();
+            assert_eq!(again.elected, 0);
+            assert_eq!(svc.references().unwrap()[0].reference.id, refs[0].reference.id);
+            // L'analyse de la séance part de cette référence (pas de choix manuel).
+            let d = svc.session_detail(sid).unwrap();
+            assert_eq!(d.analysis_reference_lap_id, refs[0].lap_id);
+        }
+
+        #[test]
+        fn an_invalid_lap_is_never_elected_even_if_fastest() {
+            let svc = AppService::in_memory().unwrap();
+            let mut s = lmu(12, 1_790_000_000);
+            // Le tour le plus rapide de la séance devient invalide (limites de piste) : il est écarté.
+            let fastest = s.laps.iter().enumerate().filter(|(_, l)| l.meta.kind == LapKind::Flying).min_by(|a, b| a.1.meta.lap_time_s.unwrap().total_cmp(&b.1.meta.lap_time_s.unwrap())).unwrap().0;
+            s.laps[fastest].meta.validity = Validity::Invalid;
+            insert(&svc, &s);
+            svc.refresh_references(None).unwrap();
+            let r = &svc.references().unwrap()[0].reference;
+            assert_ne!(r.lap_number, s.laps[fastest].meta.number);
+            assert_eq!(r.lap_time_s, best_clean(&s).1);
+        }
+
+        #[test]
+        fn a_faster_session_replaces_the_reference_and_keeps_history() {
+            let svc = AppService::in_memory().unwrap();
+            let a = lmu(13, 1_790_000_000);
+            insert(&svc, &a);
+            svc.refresh_references(None).unwrap();
+            // Séance plus lente : la référence reste.
+            let mut slow = lmu(14, 1_790_100_000);
+            for l in &mut slow.laps {
+                l.meta.lap_time_s = l.meta.lap_time_s.map(|t| t + 5.0);
+                let end = l.trace.time_s.last().copied().unwrap_or(60.0).max(1.0);
+                l.trace.time_s.iter_mut().for_each(|x| *x *= 1.0 + 5.0 / end);
+            }
+            insert(&svc, &slow);
+            assert_eq!(svc.refresh_references(None).unwrap().elected, 0);
+            // Séance plus rapide (mêmes tours, 0,5 s de moins) : elle prend la place, l'ancienne passe dans l'historique.
+            let mut fast = lmu(13, 1_790_200_000);
+            fast.meta.source_fingerprint = "lib-fast".into();
+            for l in &mut fast.laps {
+                l.meta.lap_time_s = l.meta.lap_time_s.map(|t| t - 0.5);
+            }
+            let fid = insert(&svc, &fast);
+            assert_eq!(svc.refresh_references(None).unwrap().elected, 1);
+            let e = &svc.references().unwrap()[0];
+            assert_eq!(e.reference.session_id, fid);
+            assert_eq!(e.history.len(), 1);
+            assert!((e.history[0].lap_time_s - e.reference.lap_time_s - 0.5).abs() < 1e-6);
+            assert!(e.history[0].retired_reason.as_deref().unwrap().starts_with("battue de 0.500"));
+            // La séance de la référence est supprimée : la précédente redevient la référence.
+            svc.delete_session(fid).unwrap();
+            let e = &svc.references().unwrap()[0];
+            assert_eq!(e.reference.lap_time_s, best_clean(&a).1);
+        }
+
+        #[test]
+        fn wet_and_dry_and_other_drivers_are_kept_apart() {
+            let svc = AppService::in_memory().unwrap();
+            let dry = lmu(15, 1_790_000_000);
+            let mut wet = lmu(16, 1_790_100_000);
+            wet.meta.weather.wet = Some(true);
+            let mut ext = lmu(17, 1_790_200_000);
+            for l in &mut ext.laps {
+                l.meta.lap_time_s = l.meta.lap_time_s.map(|t| t - 3.0);
+            }
+            insert(&svc, &dry);
+            insert(&svc, &wet);
+            let xid = insert(&svc, &ext);
+            svc.db().set_external_driver(xid, "Pilote externe").unwrap();
+            svc.refresh_references(None).unwrap();
+            let refs = svc.references().unwrap();
+            let conds: Vec<&str> = refs.iter().map(|r| r.reference.key.conditions.as_str()).collect();
+            assert_eq!(refs.len(), 2, "{conds:?}");
+            assert!(conds.contains(&"sec") && conds.contains(&"humide"));
+            assert!(refs.iter().all(|r| r.reference.session_id != xid), "un tour d'un autre pilote n'est jamais élu");
+        }
+    }
 }
+

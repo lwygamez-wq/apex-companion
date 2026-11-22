@@ -15,6 +15,7 @@ import { SessionsPage } from "./pages/SessionsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StrategyPage } from "./pages/StrategyPage";
 import { SetupsPage } from "./pages/SetupsPage";
+import { ReferencesPage } from "./pages/ReferencesPage";
 
 export type Route =
   | { page: "dashboard" }
@@ -25,6 +26,7 @@ export type Route =
   | { page: "live" }
   | { page: "strategy" }
   | { page: "setups" }
+  | { page: "references" }
   | { page: "settings" };
 
 /** Navigation rangée par moment : avant (Briefing, Stratégie), après (Séances, Progression), pendant (Au volant). */
@@ -33,6 +35,7 @@ const NAV: { page: Route["page"]; label: string; also?: Route["page"][]; icon: s
   { page: "strategy", label: "Stratégie", icon: "M5 21V4M5 4h11l-2 4 2 4H5" },
   { page: "setups", label: "Setups", icon: "M7 4v16M17 4v16M4 9h6M14 15h6" },
   { page: "sessions", label: "Séances", also: ["analysis", "comparison"], icon: "M4 6h16M4 12h16M4 18h10" },
+  { page: "references", label: "Références", icon: "M6 4h12v16l-6-4-6 4z" },
   { page: "history", label: "Progression", icon: "M4 18l6-6 4 4 6-8" },
   { page: "live", label: "Au volant", icon: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 3v6M3.5 14h6M14.5 14h6" },
   { page: "settings", label: "Réglages", icon: "M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6" },
@@ -75,6 +78,7 @@ export function App() {
         {route.page === "live" && <LiveCoachPage status={status} />}
         {route.page === "strategy" && <StrategyPage />}
         {route.page === "setups" && <SetupsPage />}
+        {route.page === "references" && <ReferencesPage navigate={setRoute} />}
         {route.page === "settings" && <SettingsPage />}
         </PageBoundary>
       </main>

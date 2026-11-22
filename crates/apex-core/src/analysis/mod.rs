@@ -10,6 +10,7 @@ pub mod phases;
 pub mod plan;
 pub mod progress;
 pub mod race;
+pub mod references;
 pub mod regularity;
 pub mod resample;
 pub mod stint_drift;

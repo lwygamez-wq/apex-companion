@@ -210,6 +210,10 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "best": num(d.best_lap_id),
         "fastest": num(d.fastest_lap_id),
         "analysis_reference": num(reference),
+        // Référence d'une autre séance : son temps (bibliothèque ou choix manuel).
+        "analysis_reference_time": reference.filter(|r| num(Some(*r)).is_none()).and_then(|r| svc.lap_row(r).ok()).and_then(|l| l.meta.lap_time_s),
+        // Bibliothèque de références : combinaisons dont cette séance porte la référence élue.
+        "library": svc.references().unwrap().iter().filter(|e| e.reference.session_id == id).map(|e| json!({ "lap": e.reference.lap_number, "time": e.reference.lap_time_s, "conditions": e.reference.key.conditions, "setup": e.reference.key.setup })).collect::<Vec<_>>(),
         "theoretical_best_s": d.theoretical_best_s,
         "consistency": d.consistency,
         "off_tracks": d.off_tracks,
@@ -259,6 +263,26 @@ fn real_sessions_do_not_regress() {
     }
 
     let (mut failures, mut rule) = (vec![], vec![]);
+
+    // Bibliothèque de références : une relecture complète ne change rien, et aucune référence élue
+    // ne vient d'un tour invalide, perturbé ou incomplet.
+    let before: Vec<i64> = svc.references().unwrap().iter().map(|e| e.reference.id).collect();
+    let again = svc.refresh_references(None).unwrap();
+    let after: Vec<i64> = svc.references().unwrap().iter().map(|e| e.reference.id).collect();
+    if again.elected != 0 || again.retired != 0 || before != after {
+        rule.push(format!("bibliothèque de références instable à la relecture : {again:?}"));
+    }
+    for e in svc.references().unwrap() {
+        let r = &e.reference;
+        let Some(lap) = e.lap_id.map(|id| svc.lap_row(id).unwrap()) else {
+            rule.push(format!("référence {} / {} : tour introuvable", r.key.track, r.key.car));
+            continue;
+        };
+        if !lap.clean || lap.meta.validity == apex_core::model::Validity::Invalid {
+            rule.push(format!("référence {} / {} tirée d'un tour non propre (tour {})", r.key.track, r.key.car, r.lap_number));
+        }
+    }
+    println!("bibliothèque : {} référence(s)", after.len());
     for (f, raw, id) in &imported {
         let name = f.file_name().unwrap().to_string_lossy().trim_end_matches(".gz").to_string();
         let got = snapshot(&svc, *id, raw, &mut rule);

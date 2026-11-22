@@ -1,600 +1,529 @@
 {
-  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Nazionale Monza · Voiture : Cadillac V-Series.R · Séance : course · Série : Open\nLongueur du circuit : 5781 m\nTours : 37 au total, 29 propres. Meilleur tour propre : 1:37.286 (tour 10). Tour théorique (meilleurs segments) : 1:36.658.\nRégularité : écart-type 0.99 s sur 29 tours propres, moyenne 1:38.335.\n\nTOURS (numéro, temps, état) :\n- T0 — incomplet, 0.57 L\n- T0 1:43.730 incident, 2.92 L\n- T1 1:37.871 propre, 2.80 L\n- T2 1:37.563 non valide, 2.79 L\n- T3 1:40.640 propre, 2.79 L\n- T4 1:38.134 propre, 2.80 L\n- T5 1:39.129 propre, 2.79 L\n- T6 1:40.852 propre, 2.80 L\n- T7 1:38.584 incident, 2.81 L\n- T8 1:38.576 propre, 2.77 L\n- T9 1:37.301 propre, 2.79 L\n- T10 1:37.286 propre, 2.72 L\n- T11 1:37.573 propre, 2.68 L\n- T12 1:38.127 propre, 2.70 L\n- T13 1:37.485 propre, 2.79 L\n- T14 1:39.577 propre, 2.83 L\n- T15 2:05.066 sortie de piste, incident, 2.89 L\n- T16 1:40.552 propre, 2.76 L\n- T17 1:38.174 propre, 2.77 L\n- T18 1:37.960 propre, 2.75 L\n- T19 1:37.920 propre, 2.79 L\n- T20 1:37.308 propre, 2.71 L\n- T21 1:38.879 propre, 2.80 L\n- T22 1:45.101 stand, 2.60 L\n- T23 2:26.722 stand\n- T24 1:38.372 propre, 2.83 L\n- T25 1:37.712 propre, 2.81 L\n- T26 1:38.271 propre, 2.88 L\n- T27 1:38.567 propre, 2.85 L\n- T28 1:38.469 propre, 2.86 L\n- T29 1:38.461 propre, 2.74 L\n- T30 1:37.371 propre, 2.73 L\n- T31 1:37.456 propre, 2.70 L\n- T32 1:38.080 propre, 2.79 L\n- T33 1:38.267 propre, 2.96 L\n- T34 1:37.339 propre, 3.00 L\n- T35 — incomplet, 2.98 L\n\nCOMPARAISON : ton tour 17 (1:38.174) contre la référence ton tour 10 (1:37.286). Écart final +0.888 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Rettifilo : +0.39 s · freinage plus tôt (-22 m) · vitesse mini 65 vs 66 km/h, gaz +6 m · sortie 173 vs 171 km/h\n- Roggia : +0.17 s · freinage plus tard (+16 m) · vitesse mini 86 vs 96 km/h, gaz +0 m · sortie 184 vs 181 km/h\n- Lesmo 1 : +0.15 s · freinage plus tard (+9 m) · vitesse mini 147 vs 152 km/h, gaz -18 m · sortie 198 vs 204 km/h\n- Lesmo 2 : +0.13 s · freinage plus tard (+4 m) · vitesse mini 131 vs 139 km/h, gaz -29 m · sortie 196 vs 196 km/h\n- Ascari : +0.04 s · freinage plus tôt (-7 m) · vitesse mini 134 vs 139 km/h, gaz -11 m · sortie 204 vs 201 km/h\n- Parabolica : -0.00 s · freinage plus tard (+5 m) · vitesse mini 151 vs 155 km/h, gaz -11 m · sortie 203 vs 202 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Rettifilo : freinage trop précoce (gain estimé 0.20 à 0.39 s) : Tu freines environ 22 m plus tôt que la référence. Perte mesurée : 0.39 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 15 m plus loin (réf. : 735 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 66 km/h au minimum.\n- Roggia : freinage trop tardif, entrée surchargée (gain estimé 0.08 à 0.17 s) : Tu freines 16 m plus tard que la référence mais tu sors moins vite (184 km/h contre 181 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.17 s par rapport à la référence. Confiance : élevée. → Reviens vers le point de freinage de la référence (1968 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 181 km/h.\n- Lesmo 1 : freinage trop tardif, entrée surchargée (gain estimé 0.07 à 0.15 s) : Tu freines 9 m plus tard que la référence mais tu sors moins vite (198 km/h contre 204 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.15 s par rapport à la référence. Confiance : moyenne. → Reviens vers le point de freinage de la référence (2432 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 204 km/h.\n- Lesmo 2 : vitesse minimale insuffisante (gain estimé 0.07 à 0.13 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 8 km/h (131 km/h contre 139 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.13 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 139 km/h vers 2890 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Lesmo 2 : 0.25 s entre ton passage moyen et ton meilleur, sans sortie.\n- Lesmo 2 : 1/67 sorties, à prendre 0.25 s en refaisant ton meilleur passage, une sortie coûte 23.4 s · 1 sortie sur 67 et 0.25 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Rettifilo : 1/67 sorties, à prendre 0.47 s en refaisant ton meilleur passage, une sortie coûte 5.0 s · 1 sortie sur 67 et 0.47 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Ascari : 1/67 sorties, à prendre 0.37 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie sur 67 et 0.37 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Roggia : 0/67 sorties, à prendre 0.33 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.33 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Parabolica : 0/67 sorties, à prendre 0.27 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.27 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Lesmo 1 : 0/67 sorties, à prendre 0.22 s en refaisant ton meilleur passage · 0 sortie(s) sur 67, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,14 s. Le plus gros : Ascari (0,27 s).\n- Ascari : −0.27 s possibles (meilleur passage au tour 34). Sur tes meilleurs passages, tu sors 13 km/h plus vite et tu portes 6 km/h de plus au point le plus lent.\n- Rettifilo : −0.19 s possibles (meilleur passage au tour 11). Sur tes meilleurs passages, tu freines 16 m plus tard et tu portes 6 km/h de plus au point le plus lent.\n- Roggia : −0.19 s possibles (meilleur passage au tour 32). Sur tes meilleurs passages, tu freines 24 m plus tard et tu portes 9 km/h de plus au point le plus lent.\n- Parabolica : −0.18 s possibles (meilleur passage au tour 12). Sur tes meilleurs passages, tu freines 12 m plus tard et tu sors 3 km/h plus vite.\n- Lesmo 2 : −0.18 s possibles (meilleur passage au tour 5). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.\n- Lesmo 1 : −0.12 s possibles (meilleur passage au tour 34). Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.\n\nSORTIES DE PISTE :\n- Lesmo 2 (à 2962 m) aux tours [15]\n\nCOURSE : P4 → P3 sur 38 pilotes, 0x ; point noir : Rettifilo\nGrille Some(4), arrivée Some(3), 38 pilotes, 0 incidents.\n- Rettifilo : 2 incidents, 0x : Incidents aux tours 0, 15. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n- Bon départ : 3 places gagnées au premier tour : P4 sur la grille, P1 après un tour.\n",
-  "analysis_reference": 10,
+  "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Nazionale Monza · Voiture : Cadillac V-Series.R · Séance : course · Série : Open\nLongueur du circuit : 5781 m\nTours : 37 au total, 29 propres. Meilleur tour propre : 1:37.286 (tour 10). Tour théorique (meilleurs segments) : 1:36.658.\nRégularité : écart-type 0.99 s sur 29 tours propres, moyenne 1:38.335.\n\nTOURS (numéro, temps, état) :\n- T0 — incomplet, 0.57 L\n- T0 1:43.730 incident, 2.92 L\n- T1 1:37.871 propre, 2.80 L\n- T2 1:37.563 non valide, 2.79 L\n- T3 1:40.640 propre, 2.79 L\n- T4 1:38.134 propre, 2.80 L\n- T5 1:39.129 propre, 2.79 L\n- T6 1:40.852 propre, 2.80 L\n- T7 1:38.584 incident, 2.81 L\n- T8 1:38.576 propre, 2.77 L\n- T9 1:37.301 propre, 2.79 L\n- T10 1:37.286 propre, 2.72 L\n- T11 1:37.573 propre, 2.68 L\n- T12 1:38.127 propre, 2.70 L\n- T13 1:37.485 propre, 2.79 L\n- T14 1:39.577 propre, 2.83 L\n- T15 2:05.066 sortie de piste, incident, 2.89 L\n- T16 1:40.552 propre, 2.76 L\n- T17 1:38.174 propre, 2.77 L\n- T18 1:37.960 propre, 2.75 L\n- T19 1:37.920 propre, 2.79 L\n- T20 1:37.308 propre, 2.71 L\n- T21 1:38.879 propre, 2.80 L\n- T22 1:45.101 stand, 2.60 L\n- T23 2:26.722 stand\n- T24 1:38.372 propre, 2.83 L\n- T25 1:37.712 propre, 2.81 L\n- T26 1:38.271 propre, 2.88 L\n- T27 1:38.567 propre, 2.85 L\n- T28 1:38.469 propre, 2.86 L\n- T29 1:38.461 propre, 2.74 L\n- T30 1:37.371 propre, 2.73 L\n- T31 1:37.456 propre, 2.70 L\n- T32 1:38.080 propre, 2.79 L\n- T33 1:38.267 propre, 2.96 L\n- T34 1:37.339 propre, 3.00 L\n- T35 — incomplet, 2.98 L\n\nCOMPARAISON : ton tour 10 (1:37.286) contre la référence Ta référence auto (meilleur tour propre ici, Open), 1:37.058 (1:37.058). Écart final +0.228 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Lesmo 1 : +0.09 s · freinage plus tôt (-9 m) · vitesse mini 152 vs 151 km/h, gaz -15 m · sortie 204 vs 201 km/h\n- Parabolica : +0.05 s · freinage plus tôt (-8 m) · vitesse mini 155 vs 153 km/h, gaz +33 m · sortie 203 vs 207 km/h\n- Ascari : +0.04 s · freinage plus tard (+7 m) · vitesse mini 139 vs 144 km/h, gaz -7 m · sortie 203 vs 204 km/h\n- Lesmo 2 : +0.02 s · freinage plus tôt (-10 m) · vitesse mini 139 vs 137 km/h, gaz +23 m · sortie 198 vs 201 km/h\n- Roggia : -0.02 s · freinage au même endroit · vitesse mini 96 vs 91 km/h, gaz +9 m · sortie 183 vs 186 km/h\n- Rettifilo : -0.02 s · freinage plus tôt (-28 m) · vitesse mini 66 vs 65 km/h, gaz -10 m · sortie 172 vs 173 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Lesmo 1 : freinage trop précoce (gain estimé 0.04 à 0.09 s) : Tu freines environ 9 m plus tôt que la référence. Perte mesurée : 0.09 s par rapport à la référence. Confiance : moyenne. → Décale ton point de freinage d'environ 6 m plus loin (réf. : 2441 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 151 km/h au minimum.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Lesmo 2 : 0.26 s entre ton passage moyen et ton meilleur, sans sortie.\n- Lesmo 2 : 1/67 sorties, à prendre 0.26 s en refaisant ton meilleur passage, une sortie coûte 23.7 s · 1 sortie sur 67 et 0.26 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Rettifilo : 1/67 sorties, à prendre 0.47 s en refaisant ton meilleur passage, une sortie coûte 5.0 s · 1 sortie sur 67 et 0.47 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Ascari : 1/67 sorties, à prendre 0.37 s en refaisant ton meilleur passage, une sortie coûte 0.1 s · 1 sortie sur 67 et 0.37 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Roggia : 0/67 sorties, à prendre 0.33 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.33 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Parabolica : 0/67 sorties, à prendre 0.27 s en refaisant ton meilleur passage · Aucune sortie sur 67 passages, et 0.27 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Lesmo 1 : 0/67 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 67, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,14 s. Le plus gros : Ascari (0,27 s).\n- Ascari : −0.27 s possibles (meilleur passage au tour 34). Sur tes meilleurs passages, tu sors 13 km/h plus vite et tu portes 6 km/h de plus au point le plus lent.\n- Rettifilo : −0.19 s possibles (meilleur passage au tour 11). Sur tes meilleurs passages, tu freines 16 m plus tard et tu portes 6 km/h de plus au point le plus lent.\n- Roggia : −0.19 s possibles (meilleur passage au tour 32). Sur tes meilleurs passages, tu freines 24 m plus tard et tu portes 9 km/h de plus au point le plus lent.\n- Parabolica : −0.18 s possibles (meilleur passage au tour 12). Sur tes meilleurs passages, tu freines 12 m plus tard.\n- Lesmo 2 : −0.18 s possibles (meilleur passage au tour 5). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.\n- Lesmo 1 : −0.12 s possibles (meilleur passage au tour 34). Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.\n\nSORTIES DE PISTE :\n- Lesmo 2 (à 2962 m) aux tours [15]\n\nCOURSE : P4 → P3 sur 38 pilotes, 0x ; point noir : Rettifilo\nGrille Some(4), arrivée Some(3), 38 pilotes, 0 incidents.\n- Rettifilo : 2 incidents, 0x : Incidents aux tours 0, 15. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n- Bon départ : 3 places gagnées au premier tour : P4 sur la grille, P1 après un tour.\n",
+  "analysis_reference": null,
+  "analysis_reference_time": 97.058,
   "best": 10,
   "comparisons": [
     {
-      "compared": 9,
+      "compared": 10,
       "corners": [
         {
-          "apex_m": 970.0,
-          "dt": -0.061,
-          "min_cmp": 66.634,
-          "min_ref": 65.86,
+          "apex_m": 975.0,
+          "dt": -0.019,
+          "min_cmp": 65.86,
+          "min_ref": 64.861,
           "phases": [
             [
               "freinage",
               [
-                590.0,
+                565.0,
                 925.0
               ],
-              -0.009
+              0.028
             ],
             [
               "entree",
               [
                 925.0,
-                970.0
-              ],
-              0.032
-            ],
-            [
-              "sortie",
-              [
-                970.0,
-                1110.0
-              ],
-              -0.084
-            ]
-          ]
-        },
-        {
-          "apex_m": 2150.0,
-          "dt": 0.191,
-          "min_cmp": 90.48,
-          "min_ref": 96.07,
-          "phases": [
-            [
-              "freinage",
-              [
-                1860.0,
-                2135.0
-              ],
-              0.248
-            ],
-            [
-              "entree",
-              [
-                2135.0,
-                2150.0
-              ],
-              0.057
-            ],
-            [
-              "milieu",
-              [
-                2150.0,
-                2155.0
-              ],
-              -0.003
-            ],
-            [
-              "sortie",
-              [
-                2155.0,
-                2315.0
-              ],
-              -0.112
-            ]
-          ]
-        },
-        {
-          "apex_m": 2545.0,
-          "dt": -0.125,
-          "min_cmp": 154.464,
-          "min_ref": 151.582,
-          "phases": [
-            [
-              "freinage",
-              [
-                2390.0,
-                2490.0
-              ],
-              -0.051
-            ],
-            [
-              "entree",
-              [
-                2490.0,
-                2545.0
-              ],
-              -0.024
-            ],
-            [
-              "milieu",
-              [
-                2545.0,
-                2550.0
-              ],
-              -0.003
-            ],
-            [
-              "sortie",
-              [
-                2550.0,
-                2710.0
-              ],
-              -0.048
-            ]
-          ]
-        },
-        {
-          "apex_m": 2885.0,
-          "dt": -0.038,
-          "min_cmp": 140.333,
-          "min_ref": 138.567,
-          "phases": [
-            [
-              "freinage",
-              [
-                2745.0,
-                2865.0
-              ],
-              0.068
-            ],
-            [
-              "entree",
-              [
-                2865.0,
-                2885.0
+                975.0
               ],
               -0.013
             ],
             [
               "milieu",
               [
-                2885.0,
-                2890.0
+                975.0,
+                980.0
               ],
-              -0.007
+              0.016
             ],
             [
               "sortie",
               [
-                2890.0,
-                3025.0
-              ],
-              -0.086
-            ]
-          ]
-        },
-        {
-          "apex_m": 3965.0,
-          "dt": 0.164,
-          "min_cmp": 133.809,
-          "min_ref": 139.377,
-          "phases": [
-            [
-              "freinage",
-              [
-                3680.0,
-                3935.0
-              ],
-              0.155
-            ],
-            [
-              "entree",
-              [
-                3935.0,
-                3965.0
-              ],
-              0.017
-            ],
-            [
-              "sortie",
-              [
-                3965.0,
-                4165.0
-              ],
-              -0.009
-            ]
-          ]
-        },
-        {
-          "apex_m": 5200.0,
-          "dt": -0.046,
-          "min_cmp": 148.909,
-          "min_ref": 154.948,
-          "phases": [
-            [
-              "freinage",
-              [
-                4880.0,
-                5120.0
-              ],
-              -0.077
-            ],
-            [
-              "entree",
-              [
-                5120.0,
-                5200.0
-              ],
-              0.061
-            ],
-            [
-              "sortie",
-              [
-                5200.0,
-                5360.0
-              ],
-              -0.03
-            ]
-          ]
-        }
-      ],
-      "delta_end_s": 0.015,
-      "insights": [
-        {
-          "confidence": "low",
-          "evidence": [
-            [
-              "Temps dans le virage",
-              "9.65 s",
-              "9.84 s",
-              "+0.19 s"
-            ],
-            [
-              "Début de freinage",
-              "1970 m",
-              "1970 m",
-              "-0 m"
-            ],
-            [
-              "Vitesse minimale",
-              "96 km/h",
-              "90 km/h",
-              "-5.6 km/h"
-            ],
-            [
-              "Vitesse de sortie",
-              "181 km/h",
-              "185 km/h",
-              "+3.9 km/h"
-            ],
-            [
-              "Remise des gaz",
-              "2155 m",
-              "2150 m",
-              "-5 m"
-            ],
-            [
-              "Corrections de volant",
-              "11",
-              "8",
-              "-3"
-            ],
-            [
-              "Temps par phase",
-              "—",
-              "—",
-              "freinage +0.25 s · entrée +0.06 s · milieu -0.00 s · sortie -0.11 s"
-            ]
-          ],
-          "gain": [
-            0.095,
-            0.191
-          ],
-          "id": "corner-2",
-          "priority": "important",
-          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 96 km/h vers 2155 m).",
-          "segment": "Roggia",
-          "title": "Roggia : vitesse minimale insuffisante"
-        },
-        {
-          "confidence": "high",
-          "evidence": [
-            [
-              "Temps dans le virage",
-              "8.86 s",
-              "9.03 s",
-              "+0.16 s"
-            ],
-            [
-              "Début de freinage",
-              "3800 m",
-              "3785 m",
-              "-15 m"
-            ],
-            [
-              "Vitesse minimale",
-              "139 km/h",
-              "134 km/h",
-              "-5.6 km/h"
-            ],
-            [
-              "Vitesse de sortie",
-              "202 km/h",
-              "201 km/h",
-              "-0.7 km/h"
-            ],
-            [
-              "Remise des gaz",
-              "3965 m",
-              "3955 m",
-              "-10 m"
-            ],
-            [
-              "Corrections de volant",
-              "10",
-              "20",
-              "+10"
-            ],
-            [
-              "Temps par phase",
-              "—",
-              "—",
-              "freinage +0.16 s · entrée +0.02 s · sortie -0.01 s"
-            ]
-          ],
-          "gain": [
-            0.082,
-            0.164
-          ],
-          "id": "corner-5",
-          "priority": "important",
-          "recommendation": "Décale ton point de freinage d'environ 10 m plus loin (réf. : 3800 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 139 km/h au minimum.",
-          "segment": "Ascari",
-          "title": "Ascari : freinage trop précoce"
-        }
-      ],
-      "reference": 10,
-      "warnings": []
-    },
-    {
-      "compared": 15,
-      "corners": [
-        {
-          "apex_m": 970.0,
-          "dt": 0.456,
-          "min_cmp": 47.586,
-          "min_ref": 65.86,
-          "phases": [
-            [
-              "freinage",
-              [
-                590.0,
-                925.0
-              ],
-              -0.324
-            ],
-            [
-              "entree",
-              [
-                925.0,
-                970.0
-              ],
-              -0.064
-            ],
-            [
-              "sortie",
-              [
-                970.0,
+                980.0,
                 1110.0
               ],
-              0.844
+              -0.051
             ]
           ]
         },
         {
-          "apex_m": 2150.0,
-          "dt": 0.063,
-          "min_cmp": 94.517,
-          "min_ref": 96.07,
+          "apex_m": 2145.0,
+          "dt": -0.018,
+          "min_cmp": 96.07,
+          "min_ref": 90.549,
           "phases": [
             [
               "freinage",
               [
-                1860.0,
+                1870.0,
                 2135.0
               ],
-              0.051
+              -0.01
             ],
             [
               "entree",
               [
                 2135.0,
-                2150.0
+                2145.0
               ],
-              0.01
-            ],
-            [
-              "milieu",
-              [
-                2150.0,
-                2155.0
-              ],
-              0.0
+              -0.027
             ],
             [
               "sortie",
               [
-                2155.0,
-                2315.0
+                2145.0,
+                2320.0
               ],
-              0.003
+              0.018
             ]
           ]
         },
         {
-          "apex_m": 2545.0,
-          "dt": -0.079,
-          "min_cmp": 152.057,
-          "min_ref": 151.582,
+          "apex_m": 2570.0,
+          "dt": 0.089,
+          "min_cmp": 151.582,
+          "min_ref": 151.183,
           "phases": [
             [
               "freinage",
               [
-                2390.0,
-                2490.0
+                2405.0,
+                2515.0
               ],
-              -0.044
+              0.165
             ],
             [
               "entree",
               [
-                2490.0,
-                2545.0
+                2515.0,
+                2570.0
               ],
-              -0.012
-            ],
-            [
-              "milieu",
-              [
-                2545.0,
-                2550.0
-              ],
-              -0.001
+              0.012
             ],
             [
               "sortie",
               [
-                2550.0,
+                2570.0,
                 2710.0
               ],
-              -0.023
+              -0.089
             ]
           ]
         },
         {
-          "apex_m": 2885.0,
-          "dt": 23.738,
-          "min_cmp": 20.553,
-          "min_ref": 138.567,
+          "apex_m": 2870.0,
+          "dt": 0.025,
+          "min_cmp": 138.567,
+          "min_ref": 137.539,
           "phases": [
             [
               "freinage",
               [
                 2745.0,
-                2865.0
+                2855.0
               ],
-              -0.001
+              -0.056
             ],
             [
               "entree",
               [
-                2865.0,
-                2885.0
+                2855.0,
+                2870.0
               ],
-              0.031
-            ],
-            [
-              "milieu",
-              [
-                2885.0,
-                2890.0
-              ],
-              0.014
+              -0.013
             ],
             [
               "sortie",
               [
-                2890.0,
-                3025.0
+                2870.0,
+                3030.0
               ],
-              23.694
+              0.094
             ]
           ]
         },
         {
           "apex_m": 3965.0,
-          "dt": 0.441,
-          "min_cmp": 127.323,
-          "min_ref": 139.377,
+          "dt": 0.04,
+          "min_cmp": 139.377,
+          "min_ref": 144.43,
           "phases": [
             [
               "freinage",
               [
-                3680.0,
-                3935.0
+                3695.0,
+                3925.0
               ],
-              0.127
+              -0.026
             ],
             [
               "entree",
               [
-                3935.0,
+                3925.0,
                 3965.0
               ],
-              0.067
+              0.036
+            ],
+            [
+              "milieu",
+              [
+                3965.0,
+                3970.0
+              ],
+              0.005
             ],
             [
               "sortie",
               [
-                3965.0,
-                4165.0
+                3970.0,
+                4170.0
               ],
-              0.247
+              0.025
             ]
           ]
         },
         {
-          "apex_m": 5200.0,
-          "dt": 0.118,
-          "min_cmp": 148.953,
-          "min_ref": 154.948,
+          "apex_m": 5170.0,
+          "dt": 0.048,
+          "min_cmp": 154.948,
+          "min_ref": 152.783,
           "phases": [
             [
               "freinage",
               [
-                4880.0,
-                5120.0
+                4910.0,
+                5125.0
               ],
-              0.082
+              0.075
             ],
             [
               "entree",
               [
-                5120.0,
-                5200.0
+                5125.0,
+                5170.0
               ],
-              0.041
+              -0.018
             ],
             [
               "sortie",
               [
-                5200.0,
-                5360.0
+                5170.0,
+                5365.0
               ],
-              -0.006
+              -0.009
             ]
           ]
         }
       ],
-      "delta_end_s": 27.78,
+      "delta_end_s": 0.228,
       "insights": [
         {
           "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
-              "5.94 s",
-              "29.68 s",
-              "+23.74 s"
+              "6.28 s",
+              "6.37 s",
+              "+0.09 s"
             ],
             [
               "Début de freinage",
-              "2780 m",
-              "2780 m",
-              "-0 m"
+              "2445 m",
+              "2435 m",
+              "-10 m"
             ],
             [
               "Vitesse minimale",
-              "139 km/h",
-              "21 km/h",
-              "-118.0 km/h"
+              "151 km/h",
+              "152 km/h",
+              "+0.4 km/h"
             ],
             [
               "Vitesse de sortie",
-              "198 km/h",
-              "52 km/h",
-              "-145.7 km/h"
+              "201 km/h",
+              "204 km/h",
+              "+3.2 km/h"
             ],
             [
               "Remise des gaz",
-              "2890 m",
+              "2565 m",
+              "2550 m",
+              "-15 m"
+            ],
+            [
+              "Corrections de volant",
+              "4",
+              "3",
+              "-1"
+            ],
+            [
+              "Temps par phase",
+              "—",
+              "—",
+              "freinage +0.17 s · entrée +0.01 s · sortie -0.09 s"
+            ]
+          ],
+          "gain": [
+            0.044,
+            0.089
+          ],
+          "id": "corner-3",
+          "priority": "improvement",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 2445 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 151 km/h au minimum.",
+          "segment": "Lesmo 1",
+          "title": "Lesmo 1 : freinage trop précoce"
+        }
+      ],
+      "reference": null,
+      "warnings": []
+    },
+    {
+      "compared": 15,
+      "corners": [
+        {
+          "apex_m": 975.0,
+          "dt": 0.436,
+          "min_cmp": 47.586,
+          "min_ref": 64.861,
+          "phases": [
+            [
+              "freinage",
+              [
+                565.0,
+                925.0
+              ],
+              -0.296
+            ],
+            [
+              "entree",
+              [
+                925.0,
+                975.0
+              ],
+              -0.098
+            ],
+            [
+              "milieu",
+              [
+                975.0,
+                980.0
+              ],
+              0.152
+            ],
+            [
+              "sortie",
+              [
+                980.0,
+                1110.0
+              ],
+              0.679
+            ]
+          ]
+        },
+        {
+          "apex_m": 2145.0,
+          "dt": 0.046,
+          "min_cmp": 94.517,
+          "min_ref": 90.549,
+          "phases": [
+            [
+              "freinage",
+              [
+                1870.0,
+                2135.0
+              ],
+              0.042
+            ],
+            [
+              "entree",
+              [
+                2135.0,
+                2145.0
+              ],
+              -0.006
+            ],
+            [
+              "sortie",
+              [
+                2145.0,
+                2320.0
+              ],
+              0.01
+            ]
+          ]
+        },
+        {
+          "apex_m": 2570.0,
+          "dt": 0.015,
+          "min_cmp": 152.057,
+          "min_ref": 151.183,
+          "phases": [
+            [
+              "freinage",
+              [
+                2405.0,
+                2515.0
+              ],
+              0.122
+            ],
+            [
+              "entree",
+              [
+                2515.0,
+                2570.0
+              ],
+              0.003
+            ],
+            [
+              "sortie",
+              [
+                2570.0,
+                2710.0
+              ],
+              -0.109
+            ]
+          ]
+        },
+        {
+          "apex_m": 2870.0,
+          "dt": 23.995,
+          "min_cmp": 20.553,
+          "min_ref": 137.539,
+          "phases": [
+            [
+              "freinage",
+              [
+                2745.0,
+                2855.0
+              ],
+              -0.067
+            ],
+            [
+              "entree",
+              [
+                2855.0,
+                2870.0
+              ],
+              0.005
+            ],
+            [
+              "sortie",
+              [
+                2870.0,
+                3030.0
+              ],
+              24.057
+            ]
+          ]
+        },
+        {
+          "apex_m": 3965.0,
+          "dt": 0.477,
+          "min_cmp": 127.323,
+          "min_ref": 144.43,
+          "phases": [
+            [
+              "freinage",
+              [
+                3695.0,
+                3925.0
+              ],
+              0.066
+            ],
+            [
+              "entree",
+              [
+                3925.0,
+                3965.0
+              ],
+              0.129
+            ],
+            [
+              "milieu",
+              [
+                3965.0,
+                3970.0
+              ],
+              0.012
+            ],
+            [
+              "sortie",
+              [
+                3970.0,
+                4170.0
+              ],
+              0.27
+            ]
+          ]
+        },
+        {
+          "apex_m": 5170.0,
+          "dt": 0.162,
+          "min_cmp": 148.953,
+          "min_ref": 152.783,
+          "phases": [
+            [
+              "freinage",
+              [
+                4910.0,
+                5125.0
+              ],
+              0.156
+            ],
+            [
+              "entree",
+              [
+                5125.0,
+                5170.0
+              ],
+              -0.008
+            ],
+            [
+              "sortie",
+              [
+                5170.0,
+                5365.0
+              ],
+              0.014
+            ]
+          ]
+        }
+      ],
+      "delta_end_s": 28.008,
+      "insights": [
+        {
+          "confidence": "low",
+          "evidence": [
+            [
+              "Temps dans le virage",
+              "6.00 s",
+              "30.00 s",
+              "+24.00 s"
+            ],
+            [
+              "Début de freinage",
+              "2790 m",
+              "2780 m",
+              "-10 m"
+            ],
+            [
+              "Vitesse minimale",
+              "138 km/h",
+              "21 km/h",
+              "-117.0 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "202 km/h",
+              "59 km/h",
+              "-142.7 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "2870 m",
               "3005 m",
-              "+115 m"
+              "+135 m"
             ],
             [
               "Corrections de volant",
@@ -606,128 +535,72 @@
               "Temps par phase",
               "—",
               "—",
-              "freinage -0.00 s · entrée +0.03 s · milieu +0.01 s · sortie +23.69 s"
+              "freinage -0.07 s · entrée +0.00 s · sortie +24.06 s"
             ]
           ],
           "gain": [
-            11.869,
-            23.738
+            11.998,
+            23.995
           ],
           "id": "corner-4",
           "priority": "critical",
-          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 139 km/h vers 2890 m).",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 2790 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 138 km/h au minimum.",
           "segment": "Lesmo 2",
-          "title": "Lesmo 2 : vitesse minimale insuffisante"
+          "title": "Lesmo 2 : freinage trop précoce"
         },
         {
           "confidence": "medium",
           "evidence": [
             [
               "Temps dans le virage",
-              "12.18 s",
-              "12.64 s",
-              "+0.46 s"
+              "8.73 s",
+              "9.21 s",
+              "+0.48 s"
             ],
             [
               "Début de freinage",
-              "735 m",
-              "760 m",
-              "+25 m"
-            ],
-            [
-              "Vitesse minimale",
-              "66 km/h",
-              "48 km/h",
-              "-18.3 km/h"
-            ],
-            [
-              "Vitesse de sortie",
-              "173 km/h",
-              "170 km/h",
-              "-3.2 km/h"
-            ],
-            [
-              "Remise des gaz",
-              "970 m",
-              "990 m",
-              "+20 m"
-            ],
-            [
-              "Corrections de volant",
-              "6",
-              "11",
-              "+5"
-            ],
-            [
-              "Temps par phase",
-              "—",
-              "—",
-              "freinage -0.32 s · entrée -0.06 s · sortie +0.84 s"
-            ]
-          ],
-          "gain": [
-            0.228,
-            0.456
-          ],
-          "id": "corner-1",
-          "priority": "critical",
-          "recommendation": "Reviens vers le point de freinage de la référence (735 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 173 km/h.",
-          "segment": "Rettifilo",
-          "title": "Rettifilo : freinage trop tardif, entrée surchargée"
-        },
-        {
-          "confidence": "medium",
-          "evidence": [
-            [
-              "Temps dans le virage",
-              "8.86 s",
-              "9.31 s",
-              "+0.44 s"
-            ],
-            [
-              "Début de freinage",
-              "3800 m",
+              "3790 m",
               "3780 m",
-              "-20 m"
-            ],
-            [
-              "Vitesse minimale",
-              "139 km/h",
-              "127 km/h",
-              "-12.1 km/h"
-            ],
-            [
-              "Vitesse de sortie",
-              "202 km/h",
-              "189 km/h",
-              "-13.2 km/h"
-            ],
-            [
-              "Remise des gaz",
-              "3965 m",
-              "3955 m",
               "-10 m"
             ],
             [
+              "Vitesse minimale",
+              "144 km/h",
+              "127 km/h",
+              "-17.1 km/h"
+            ],
+            [
+              "Vitesse de sortie",
+              "204 km/h",
+              "190 km/h",
+              "-13.9 km/h"
+            ],
+            [
+              "Remise des gaz",
+              "3970 m",
+              "3955 m",
+              "-15 m"
+            ],
+            [
               "Corrections de volant",
-              "10",
-              "13",
-              "+3"
+              "12",
+              "12",
+              "+0"
             ],
             [
               "Temps par phase",
               "—",
               "—",
-              "freinage +0.13 s · entrée +0.07 s · sortie +0.25 s"
+              "freinage +0.07 s · entrée +0.13 s · milieu +0.01 s · sortie +0.27 s"
             ]
           ],
           "gain": [
-            0.221,
-            0.441
+            0.238,
+            0.477
           ],
           "id": "corner-5",
           "priority": "critical",
-          "recommendation": "Décale ton point de freinage d'environ 14 m plus loin (réf. : 3800 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 139 km/h au minimum.",
+          "recommendation": "Décale ton point de freinage d'environ 7 m plus loin (réf. : 3790 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 144 km/h au minimum.",
           "segment": "Ascari",
           "title": "Ascari : freinage trop précoce"
         },
@@ -736,115 +609,115 @@
           "evidence": [
             [
               "Temps dans le virage",
-              "8.66 s",
-              "8.78 s",
-              "+0.12 s"
+              "12.49 s",
+              "12.93 s",
+              "+0.44 s"
             ],
             [
               "Début de freinage",
-              "4975 m",
-              "4975 m",
-              "-0 m"
+              "765 m",
+              "760 m",
+              "-5 m"
             ],
             [
               "Vitesse minimale",
-              "155 km/h",
-              "149 km/h",
-              "-6.0 km/h"
+              "65 km/h",
+              "48 km/h",
+              "-17.3 km/h"
             ],
             [
               "Vitesse de sortie",
-              "202 km/h",
-              "204 km/h",
-              "+2.0 km/h"
+              "174 km/h",
+              "170 km/h",
+              "-3.6 km/h"
             ],
             [
               "Remise des gaz",
-              "5200 m",
-              "5185 m",
-              "-15 m"
+              "980 m",
+              "990 m",
+              "+10 m"
             ],
             [
               "Corrections de volant",
+              "4",
               "12",
-              "8",
-              "-4"
+              "+8"
             ],
             [
               "Temps par phase",
               "—",
               "—",
-              "freinage +0.08 s · entrée +0.04 s · sortie -0.01 s"
+              "freinage -0.30 s · entrée -0.10 s · milieu +0.15 s · sortie +0.68 s"
             ]
           ],
           "gain": [
-            0.059,
-            0.118
+            0.218,
+            0.436
           ],
-          "id": "corner-6",
-          "priority": "improvement",
-          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 155 km/h vers 5200 m).",
-          "segment": "Parabolica",
-          "title": "Parabolica : vitesse minimale insuffisante"
+          "id": "corner-1",
+          "priority": "critical",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 65 km/h vers 980 m).",
+          "segment": "Rettifilo",
+          "title": "Rettifilo : vitesse minimale insuffisante"
         },
         {
           "confidence": "low",
           "evidence": [
             [
               "Temps dans le virage",
-              "9.65 s",
-              "9.72 s",
-              "+0.06 s"
+              "8.33 s",
+              "8.49 s",
+              "+0.16 s"
             ],
             [
               "Début de freinage",
-              "1970 m",
-              "1975 m",
-              "+5 m"
+              "4980 m",
+              "4975 m",
+              "-5 m"
             ],
             [
               "Vitesse minimale",
-              "96 km/h",
-              "95 km/h",
-              "-1.6 km/h"
+              "153 km/h",
+              "149 km/h",
+              "-3.8 km/h"
             ],
             [
               "Vitesse de sortie",
-              "181 km/h",
-              "183 km/h",
-              "+1.8 km/h"
+              "207 km/h",
+              "206 km/h",
+              "-1.6 km/h"
             ],
             [
               "Remise des gaz",
-              "2155 m",
-              "2155 m",
-              "+0 m"
+              "5165 m",
+              "5185 m",
+              "+20 m"
             ],
             [
               "Corrections de volant",
-              "11",
-              "12",
-              "+1"
+              "5",
+              "8",
+              "+3"
             ],
             [
               "Temps par phase",
               "—",
               "—",
-              "freinage +0.05 s · entrée +0.01 s · milieu +0.00 s · sortie +0.00 s"
+              "freinage +0.16 s · entrée -0.01 s · sortie +0.01 s"
             ]
           ],
           "gain": [
-            0.032,
-            0.063
+            0.081,
+            0.162
           ],
-          "id": "corner-2",
-          "priority": "improvement",
-          "recommendation": "Compare la trajectoire sur la carte : la perte vient probablement de la ligne (point de corde, largeur de piste utilisée), non mesurée directement.",
-          "segment": "Roggia",
-          "title": "Roggia : perte de temps sans cause isolée"
+          "id": "corner-6",
+          "priority": "important",
+          "recommendation": "Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 153 km/h vers 5165 m).",
+          "segment": "Parabolica",
+          "title": "Parabolica : vitesse minimale insuffisante"
         }
       ],
-      "reference": 10,
+      "reference": null,
       "warnings": [
         "Le tour analysé n°15 est perturbé ou invalide."
       ]
@@ -1575,6 +1448,7 @@
       "validity": "unknown"
     }
   ],
+  "library": [],
   "off_tracks": [
     {
       "at_m": 2961.858,
@@ -1616,16 +1490,16 @@
     "corners": [
       {
         "advice": "Sur tes meilleurs passages, tu sors 13 km/h plus vite et tu portes 6 km/h de plus au point le plus lent.",
-        "apex_m": 3963.0,
+        "apex_m": 3966.0,
         "best_lap": 34,
-        "best_s": 18.139,
+        "best_s": 18.061,
         "brake_spread_m": 9.878,
         "differences": [
           {
-            "fast": 203.723,
+            "fast": 205.409,
             "label": "tu sors 13 km/h plus vite",
             "metric": "exit_speed",
-            "slow": 190.281
+            "slow": 192.045
           },
           {
             "fast": 137.166,
@@ -1641,13 +1515,13 @@
           }
         ],
         "gain_s": 0.275,
-        "median_s": 18.414,
+        "median_s": 18.335,
         "name": "Ascari",
         "passes": 29
       },
       {
         "advice": "Sur tes meilleurs passages, tu freines 16 m plus tard et tu portes 6 km/h de plus au point le plus lent.",
-        "apex_m": 970.0,
+        "apex_m": 975.0,
         "best_lap": 11,
         "best_s": 26.322,
         "brake_spread_m": 15.861,
@@ -1672,9 +1546,9 @@
       },
       {
         "advice": "Sur tes meilleurs passages, tu freines 24 m plus tard et tu portes 9 km/h de plus au point le plus lent.",
-        "apex_m": 2150.0,
+        "apex_m": 2146.0,
         "best_lap": 32,
-        "best_s": 14.077,
+        "best_s": 14.259,
         "brake_spread_m": 14.187,
         "differences": [
           {
@@ -1690,16 +1564,16 @@
             "slow": 84.356
           }
         ],
-        "gain_s": 0.185,
-        "median_s": 14.262,
+        "gain_s": 0.188,
+        "median_s": 14.446,
         "name": "Roggia",
         "passes": 29
       },
       {
-        "advice": "Sur tes meilleurs passages, tu freines 12 m plus tard et tu sors 3 km/h plus vite.",
-        "apex_m": 5199.0,
+        "advice": "Sur tes meilleurs passages, tu freines 12 m plus tard.",
+        "apex_m": 5168.0,
         "best_lap": 12,
-        "best_s": 18.476,
+        "best_s": 18.659,
         "brake_spread_m": 9.602,
         "differences": [
           {
@@ -1707,25 +1581,19 @@
             "label": "tu freines 12 m plus tard",
             "metric": "brake",
             "slow": 4966.0
-          },
-          {
-            "fast": 202.211,
-            "label": "tu sors 3 km/h plus vite",
-            "metric": "exit_speed",
-            "slow": 199.274
           }
         ],
         "gain_s": 0.181,
-        "median_s": 18.657,
+        "median_s": 18.841,
         "name": "Parabolica",
         "passes": 29
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.",
-        "apex_m": 2887.0,
+        "apex_m": 2869.0,
         "best_lap": 5,
-        "best_s": 12.274,
-        "brake_spread_m": 17.971,
+        "best_s": 12.134,
+        "brake_spread_m": 17.749,
         "differences": [
           {
             "fast": 140.729,
@@ -1734,10 +1602,10 @@
             "slow": 132.211
           },
           {
-            "fast": 200.57,
+            "fast": 202.515,
             "label": "tu sors 6 km/h plus vite",
             "metric": "exit_speed",
-            "slow": 194.769
+            "slow": 196.874
           },
           {
             "fast": 2874.0,
@@ -1746,16 +1614,16 @@
             "slow": 2862.0
           }
         ],
-        "gain_s": 0.181,
-        "median_s": 12.455,
+        "gain_s": 0.179,
+        "median_s": 12.313,
         "name": "Lesmo 2",
         "passes": 29
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.",
-        "apex_m": 2545.0,
+        "apex_m": 2568.0,
         "best_lap": 34,
-        "best_s": 7.338,
+        "best_s": 7.189,
         "brake_spread_m": 7.311,
         "differences": [
           {
@@ -1777,29 +1645,29 @@
             "slow": 2534.0
           }
         ],
-        "gain_s": 0.121,
-        "median_s": 7.458,
+        "gain_s": 0.12,
+        "median_s": 7.31,
         "name": "Lesmo 1",
         "passes": 29
       }
     ],
     "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,14 s. Le plus gros : Ascari (0,27 s).",
     "laps": 29,
-    "total_gain_s": 1.136
+    "total_gain_s": 1.137
   },
   "risk": [
     {
-      "apex_m": 2887.0,
-      "best_clean_s": 5.685,
-      "entry_m": 2746.0,
-      "exit_m": 3021.0,
-      "expected_cost_s": 0.35,
-      "gain_available_s": 0.255,
-      "mean_clean_s": 5.94,
-      "mean_off_s": 29.364,
-      "message": "1 sortie sur 67 et 0.25 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.",
+      "apex_m": 2869.0,
+      "best_clean_s": 5.826,
+      "entry_m": 2744.0,
+      "exit_m": 3027.0,
+      "expected_cost_s": 0.354,
+      "gain_available_s": 0.257,
+      "mean_clean_s": 6.083,
+      "mean_off_s": 29.828,
+      "message": "1 sortie sur 67 et 0.26 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.",
       "name": "Lesmo 2",
-      "off_cost_s": 23.424,
+      "off_cost_s": 23.745,
       "off_rate": 0.015,
       "offs": 1,
       "passes": 67,
@@ -1807,17 +1675,17 @@
       "verdict": "push"
     },
     {
-      "apex_m": 970.0,
-      "best_clean_s": 11.95,
-      "entry_m": 591.0,
-      "exit_m": 1106.0,
+      "apex_m": 975.0,
+      "best_clean_s": 12.306,
+      "entry_m": 564.0,
+      "exit_m": 1108.0,
       "expected_cost_s": 0.074,
-      "gain_available_s": 0.469,
-      "mean_clean_s": 12.419,
-      "mean_off_s": 17.37,
+      "gain_available_s": 0.473,
+      "mean_clean_s": 12.78,
+      "mean_off_s": 17.742,
       "message": "1 sortie sur 67 et 0.47 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.",
       "name": "Rettifilo",
-      "off_cost_s": 4.95,
+      "off_cost_s": 4.962,
       "off_rate": 0.015,
       "offs": 1,
       "passes": 67,
@@ -1825,17 +1693,17 @@
       "verdict": "push"
     },
     {
-      "apex_m": 3963.0,
-      "best_clean_s": 8.653,
-      "entry_m": 3678.0,
-      "exit_m": 4162.0,
+      "apex_m": 3966.0,
+      "best_clean_s": 8.531,
+      "entry_m": 3697.0,
+      "exit_m": 4168.0,
       "expected_cost_s": 0.002,
-      "gain_available_s": 0.368,
-      "mean_clean_s": 9.022,
-      "mean_off_s": 9.149,
+      "gain_available_s": 0.367,
+      "mean_clean_s": 8.898,
+      "mean_off_s": 9.026,
       "message": "1 sortie sur 67 et 0.37 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.",
       "name": "Ascari",
-      "off_cost_s": 0.128,
+      "off_cost_s": 0.127,
       "off_rate": 0.015,
       "offs": 1,
       "passes": 67,
@@ -1843,13 +1711,13 @@
       "verdict": "push"
     },
     {
-      "apex_m": 2150.0,
-      "best_clean_s": 9.533,
-      "entry_m": 1862.0,
-      "exit_m": 2315.0,
+      "apex_m": 2146.0,
+      "best_clean_s": 9.513,
+      "entry_m": 1870.0,
+      "exit_m": 2319.0,
       "expected_cost_s": 0.0,
       "gain_available_s": 0.331,
-      "mean_clean_s": 9.863,
+      "mean_clean_s": 9.844,
       "mean_off_s": null,
       "message": "Aucune sortie sur 67 passages, et 0.33 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
       "name": "Roggia",
@@ -1861,13 +1729,13 @@
       "verdict": "push"
     },
     {
-      "apex_m": 5199.0,
-      "best_clean_s": 8.492,
-      "entry_m": 4880.0,
-      "exit_m": 5360.0,
+      "apex_m": 5168.0,
+      "best_clean_s": 8.178,
+      "entry_m": 4909.0,
+      "exit_m": 5362.0,
       "expected_cost_s": 0.0,
-      "gain_available_s": 0.27,
-      "mean_clean_s": 8.762,
+      "gain_available_s": 0.266,
+      "mean_clean_s": 8.444,
       "mean_off_s": null,
       "message": "Aucune sortie sur 67 passages, et 0.27 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.",
       "name": "Parabolica",
@@ -1879,15 +1747,15 @@
       "verdict": "push"
     },
     {
-      "apex_m": 2545.0,
-      "best_clean_s": 6.493,
-      "entry_m": 2387.0,
+      "apex_m": 2568.0,
+      "best_clean_s": 6.171,
+      "entry_m": 2406.0,
       "exit_m": 2710.0,
       "expected_cost_s": 0.0,
-      "gain_available_s": 0.22,
-      "mean_clean_s": 6.713,
+      "gain_available_s": 0.211,
+      "mean_clean_s": 6.381,
       "mean_off_s": null,
-      "message": "0 sortie(s) sur 67, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.",
+      "message": "0 sortie(s) sur 67, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.",
       "name": "Lesmo 1",
       "off_cost_s": null,
       "off_rate": 0.0,
@@ -1897,7 +1765,7 @@
       "verdict": "fine"
     }
   ],
-  "risk_headline": "Rester en piste, c'est acquis. Le temps est à prendre d'abord à Lesmo 2 : 0.25 s entre ton passage moyen et ton meilleur, sans sortie.",
+  "risk_headline": "Rester en piste, c'est acquis. Le temps est à prendre d'abord à Lesmo 2 : 0.26 s entre ton passage moyen et ton meilleur, sans sortie.",
   "session": {
     "car": "Cadillac V-Series.R",
     "config": null,

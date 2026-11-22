@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  ReferenceEntry,
   ChatMessage,
   ChatReply,
   EngineerPlan,
@@ -65,6 +66,7 @@ export const api = {
   compare: (referenceLapId: number, comparedLapId: number, stepM = 1) =>
     call<Comparison>("compare_laps", { referenceLapId, comparedLapId, stepM }),
   setReference: (lapId: number) => call<void>("set_reference", { lapId }),
+  references: () => call<ReferenceEntry[]>("references"),
   setSessionSetup: (id: number, setup: SetupType | null) => call<void>("set_session_setup", { id, setup }),
   trackOverlay: (sessionId: number, spineLapId: number | null) => call<TrackOverlay>("track_overlay", { sessionId, spineLapId }),
   aiChat: (sessionId: number, messages: ChatMessage[]) => call<ChatReply>("ai_chat", { sessionId, messages }),
