@@ -1122,3 +1122,31 @@ export interface SetupTrialReport {
   no_proposal: string | null;
   verdict: TrialVerdict | null;
 }
+
+/** Conditions de piste d'une référence (miroir de `analysis::references::Conditions`). */
+export type RefConditions = "sec" | "humide" | "inconnu";
+
+/** Une élection de la bibliothèque de références (miroir de `storage::AutoReference`). */
+export interface AutoReference {
+  id: number;
+  sim: SimId;
+  track: string;
+  track_config: string | null;
+  car: string;
+  setup: SetupType | null;
+  conditions: RefConditions;
+  car_class: string | null;
+  session_id: number;
+  lap_number: number;
+  lap_time_s: number;
+  session_started_at: number;
+  elected_at: number;
+  active: boolean;
+  retired_reason: string | null;
+}
+
+/** Combinaison de la bibliothèque : référence active et versions précédentes (miroir de `service::ReferenceEntry`). */
+export interface ReferenceEntry extends AutoReference {
+  lap_id: number | null;
+  history: AutoReference[];
+}

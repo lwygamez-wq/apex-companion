@@ -9,7 +9,7 @@ use crate::analysis::session::{best_clean_lap, consistency};
 use crate::codec;
 use crate::model::*;
 use rusqlite::{params, Connection, OptionalExtension};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 #[derive(Debug, thiserror::Error)]
@@ -125,6 +125,28 @@ ALTER TABLE sessions ADD COLUMN profile_json TEXT;
 ALTER TABLE laps ADD COLUMN energy_used_pct REAL;
 ALTER TABLE laps ADD COLUMN tyre_wear_json TEXT;
 "#,
+    r#"
+-- v12 : bibliothèque de références élues automatiquement (une ligne par élection, historique gardé).
+-- Le tour est repéré par (séance, numéro) : un recalcul de la séance change l'identifiant des tours.
+CREATE TABLE auto_references (
+    id INTEGER PRIMARY KEY,
+    sim TEXT NOT NULL,
+    track TEXT NOT NULL,
+    track_config TEXT NOT NULL DEFAULT '',
+    car TEXT NOT NULL,
+    setup TEXT NOT NULL DEFAULT '',
+    conditions TEXT NOT NULL,
+    car_class TEXT,
+    session_id INTEGER NOT NULL,
+    lap_number INTEGER NOT NULL,
+    lap_time_s REAL NOT NULL,
+    session_started_at INTEGER NOT NULL,
+    elected_at INTEGER NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    retired_reason TEXT
+);
+CREATE INDEX idx_auto_ref_key ON auto_references(sim, track, track_config, car, setup, conditions, active);
+"#,
 ];
 
 /// Version courante du décodage des fichiers sources. À incrémenter quand une correction
@@ -176,6 +198,33 @@ pub struct SessionSummary {
     pub external_driver: Option<String>,
     /// Setup imposé (fixed) ou libre (open) ; `None` : inconnu.
     pub setup: Option<SetupType>,
+}
+
+/// Combinaison de la bibliothèque de références.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AutoRefKey {
+    pub sim: SimId,
+    pub track: String,
+    pub track_config: Option<String>,
+    pub car: String,
+    pub setup: Option<SetupType>,
+    pub conditions: crate::analysis::references::Conditions,
+}
+
+/// Une élection de la bibliothèque de références (active, ou remplacée et gardée pour l'historique).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AutoReference {
+    pub id: i64,
+    #[serde(flatten)]
+    pub key: AutoRefKey,
+    pub car_class: Option<String>,
+    pub session_id: i64,
+    pub lap_number: i32,
+    pub lap_time_s: f64,
+    pub session_started_at: i64,
+    pub elected_at: i64,
+    pub active: bool,
+    pub retired_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -605,6 +654,64 @@ impl Store {
                 self.set_reference(l)?;
             }
         }
+        Ok(())
+    }
+
+    /// Références élues (actives seulement, ou tout l'historique), les plus récentes d'abord.
+    pub fn auto_references(&self, with_history: bool) -> Result<Vec<AutoReference>, StoreError> {
+        let sql = format!(
+            "SELECT id, sim, track, track_config, car, setup, conditions, car_class, session_id, lap_number, lap_time_s, session_started_at, elected_at, active, retired_reason FROM auto_references {} ORDER BY track, car, setup, conditions, elected_at DESC, id DESC",
+            if with_history { "" } else { "WHERE active = 1" }
+        );
+        let mut st = self.conn.prepare(&sql)?;
+        let rows = st.query_map([], |r| {
+            Ok(AutoReference {
+                id: r.get(0)?,
+                key: AutoRefKey {
+                    sim: SimId::parse(&r.get::<_, String>(1)?).unwrap_or(SimId::Demo),
+                    track: r.get(2)?,
+                    track_config: Some(r.get::<_, String>(3)?).filter(|s| !s.is_empty()),
+                    car: r.get(4)?,
+                    setup: SetupType::parse(&r.get::<_, String>(5)?),
+                    conditions: crate::analysis::references::Conditions::parse(&r.get::<_, String>(6)?),
+                },
+                car_class: r.get(7)?,
+                session_id: r.get(8)?,
+                lap_number: r.get(9)?,
+                lap_time_s: r.get(10)?,
+                session_started_at: r.get(11)?,
+                elected_at: r.get(12)?,
+                active: r.get::<_, i64>(13)? != 0,
+                retired_reason: r.get(14)?,
+            })
+        })?;
+        Ok(rows.collect::<Result<_, _>>()?)
+    }
+
+    /// Référence active d'une combinaison.
+    pub fn active_auto_reference(&self, key: &AutoRefKey) -> Result<Option<AutoReference>, StoreError> {
+        Ok(self.auto_references(false)?.into_iter().find(|r| &r.key == key))
+    }
+
+    /// Remplace la référence active d'une combinaison (l'ancienne reste dans l'historique avec sa raison).
+    pub fn elect_auto_reference(&mut self, r: &AutoReference, reason: &str) -> Result<(), StoreError> {
+        let k = &r.key;
+        let tx = self.conn.transaction()?;
+        tx.execute(
+            "UPDATE auto_references SET active = 0, retired_reason = ?7 WHERE active = 1 AND sim = ?1 AND track = ?2 AND track_config = ?3 AND car = ?4 AND setup = ?5 AND conditions = ?6",
+            params![k.sim.as_str(), k.track, k.track_config.clone().unwrap_or_default(), k.car, k.setup.map(|x| x.as_str()).unwrap_or(""), k.conditions.as_str(), reason],
+        )?;
+        tx.execute(
+            "INSERT INTO auto_references (sim, track, track_config, car, setup, conditions, car_class, session_id, lap_number, lap_time_s, session_started_at, elected_at, active) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1)",
+            params![k.sim.as_str(), k.track, k.track_config.clone().unwrap_or_default(), k.car, k.setup.map(|x| x.as_str()).unwrap_or(""), k.conditions.as_str(), r.car_class, r.session_id, r.lap_number, r.lap_time_s, r.session_started_at, r.elected_at],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Retire la référence active d'une combinaison sans successeur (séance supprimée).
+    pub fn retire_auto_reference(&mut self, id: i64, reason: &str) -> Result<(), StoreError> {
+        self.conn.execute("UPDATE auto_references SET active = 0, retired_reason = ?2 WHERE id = ?1", params![id, reason])?;
         Ok(())
     }
 

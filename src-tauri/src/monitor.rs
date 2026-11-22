@@ -129,13 +129,24 @@ pub fn spawn(app: AppHandle, svc: Arc<AppService>, status: Arc<Mutex<StatusPaylo
         // pendant lesquelles la lecture live (et l'enregistrement LMU) doit déjà tourner.
         {
             let (svc, app) = (svc.clone(), app.clone());
-            std::thread::spawn(move || match svc.reprocess_outdated() {
-                Ok(n) if n > 0 => {
-                    log::info!("{n} session(s) recalculée(s) avec le nouveau décodeur");
-                    let _ = app.emit("apex://sessions-changed", ());
+            std::thread::spawn(move || {
+                match svc.reprocess_outdated() {
+                    Ok(n) if n > 0 => {
+                        log::info!("{n} session(s) recalculée(s) avec le nouveau décodeur");
+                        let _ = app.emit("apex://sessions-changed", ());
+                    }
+                    Ok(_) => {}
+                    Err(e) => log::warn!("recalcul des sessions : {e}"),
                 }
-                Ok(_) => {}
-                Err(e) => log::warn!("recalcul des sessions : {e}"),
+                // Télémétrie écrite par LMU lui-même : inventaire en lecture seule (verdict dans le journal).
+                if let Some(r) = svc.probe_game_telemetry() {
+                    log::info!("sonde télémétrie du jeu : {} fichier(s) ; {}", r.files.len(), r.verdict);
+                }
+                // Bibliothèque de références : rattrapage de toute la base (après le recalcul, qui change les tours).
+                match svc.refresh_references(None) {
+                    Ok(r) => log::info!("références : {} combinaison(s), {} élue(s), {} écartée(s), {} retirée(s)", r.combos, r.elected, r.rejected, r.retired),
+                    Err(e) => log::warn!("bibliothèque de références : {e}"),
+                }
             });
         }
         // Recherche Garage 61 pour toutes les sessions déjà roulées : au plus une fois par jour.

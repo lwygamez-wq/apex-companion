@@ -775,3 +775,15 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 .sd-trial-what { margin: 4px 0; }
 .sd-verdict { margin-top: 10px; }
 .sd-verdict p { margin: 6px 0; }
+
+/* Onglet Références : mêmes colonnes d'un circuit à l'autre, chiffres alignés à droite. */
+.su-group.ref-group .su-table { table-layout: fixed; }
+.su-group.ref-group .su-table th:nth-child(n):nth-child(n) { text-align: left; }
+.su-group.ref-group .su-table th:nth-child(1) { width: 32%; }
+.su-group.ref-group .su-table th:nth-child(2) { width: 8%; }
+.su-group.ref-group .su-table th:nth-child(3) { width: 12%; }
+.su-group.ref-group .su-table th:nth-child(4):nth-child(4) { width: 10%; text-align: right; }
+.su-group.ref-group .su-table th:nth-child(5):nth-child(5) { width: 15%; text-align: right; }
+.su-group.ref-group .su-table th:nth-child(6) { width: 14%; }
+.su-group.ref-group .su-table th:nth-child(7) { width: 9%; }
+.su-group.ref-group .su-table td:last-child { text-align: right; }
