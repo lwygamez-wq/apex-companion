@@ -1418,6 +1418,7 @@
     "track": "Red Bull Ring"
   },
   "setup_diag": null,
+  "setup_memory": null,
   "strategy": {
     "lap_time": 78.289,
     "laps": 24,

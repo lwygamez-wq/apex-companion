@@ -2599,6 +2599,16 @@
     "tyre_findings": [],
     "tyres": []
   },
+  "setup_memory": {
+    "consumption": [],
+    "entries": [],
+    "missing": [
+      "1 séance(s) sans setup enregistré (avant Apex 0.36) : hors mémoire."
+    ],
+    "queue": [],
+    "recommended": null,
+    "skipped": []
+  },
   "strategy": {
     "lap_time": 93.689,
     "laps": 57,

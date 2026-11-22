@@ -152,6 +152,11 @@ pub async fn set_reference(state: State<'_, AppState>, lap_id: i64) -> R<()> {
 }
 
 #[tauri::command]
+pub async fn setup_memory(state: State<'_, AppState>, session_id: i64) -> R<apex_core::analysis::setup_memory::SetupMemory> {
+    blocking(state.svc.clone(), move |s| s.setup_memory(session_id)).await
+}
+
+#[tauri::command]
 pub async fn references(state: State<'_, AppState>) -> R<Vec<apex_core::service::ReferenceEntry>> {
     blocking(state.svc.clone(), |s| s.references()).await
 }

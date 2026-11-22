@@ -89,3 +89,18 @@ La validation du sens des mesures est donc **incomplète** : deux séances seule
 Rapport de rotation = lacet / (vitesse × angle du volant), comparé à la même grandeur dans les courbes prises en douceur (2 à 6 m/s²) dans la même tranche de 50 km/h. Le signe volant/lacet est calé sur la séance. Sous 0,85 sur au moins 80 % des tours : sous-vire. Au-dessus de 1,15 : survire. Sinon : pas d'écart mesurable. Le sens est fiable, l'ampleur ne se compare qu'entre virages d'une même séance (elle dépend de la voiture, du rapport de direction et de la vitesse).
 
 Sur le corpus : le milieu des virages lents sort souvent en sous-virage (Imola, 3 voitures : 0,51 à 0,74), et les sorties de l'Alpine en survirage (1,36 à 1,75). Ces chiffres ne sont pas vérifiés en jeu.
+
+## 6. Ce que l'API garage remplit (sonde du 22 nov., lecture seule)
+
+Mesuré sur le setup enregistré dans l'en-tête des `.apexlmu` du corpus (lu par `GET` sur l'API locale au début de chaque séance, depuis Apex 0.36). Aucune écriture dans l'API.
+
+| Séances | Setup enregistré | Réglages | Avec crans mini et maxi | Avec valeur affichée | Setups fournis par le jeu (`carPresetSetups`) | Température idéale par gomme (`optimalCompoundConditions`) |
+|---|---|---|---|---|---|---|
+| Imola 11–12 nov. (3 courses, 1 essai) | non (avant 0.36) | — | — | — | — | — |
+| Bahreïn 12 nov. (Cadillac) | oui | 170 | 170 (100 %) | 170 (100 %) | 3 | Medium 92, Hard 99, Wet 51,9 °C |
+| Monza 18 nov. ×2 (Cadillac) | oui | 170 | 170 (100 %) | 170 (100 %) | 3 | idem |
+
+- Les 170 réglages couvrent 40 familles : aéro, suspension (`WM_CAMBER`, `WM_PRESSURE`, `WM_RIDEHEIGHT`, amortisseurs, butées), freins, différentiel, électronique (TC, ABS, régénération), rapports.
+- 117 à 124 réglages sont en butée (cran mini ou maxi). La plupart sont des réglages à deux positions ou laissés à 0 (cartes, options). Le diagnostic n'en tient compte que pour carrossage et pression : la pression à froid est au cran 0 sur 0–36 sur les trois courses, donc aucun essai de pression n'est possible dans le sens « plus basse ».
+- La réponse complète de `getPlayerGarageData` (champs hors setup) reste sur le PC d'Alex dans `sonde-lmu/<séance>.json` (`GarageSummary`). Elle n'est pas dans le corpus, donc ses autres champs ne sont pas chiffrés ici.
+- `mOptimalTemp` de la mémoire partagée n'est pas enregistré. La température idéale vient de l'API (`optimalCompoundConditions`). Elle n'est **jamais comparée** aux pneus (section 2).

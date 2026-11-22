@@ -1192,3 +1192,53 @@ export interface RaceOptions {
   radio: string;
   pit_model: PitModel | null;
 }
+
+/** Mémoire d'essais setup (miroir de `analysis::setup_memory`). */
+export interface MemoryChange {
+  key: string;
+  label: string;
+  from: string;
+  to: string;
+  steps: number;
+}
+export interface MeasuredEffect {
+  what: string;
+  before: number;
+  after: number;
+  effect: number;
+  threshold: number;
+  significant: boolean;
+}
+export type EntryStatus = "validated" | "not_conclusive" | "not_attributable" | "no_change";
+export interface MemoryEntry {
+  from_session: number;
+  to_session: number;
+  from_started_at: number;
+  to_started_at: number;
+  changes: MemoryChange[];
+  effects: MeasuredEffect[];
+  status: EntryStatus;
+  lap_before_s: number | null;
+  lap_after_s: number | null;
+  text: string;
+}
+export interface QueueItem {
+  trial: Trial;
+  sharpness: number;
+  repeats: number;
+  sessions_measured: number;
+  tried: string | null;
+}
+export interface RecommendedSetup {
+  base_session: number;
+  changes: [MemoryChange, string][];
+  text: string;
+}
+export interface SetupMemory {
+  entries: MemoryEntry[];
+  queue: QueueItem[];
+  skipped: string[];
+  recommended: RecommendedSetup | null;
+  consumption: [number, string, number, number, string][];
+  missing: string[];
+}

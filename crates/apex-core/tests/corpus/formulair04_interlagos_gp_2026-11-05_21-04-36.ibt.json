@@ -234,6 +234,7 @@
     "track": "Autódromo José Carlos Pace"
   },
   "setup_diag": null,
+  "setup_memory": null,
   "strategy": null,
   "theoretical_best_s": null
 }

@@ -77,8 +77,12 @@ fn fr1(v: f32) -> String {
     format!("{v:.1}").replace('.', ",")
 }
 
-/// Essai proposé à partir d'un diagnostic, ou `None` avec la raison.
-pub fn propose(d: &SetupDiagnosis) -> Result<Trial, String> {
+/// (netteté, essai) triés, et réglages écartés en butée.
+pub type Candidates = (Vec<(f32, Trial)>, Vec<String>);
+
+/// Essais possibles d'après un diagnostic, du plus net (écart / dispersion) au moins net, et réglages
+/// écartés parce qu'en butée. `Err` : pas assez de tours ou setup non enregistré.
+pub fn candidates(d: &SetupDiagnosis) -> Result<Candidates, String> {
     if d.laps_used < 5 {
         return Err(format!("{} tours utilisables : il en faut 5 pour proposer un essai.", d.laps_used));
     }
@@ -138,6 +142,12 @@ pub fn propose(d: &SetupDiagnosis) -> Result<Trial, String> {
         }
     }
     cands.sort_by(|a, b| b.0.total_cmp(&a.0));
+    Ok((cands, skipped))
+}
+
+/// L'essai proposé : le plus net des candidats, ou la raison de ne rien proposer.
+pub fn propose(d: &SetupDiagnosis) -> Result<Trial, String> {
+    let (cands, skipped) = candidates(d)?;
     cands.into_iter().next().map(|(_, t)| t).ok_or_else(|| {
         if skipped.is_empty() {
             "Pas d'écart net et répété sur un essieu entier : pas d'essai à proposer.".into()
@@ -145,6 +155,38 @@ pub fn propose(d: &SetupDiagnosis) -> Result<Trial, String> {
             format!("Écart net, mais réglage en butée : {}. Pas d'essai possible dans ce sens.", skipped.join(", "))
         }
     })
+}
+
+/// Mesure d'un essieu (moyenne des deux roues, dispersion, tours) pour une métrique d'essai.
+pub fn side_of(d: &SetupDiagnosis, axle: usize, metric: TrialMetric) -> Option<(f32, f32, usize)> {
+    let f: fn(&TyreDiag) -> Option<&Stat> = match metric {
+        TrialMetric::InnerMinusOuter => |t| t.inner_minus_outer.as_ref(),
+        TrialMetric::MiddleMinusEdges => |t| t.middle_minus_edges.as_ref(),
+    };
+    let a = f(d.tyres.get(axle * 2)?)?;
+    let b = f(d.tyres.get(axle * 2 + 1)?)?;
+    Some(((a.value + b.value) / 2.0, (a.spread + b.spread) / 2.0, a.laps.min(b.laps)))
+}
+
+/// Effet mesuré entre deux séances sur un essieu.
+#[derive(Debug, Clone, Copy, Serialize, PartialEq)]
+pub struct AxleEffect {
+    pub before: (f32, f32, usize),
+    pub after: (f32, f32, usize),
+    pub effect: f32,
+    /// 2 erreurs types de la différence, et 1 °C au moins.
+    pub threshold: f32,
+    pub significant: bool,
+}
+
+/// Effet entre deux séances : « effet mesuré » si l'écart dépasse 2 erreurs types de la différence et 1 °C.
+pub fn axle_effect(before: &SetupDiagnosis, after: &SetupDiagnosis, axle: usize, metric: TrialMetric) -> Option<AxleEffect> {
+    let (b, a) = (side_of(before, axle, metric)?, side_of(after, axle, metric)?);
+    // Écart entre 1er et 9e déciles ≈ 2,56 écarts types ; erreur type de la différence des médianes.
+    let se = ((b.1 / 2.56).powi(2) / b.2.max(1) as f32 + (a.1 / 2.56).powi(2) / a.2.max(1) as f32).sqrt();
+    let threshold = (2.0 * se).max(1.0);
+    let effect = a.0 - b.0;
+    Some(AxleEffect { before: b, after: a, effect, threshold, significant: effect.abs() >= threshold })
 }
 
 /// Verdict d'un essai entre la séance d'avant et celle d'après.
@@ -187,25 +229,11 @@ pub fn verdict(trial: &Trial, before: &SetupDiagnosis, after: &SetupDiagnosis, l
         .filter_map(|b| before.setup.iter().find(|a| a.key == b.key).filter(|a| a.step != b.step).map(|a| format!("{} : {} → {}", b.label, a.display, b.display)))
         .collect();
     let axle = if trial.axle == "avant" { 0 } else { 1 };
-    let f: fn(&TyreDiag) -> Option<&Stat> = match trial.metric {
-        TrialMetric::InnerMinusOuter => |t| t.inner_minus_outer.as_ref(),
-        TrialMetric::MiddleMinusEdges => |t| t.middle_minus_edges.as_ref(),
-    };
-    let side = |d: &SetupDiagnosis| -> Option<(f32, f32, usize)> {
-        let a = f(d.tyres.get(axle * 2)?)?;
-        let b = f(d.tyres.get(axle * 2 + 1)?)?;
-        Some(((a.value + b.value) / 2.0, (a.spread + b.spread) / 2.0, a.laps.min(b.laps)))
-    };
-    let (sb, sa) = (side(before), side(after));
-    let (mut effect, mut threshold, mut significant) = (None, None, false);
-    if let (Some((vb, spb, nb)), Some((va, spa, na))) = (sb, sa) {
-        // Écart entre 1er et 9e déciles ≈ 2,56 écarts types ; erreur type de la différence des médianes.
-        let se = ((spb / 2.56).powi(2) / nb.max(1) as f32 + (spa / 2.56).powi(2) / na.max(1) as f32).sqrt();
-        let th = (2.0 * se).max(1.0);
-        effect = Some(va - vb);
-        threshold = Some(th);
-        significant = (va - vb).abs() >= th;
-    }
+    let e = axle_effect(before, after, axle, trial.metric);
+    let (sb, sa) = (e.map(|x| x.before), e.map(|x| x.after));
+    let sb = sb.or_else(|| side_of(before, axle, trial.metric));
+    let sa = sa.or_else(|| side_of(after, axle, trial.metric));
+    let (effect, threshold, significant) = (e.map(|x| x.effect), e.map(|x| x.threshold), e.is_some_and(|x| x.significant));
     let what = match trial.metric {
         TrialMetric::InnerMinusOuter => "écart intérieur / extérieur",
         TrialMetric::MiddleMinusEdges => "écart milieu / bords",

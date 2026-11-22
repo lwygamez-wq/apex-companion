@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   ReferenceEntry,
+  SetupMemory,
   ChatMessage,
   ChatReply,
   EngineerPlan,
@@ -83,6 +84,7 @@ export const api = {
   setupProbeReports: () => call<ProbeReport[]>("setup_probe_reports"),
   setupDiagnosis: (sessionId: number) => call<SetupDiagnosis>("setup_diagnosis", { sessionId }),
   setupTrial: (before: number, after: number | null) => call<SetupTrialReport>("setup_trial", { before, after }),
+  setupMemory: (sessionId: number) => call<SetupMemory>("setup_memory", { sessionId }),
   exportFeedback: (path: string, note: string) => call<FeedbackSummary>("export_feedback", { path, note }),
   deleteSession: (id: number) => call<void>("delete_session", { id }),
   deleteAll: () => call<void>("delete_all_data"),
