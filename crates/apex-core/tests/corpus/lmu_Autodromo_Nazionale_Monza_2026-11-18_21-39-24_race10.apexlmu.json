@@ -2057,6 +2057,82 @@
       ]
     ]
   },
+  "setup_memory": {
+    "consumption": [
+      [
+        "aileron P6",
+        4.357,
+        30,
+        "%"
+      ],
+      [
+        "aileron P4",
+        4.324,
+        30,
+        "%"
+      ]
+    ],
+    "entries": [
+      {
+        "changes": 9,
+        "effects": [
+          [
+            "Pneus avant, écart intérieur / extérieur",
+            3.912,
+            4.17,
+            1.0,
+            false
+          ],
+          [
+            "Pneus arrière, écart intérieur / extérieur",
+            7.678,
+            7.76,
+            1.0,
+            false
+          ],
+          [
+            "Pneus avant, écart milieu / bords",
+            4.427,
+            4.291,
+            1.0,
+            false
+          ],
+          [
+            "Pneus arrière, écart milieu / bords",
+            3.858,
+            3.847,
+            1.0,
+            false
+          ]
+        ],
+        "status": "not_attributable"
+      }
+    ],
+    "missing": [],
+    "queue": [
+      [
+        "Carrossage AR",
+        "vers 0°",
+        1,
+        2,
+        2,
+        false
+      ],
+      [
+        "Carrossage AV",
+        "vers 0°",
+        2,
+        2,
+        2,
+        false
+      ]
+    ],
+    "recommended": 0,
+    "skipped": [
+      "Pression à froid AV en butée (cran 0 sur 0–36)",
+      "Pression à froid AR en butée (cran 0 sur 0–36)"
+    ]
+  },
   "strategy": {
     "lap_time": 98.134,
     "laps": 37,

@@ -1312,6 +1312,7 @@
     "track": "Okayama International Circuit"
   },
   "setup_diag": null,
+  "setup_memory": null,
   "strategy": {
     "lap_time": 62.063,
     "laps": 14,

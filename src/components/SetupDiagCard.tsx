@@ -4,6 +4,7 @@ import { dateTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { BalancePhase, BalanceTrend, BalanceZone, DiagStat, SessionSummary, SetupDiagnosis, SetupRow, SetupTrialReport } from "../lib/types";
 import { lapTime } from "../lib/format";
+import { SetupMemoryCard } from "./SetupMemoryCard";
 
 /** « 58,7 °C » ; « — » sans mesure. */
 export function fmtStat(s: DiagStat | null | undefined, digits = 1): string {
@@ -316,6 +317,7 @@ export function SetupDiagCard() {
       {err && <div className="fc-warn">{err}</div>}
       {d && <Diagnosis d={d} />}
       {d && trial && <TrialView r={trial} afterChoices={afterChoices} after={after} onAfter={setAfter} />}
+      {d && chosen != null && <SetupMemoryCard sessionId={chosen} />}
     </div>
   );
 }

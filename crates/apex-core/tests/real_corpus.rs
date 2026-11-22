@@ -228,6 +228,29 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
             }))
         });
 
+    // Mémoire d'essais setup (LMU) : changements entre séances, effets, file d'essais, setup recommandé.
+    // Règle : un changement recommandé doit venir d'un essai à un seul réglage avec effet mesuré.
+    let setup_memory = (m.sim == apex_core::model::SimId::Lmu).then(|| svc.setup_memory(id).unwrap()).map(|mm| {
+        if let Some(r) = &mm.recommended {
+            for (c, proof) in &r.changes {
+                if !proof.contains("effet mesuré") {
+                    rule.push(format!("{} : {} recommandé sans effet mesuré", file.display(), c.label));
+                }
+            }
+        }
+        for e in &mm.entries {
+            println!("BANC setup {} : {} → {} {:?} ({} changement(s)) {}", file.file_name().unwrap().to_string_lossy(), e.from_session, e.to_session, e.status, e.changes.len(), e.text);
+        }
+        json!({
+            "entries": mm.entries.iter().map(|e| json!({ "status": e.status, "changes": e.changes.len(), "effects": e.effects.iter().map(|x| json!([x.what, x.before, x.after, x.threshold, x.significant])).collect::<Vec<_>>() })).collect::<Vec<_>>(),
+            "queue": mm.queue.iter().map(|q| json!([q.trial.label, q.trial.direction, q.trial.steps, q.repeats, q.sessions_measured, q.tried.is_some()])).collect::<Vec<_>>(),
+            "skipped": mm.skipped,
+            "recommended": mm.recommended.as_ref().map(|r| r.changes.len()),
+            "consumption": mm.consumption.iter().map(|c| json!([c.1, c.2, c.3, c.4])).collect::<Vec<_>>(),
+            "missing": mm.missing,
+        })
+    });
+
     let strategy = svc
         .race_strategy(m.sim, &m.track, m.track_config.as_deref(), &m.car, m.setup, None, 0.5, 0.5, &StrategyOverrides::default())
         .ok()
@@ -277,6 +300,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "ai_context": svc.ai_context(id).ok(),
         "strategy": strategy,
         "options": options,
+        "setup_memory": setup_memory,
         "setup_diag": setup_diag,
         "engineer_replay": engineer,
         "radio": radio,

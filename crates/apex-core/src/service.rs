@@ -1684,6 +1684,36 @@ impl AppService {
         Ok(SetupTrialReport { proposal, no_proposal, verdict })
     }
 
+    /// Mémoire d'essais setup de la voiture et du circuit d'une séance LMU : changements entre séances
+    /// consécutives et leur effet mesuré, file des prochains essais, setup recommandé (setup actuel + seuls
+    /// changements validés), consommation par setup. Lit les enregistrements `.apexlmu` (rien en base).
+    pub fn setup_memory(&self, id: i64) -> Result<crate::analysis::setup_memory::SetupMemory> {
+        use crate::analysis::setup_memory::{build, SessionSetup};
+        let meta = self.db().session_meta(id)?;
+        if meta.sim != SimId::Lmu {
+            return Err(ServiceError::User("Mémoire d'essais : séances Le Mans Ultimate seulement.".into()));
+        }
+        let list: Vec<SessionSummary> = self
+            .db()
+            .list_sessions(&SessionFilter { sim: Some(SimId::Lmu), track: Some(meta.track.clone()), car: Some(meta.car.clone()), ..Default::default() })?
+            .into_iter()
+            .filter(|s| s.track_config == meta.track_config && s.external_driver.is_none() && s.started_at_unix <= meta.started_at_unix)
+            .collect();
+        let mut sessions = vec![];
+        for s in list.iter().rev().take(12) {
+            let diag = self.setup_diagnosis(s.id)?;
+            let laps = self.db().laps(s.id)?;
+            let usable: Vec<&crate::storage::LapRow> = laps.iter().filter(|l| crate::analysis::setup_diag::usable(&l.meta)).collect();
+            let mut t: Vec<f64> = usable.iter().filter_map(|l| l.meta.lap_time_s).collect();
+            t.sort_by(f64::total_cmp);
+            let energy = usable.iter().any(|l| l.meta.energy_used_pct.is_some_and(|v| v > 0.1));
+            let mut e: Vec<f32> = usable.iter().filter_map(|l| if energy { l.meta.energy_used_pct } else { l.meta.fuel_used_l }).filter(|v| *v > 0.1).collect();
+            e.sort_by(f32::total_cmp);
+            sessions.push(SessionSetup { session_id: s.id, started_at: s.started_at_unix, diag, lap_median_s: t.get(t.len() / 2).copied(), laps: t.len(), per_lap: e.get(e.len() / 2).copied(), per_lap_unit: if energy { "%" } else { "L" } });
+        }
+        Ok(build(&sessions))
+    }
+
     pub fn setup_probe_reports(&self) -> Vec<crate::connectors::lmu_probe::ProbeReport> {
         let Some(dir) = self.lmu_dir.as_ref().and_then(|d| d.parent()).map(|d| d.join("sonde-lmu")) else { return vec![] };
         let mut files: Vec<(std::time::SystemTime, PathBuf)> = std::fs::read_dir(dir)
