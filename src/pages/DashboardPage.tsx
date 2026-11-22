@@ -9,6 +9,7 @@ import { PHASE_SPOKEN } from "../lib/compareView";
 import { useAsync } from "../lib/hooks";
 import type { StatusPayload } from "../lib/types";
 import { ReadyCard } from "../components/ReadyCard";
+import { Alert, Button, EmptyState, LoadError, Skeleton } from "../components/ui";
 
 function Sparkline({ points }: { points: [number, number][] }) {
   if (points.length < 2) return <div className="muted">Au moins 2 sessions sur ce combo sont nécessaires.</div>;
@@ -17,7 +18,7 @@ function Sparkline({ points }: { points: [number, number][] }) {
   const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${(i / (points.length - 1)) * 300},${60 - ((p[1] - min) / span) * 50 - 5}`).join(" ");
   return (
     <svg viewBox="0 0 300 60" style={{ width: "100%", height: 60 }}>
-      <path d={d} stroke="#c9c9d4" strokeWidth={2} fill="none" />
+      <path d={d} stroke="var(--ref)" strokeWidth={2} fill="none" />
     </svg>
   );
 }
@@ -43,25 +44,20 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
     <>
       <div className="page-title">
         <h1>Briefing</h1>
-        {s && <ImportActions compact onDone={dash.reload} />}
-      </div>
-      {dash.error && <div className="error">{dash.error}</div>}
-      {msg && <div className="warning" onClick={() => setMsg(null)}>{msg}</div>}
-      {autolog.data?.enabled === false && (
-        <div className="card notice">
-          <div>
-            <b>iRacing n'enregistre tes sessions que si tu appuies sur Alt+L.</b>
-            <div className="muted" style={{ fontSize: 13 }}>Active l'enregistrement automatique (iRacing fermé). Environ 200 Mo par heure de roulage.</div>
+        {s && (
+          <div className="row">
+            <ImportActions compact onDone={dash.reload} />
+            <Button variant="primary" onClick={() => navigate({ page: "analysis", sessionId: s.id })}>Analyser ma dernière séance</Button>
           </div>
-          <button className="btn primary" onClick={() => run(api.setIracingAutolog(true), "Enregistrement automatique activé.")}>Activer</button>
-        </div>
-      )}
+        )}
+      </div>
+      {dash.error && <LoadError error={dash.error} onRetry={dash.reload} />}
+      {dash.loading && !d && <Skeleton block lines={4} label="Chargement du briefing" />}
+      {msg && <Alert action={<Button variant="quiet" onClick={() => setMsg(null)}>OK</Button>}>{msg}</Alert>}
       {d && !s && (
-        <div className="card empty">
-          <h2>Aucune session enregistrée</h2>
-          <p>Importe tes fichiers de télémétrie iRacing, ou charge une session de démonstration pour découvrir l'analyse.</p>
-          <div className="row" style={{ justifyContent: "center" }}><ImportActions onDone={dash.reload} /></div>
-        </div>
+        <EmptyState title="Aucune séance enregistrée" action={<ImportActions onDone={dash.reload} />}>
+          Lance Le Mans Ultimate avec Apex ouvert : chaque séance est enregistrée et analysée toute seule. Tu peux aussi importer des fichiers iRacing ou charger une séance de démonstration.
+        </EmptyState>
       )}
       {s && d && (
         <>
@@ -100,9 +96,9 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
           {d.active_goal && (
             <div className="card notice">
               <div>
-                <span className="muted" style={{ fontSize: 13 }}>Objectif en cours</span>
+                <span className="muted t-sm">Objectif en cours</span>
                 <div style={{ fontWeight: 650 }}>{d.active_goal.title}</div>
-                <div className="muted" style={{ fontSize: 13 }}>
+                <div className="muted t-sm">
                   {d.active_goal.result ? <><span className={`chip ${d.active_goal.result.achieved ? "good" : "warn"}`}>{d.active_goal.result.achieved ? "Atteint" : "Pas encore"}</span> {d.active_goal.result.summary}</> : "Vérifié sur ta prochaine session sur ce circuit."}
                 </div>
               </div>
@@ -123,7 +119,7 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
                         {z.main_phase && <> · surtout {PHASE_SPOKEN[z.main_phase.phase]} ({z.main_phase.median_s.toFixed(2)} s, {z.main_phase.laps_losing}/{z.main_phase.laps} tours)</>}
                       </span>
                       <span className="mono">{z.avg_loss_s.toFixed(2)} s</span>
-                      <span className="muted" style={{ fontSize: 13 }}>{z.occurrences}/{z.laps_compared} tours</span>
+                      <span className="muted t-sm">{z.occurrences}/{z.laps_compared} tours</span>
                     </div>
                   ))}
                 </div>
@@ -137,6 +133,11 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
             </div>
           )}
         </>
+      )}
+      {autolog.data?.enabled === false && (
+        <Alert title="iRacing : enregistrement automatique désactivé" action={<Button onClick={() => run(api.setIracingAutolog(true), "Enregistrement automatique activé.")}>Activer</Button>}>
+          Sans lui, iRacing n'enregistre une séance que si tu appuies sur Alt+L. Environ 200 Mo par heure de roulage ; à activer iRacing fermé.
+        </Alert>
       )}
     </>
   );
