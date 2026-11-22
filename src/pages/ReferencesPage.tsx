@@ -4,6 +4,7 @@ import { useAsync } from "../lib/hooks";
 import { lapTime } from "../lib/format";
 import { carLabel } from "./SetupsPage";
 import type { ReferenceEntry } from "../lib/types";
+import { EmptyState, LoadError, Skeleton } from "../components/ui";
 import type { Route } from "../App";
 
 const COND: Record<ReferenceEntry["conditions"], string> = { sec: "Sec", humide: "Humide", inconnu: "Conditions inconnues" };
@@ -38,8 +39,11 @@ export function ReferencesPage({ navigate }: { navigate: (r: Route) => void }) {
         <p className="muted">
           Pour chaque circuit et chaque voiture, Apex garde ton meilleur tour propre : tour chronométré, valide, sans sortie, sans drapeau ni passage au stand, télémétrie complète. Sec et pluie sont séparés, comme fixed et open. Elle sert de référence à l'analyse et au coach, sauf si tu en as choisi une toi-même.
         </p>
-        {refs.error && <div className="fc-warn">{refs.error}</div>}
-        {refs.data && refs.data.length === 0 && <div className="muted">Aucune référence pour l'instant : elles apparaissent dès qu'une séance avec un tour propre complet est importée.</div>}
+        {refs.error && <LoadError error={refs.error} onRetry={refs.reload} />}
+        {refs.loading && !refs.data && <Skeleton lines={4} label="Chargement des références" />}
+        {refs.data && refs.data.length === 0 && (
+          <EmptyState title="Pas encore de référence">Roule une séance avec au moins un tour propre complet : Apex garde automatiquement le meilleur ici, sans rien à faire.</EmptyState>
+        )}
         {byTrack.map(([track, list]) => (
           <div key={track} className="su-group ref-group">
             <h3>{track}</h3>
