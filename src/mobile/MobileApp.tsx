@@ -137,7 +137,7 @@ function SessionList({ list, onOpen, onDelete, onPick }: { list: StoredSummary[]
           <li>Ici : « Ouvrir » → Fichiers → iCloud Drive → choisis la session.</li>
         </ol>
         <button className="btn primary" onClick={onPick}>Ouvrir un export</button>
-        <p className="muted" style={{ fontSize: 13 }}>Tout reste dans ton téléphone : rien n'est envoyé sur Internet.</p>
+        <p className="muted" style={{ fontSize: 14 }}>Tout reste dans ton téléphone : rien n'est envoyé sur Internet.</p>
       </div>
     );
   }

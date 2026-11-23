@@ -25,7 +25,7 @@ export function CornerList({ corners, selected, onSelect, onRename }: {
     <div className="card corners">
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
         <h2 className="m-0">Virage par virage</h2>
-        <span className="muted" style={{ fontSize: 13 }}>
+        <span className="muted" style={{ fontSize: 14 }}>
           <i className="swatch loss" /> temps perdu <i className="swatch gain" /> temps gagné · clic : détail
         </span>
       </div>

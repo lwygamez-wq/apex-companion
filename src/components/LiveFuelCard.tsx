@@ -1,5 +1,5 @@
 import type { EngineerCall, FuelUnit, LiveFuel } from "../lib/types";
-import { amount, perLap, setting } from "./FuelCalculator";
+import { perLap, setting } from "./FuelCalculator";
 
 const n1 = (v: number) => v.toFixed(1).replace(".", ",");
 const n2 = (v: number) => v.toFixed(2).replace(".", ",");
@@ -60,18 +60,11 @@ export function LiveFuelCard({ f }: { f: LiveFuel | null | undefined }) {
   if (!f) return null;
   const u = f.unit;
   const pct = f.capacity ? Math.max(0, Math.min(1, f.level / f.capacity)) : null;
-  let verdict: { cls: string; text: string } | null = null;
-  if (!f.engineer && f.laps_left != null && f.need_to_finish != null) {
-    const spare = f.level - f.need_to_finish;
-    if (spare >= 0) verdict = { cls: "ok", text: `De quoi finir : il faut ${amount(u, f.need_to_finish)}, marge ${amount(u, spare)}.` };
-    else if (f.save_per_lap != null) verdict = { cls: "warn", text: `Il manque ${amount(u, -spare)} : économise ${perLap(u, f.save_per_lap)} par tour pour finir sans arrêt.` };
-    else verdict = { cls: "warn", text: `Il manque ${amount(u, -spare)} : ${f.stops_needed ?? 1} arrêt${(f.stops_needed ?? 1) > 1 ? "s" : ""} nécessaire${(f.stops_needed ?? 1) > 1 ? "s" : ""}.` };
-  }
   return (
     <div className="card livefuel">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h2 style={{ margin: 0 }}>Relais en cours</h2>
-        <span className="muted" style={{ fontSize: 14 }}>{u === "energy" ? "énergie virtuelle" : "carburant"} · dis « stratégie » ou « {u === "energy" ? "énergie" : "carburant"} »</span>
+      <div className="row row-between">
+        <h2 className="m-0">Détail du relais</h2>
+        <span className="muted t-sm">{u === "energy" ? "énergie virtuelle" : "carburant"} · dis « stratégie » ou « {u === "energy" ? "énergie" : "carburant"} »</span>
       </div>
       {pct != null && (
         <div className="lf-bar" aria-hidden="true">
@@ -79,14 +72,12 @@ export function LiveFuelCard({ f }: { f: LiveFuel | null | undefined }) {
         </div>
       )}
       <div className="lf-main">
-        <div><span>{u === "energy" ? "Énergie" : "Carburant"}</span><b className="mono">{amount(u, f.level)}</b>{f.fuel_l != null && <small className="muted">{n1(f.fuel_l)} L à bord{f.fuel_laps != null ? ` · ${n1(f.fuel_laps)} tours` : ""}</small>}</div>
         <div><span>Par tour</span><b className="mono">{f.per_lap != null ? perLap(u, f.per_lap) : "—"}</b><small className="muted">3 derniers tours</small></div>
-        <div><span>Tours possibles</span><b className="mono">{f.laps_in_tank != null ? n1(f.laps_in_tank) : "—"}</b>{u === "energy" && f.fuel_ratio != null && <small className="muted">ratio conseillé {n2(f.fuel_ratio)}</small>}</div>
-        <div><span>Tours restants</span><b className="mono">{f.laps_left != null ? n1(f.laps_left) : "—"}</b><small className="muted">{f.laps_left != null ? "course" : "hors course"}</small></div>
+        {f.fuel_l != null && <div><span>Carburant à bord</span><b className="mono">{n1(f.fuel_l)} L</b>{f.fuel_laps != null && <small className="muted">{n1(f.fuel_laps)} tours</small>}</div>}
+        {u === "energy" && f.fuel_ratio != null && <div><span>Ratio conseillé</span><b className="mono">{n2(f.fuel_ratio)}</b><small className="muted">L par %</small></div>}
       </div>
-      {f.per_lap == null && <div className="muted" style={{ marginTop: 10 }}>Consommation mesurée à la fin du premier tour lancé.</div>}
+      {f.per_lap == null && <div className="muted mt-12">Consommation mesurée à la fin du premier tour lancé.</div>}
       {f.engineer && <EngineerBlock e={f.engineer} u={u} />}
-      {verdict && <div className={`lf-verdict ${verdict.cls}`}>{verdict.text}</div>}
     </div>
   );
 }

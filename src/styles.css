@@ -953,3 +953,35 @@ input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; accent-
 label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; }
 .ml-8 { margin-left: 8px; }
 .mt-12 { margin-top: 12px; }
+
+/* ===== Au volant : lecture à distance (0.54) ===== */
+.glance { background: var(--bg-sunken); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 24px 24px; margin-bottom: 16px; }
+.glance-state { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-md); font-weight: 800; margin-bottom: 16px; color: var(--text); }
+.glance-state i { width: 12px; height: 12px; border-radius: var(--r-pill); background: var(--text-2); }
+.glance-state.tone-gain i { background: var(--gain); }
+.glance-state.tone-loss i { background: var(--loss); }
+.glance-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.glance-tile { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: var(--r-card); background: var(--surface-1); border-top: 4px solid var(--line); min-width: 0; }
+.glance-label { font-size: var(--fs-md); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
+.glance-value { font-family: var(--big); font-stretch: 112%; font-weight: 900; font-size: var(--fs-hero); line-height: 1.05; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.glance-sub { font-size: var(--fs-lg); font-weight: 600; color: var(--text-2); }
+.glance-tile.tone-gain { border-top-color: var(--gain); }
+.glance-tile.tone-gain .glance-value { color: var(--gain); }
+.glance-tile.tone-loss { border-top-color: var(--loss); }
+.glance-tile.tone-loss .glance-value { color: var(--loss); }
+.glance-tile.tone-danger { border-top-color: var(--danger); }
+.glance-tile.tone-danger .glance-value { color: var(--danger); }
+.glance-tile.tone-accent { border-top-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface-1)); }
+.glance-tile.tone-accent .glance-value { color: var(--accent); }
+.glance-wait { font-size: var(--fs-lg); color: var(--text-2); max-width: 60ch; }
+.section-sep { margin: 24px 0 12px; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
+.row-between { justify-content: space-between; }
+.mt-16 { margin-top: 16px; }
+.live-grid { align-items: start; }
+.live-voice { margin-bottom: 16px; }
+.vol-val { width: 48px; text-align: right; }
+.azure-help { margin: 8px 0; }
+/* Curseurs : cible de 32 px de haut. Lignes de réglage à case à cocher : la ligne entière est cliquable. */
+input[type="range"] { min-height: 32px; }
+label.form-row { cursor: pointer; }
+label.form-row:hover { background: var(--veil); }

@@ -153,9 +153,9 @@ export function SettingsPage() {
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Coach vocal</h2>
-          <div className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></div>
-          <div className="form-row"><div>Ingénieur de course<div className="hint">En course : relais, cible par tour (lift ou attaque), appel aux stands avec l'énergie et le ratio à régler. Parle même si le coaching est coupé en course.</div></div><input type="checkbox" checked={s.engineer_calls} onChange={(e) => upd("engineer_calls", e.target.checked)} /></div>
-          <div className="form-row"><div>Voix activée</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></div>
+          <label className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></label>
+          <label className="form-row"><div>Ingénieur de course<div className="hint">En course : relais, cible par tour (lift ou attaque), appel aux stands avec l'énergie et le ratio à régler. Parle même si le coaching est coupé en course.</div></div><input type="checkbox" checked={s.engineer_calls} onChange={(e) => upd("engineer_calls", e.target.checked)} /></label>
+          <label className="form-row"><div>Voix activée</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></label>
           <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
         </div>
       )}
@@ -163,7 +163,7 @@ export function SettingsPage() {
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>LEDs du volant (SimHub)</h2>
-          <div className="form-row">
+          <label className="form-row">
             <div>
               Repères de freinage
               <div className="hint">
@@ -171,7 +171,7 @@ export function SettingsPage() {
               </div>
             </div>
             <input type="checkbox" checked={s.led_cues} onChange={(e) => upd("led_cues", e.target.checked)} />
-          </div>
+          </label>
           <div className="form-row">
             <div>
               Plugin SimHub d'Apex
@@ -231,24 +231,24 @@ export function SettingsPage() {
               )}
             </div>
           </div>
-          <div className="form-row">
+          <label className="form-row">
             <div>Synchro automatique<div className="hint">Importe chaque nouveau .ibt dès qu'iRacing a fini de l'écrire, et rattrape au démarrage les sessions roulées app fermée. Le Mans Ultimate : Apex enregistre lui-même chaque passage en piste (Apex doit être ouvert pendant que tu roules).</div></div>
             <input type="checkbox" checked={s.auto_import} onChange={(e) => upd("auto_import", e.target.checked)} />
-          </div>
-          <div className="form-row">
+          </label>
+          <label className="form-row">
             <div>Télémétrie live<div className="hint">Apex suit ta voiture en direct pendant que tu roules : indispensable au coach vocal et aux LEDs.</div></div>
             <input type="checkbox" checked={s.live_enabled} onChange={(e) => upd("live_enabled", e.target.checked)} />
-          </div>
+          </label>
           <div className="form-row">
             <div>Fréquence d'enregistrement live<div className="hint">60 Hz (conseillé) : points de freinage précis à 1–2 m près. 20 Hz : moins précis, pour un PC juste en puissance.</div></div>
             <select value={s.sample_rate_hz} onChange={(e) => upd("sample_rate_hz", Number(e.target.value))}>
               {[20, 30, 60].map((h) => <option key={h} value={h}>{h} Hz</option>)}
             </select>
           </div>
-          <div className="form-row">
+          <label className="form-row">
             <div>Mode débutant<div className="hint">Affiche seulement tes 3 priorités et met la régularité avant la vitesse pure.</div></div>
             <input type="checkbox" checked={s.beginner_mode} onChange={(e) => upd("beginner_mode", e.target.checked)} />
-          </div>
+          </label>
           <div className="form-row">
             <div>Unités</div>
             <select value={s.units} onChange={(e) => upd("units", e.target.value as AppSettings["units"])}>
@@ -262,13 +262,13 @@ export function SettingsPage() {
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Tours de référence (Garage 61)</h2>
-          <div className="form-row">
+          <label className="form-row">
             <div>
               Import depuis Téléchargements
               <div className="hint">Chaque tour exporté de Garage 61 (« Export CSV » sur le site) est importé tout seul dès qu'il arrive dans ton dossier Téléchargements, et devient ta référence sur ce circuit.</div>
             </div>
             <input type="checkbox" checked={s.watch_downloads} onChange={(e) => upd("watch_downloads", e.target.checked)} />
-          </div>
+          </label>
           <div className="form-row">
             <div>Dossier de téléchargements<div className="hint">Vide = le dossier Téléchargements de Windows, détecté automatiquement même s'il a été déplacé (ex. D:\Téléchargements).</div></div>
             <div className="row">
@@ -303,10 +303,10 @@ export function SettingsPage() {
               onChange={(e) => upd("garage61_drivers", e.target.value.split("\n").map((x) => x.trim()).filter(Boolean))}
             />
           </div>
-          <div className="form-row">
+          <label className="form-row">
             <div>Recherche automatique<div className="hint">Après chaque nouvelle session iRacing, et une fois par jour pour toutes tes sessions déjà roulées : cherche le tour le plus rapide disponible (même circuit, même voiture) et le prend comme référence s'il bat la référence actuelle.</div></div>
             <input type="checkbox" checked={s.garage61_auto} onChange={(e) => upd("garage61_auto", e.target.checked)} disabled={!s.garage61_token} />
-          </div>
+          </label>
         </div>
       )}
 
@@ -360,10 +360,10 @@ export function SettingsPage() {
             <div>Version installée</div>
             <div className="mono">{version || "—"}</div>
           </div>
-          <div className="form-row">
+          <label className="form-row">
             <div>Vérifier au démarrage<div className="hint">Seule connexion internet de l'app : elle demande à GitHub s'il existe une version plus récente. Aucune donnée n'est envoyée.</div></div>
             <input type="checkbox" checked={s.check_updates} onChange={(e) => upd("check_updates", e.target.checked)} />
-          </div>
+          </label>
           <div className="row" style={{ marginTop: 10 }}>
             <button className="btn" onClick={() => void checkNow()}>Rechercher une mise à jour</button>
             {updMsg && <span className="muted">{updMsg}</span>}
@@ -414,7 +414,7 @@ export function SettingsPage() {
           <div key={c.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
             <div className="row" style={{ justifyContent: "space-between" }}>
               <b>{c.name}</b>
-              <span className="muted" style={{ fontSize: 13 }}>{c.capabilities.data_source}</span>
+              <span className="muted" style={{ fontSize: 14 }}>{c.capabilities.data_source}</span>
             </div>
             <div className="cap-grid">
               {CAP_LABELS.map(([k, label]) => {
@@ -422,7 +422,7 @@ export function SettingsPage() {
                 return <div className="cap" key={k}><span>{label}</span><span className={`chip ${SUPPORT_CLS[v]}`}>{SUPPORT_FR[v]}</span></div>;
               })}
             </div>
-            <div className="muted" style={{ fontSize: 13 }}>
+            <div className="muted" style={{ fontSize: 14 }}>
               <div>Installation : {c.install.detail}</div>
               <div>Processus détectés : {c.process_names.join(", ")}</div>
               {c.capabilities.notes.map((n) => <div key={n}>• {n}</div>)}
