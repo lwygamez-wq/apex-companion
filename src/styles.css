@@ -33,6 +33,29 @@
   --accent: #ff7a45;
   --accent-hover: #ff9466;
   --on-accent: #1a0f08;
+  /* Carte de piste : piste, herbe, peinture, vibreurs. */
+  --map-asphalt: #1d1d24;
+  --map-asphalt-edge: #3b3b46;
+  --map-ring: rgba(52, 52, 70, 0.55);
+  --map-grass: rgba(76, 150, 80, 0.45);
+  --map-paint: rgba(240, 240, 245, 0.9);
+  --kerb-red: #d42b25;
+  --kerb-white: #f4f4f4;
+  --car-tyre: #0d0d12;
+  --car-shadow: rgba(0, 0, 0, 0.45);
+  /* Pédales (convention de télémétrie) : frein rouge, gaz partiel vert clair, plein gaz vert, roue libre blanc. */
+  --pedal-brake: #ff3b30;
+  --pedal-brake-light: #ff7a6e;
+  --pedal-partial: #b7e86a;
+  --pedal-full: #3dd9b3;
+  --pedal-coast: #e8e8ee;
+  /* Vitesse, du plus lent au plus rapide. */
+  --speed-0: #2f6bff;
+  --speed-1: #3fa7ff;
+  --speed-2: #3dd9b3;
+  --speed-3: #f5c542;
+  --speed-4: #ff8a00;
+  --speed-5: #ff3b30;
   /* Marque : le trait du logo, rien d'autre. */
   --brand: #e10600;
   --overlay: rgba(12, 12, 18, 0.88);
@@ -223,7 +246,7 @@ td.num, th.num { text-align: right; }
 .trackmap-canvas { position: relative; }
 .trackmap-overview { position: absolute; left: 8px; bottom: 8px; width: 112px; height: 112px; background: var(--overlay); border: 1px solid var(--line); border-radius: var(--r-ctl); pointer-events: none; }
 .trackmap-zoom { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
-.trackmap-zoom button { width: 30px; height: 30px; border: 1px solid var(--line); background: var(--overlay); color: var(--text); border-radius: var(--r-ctl); font-size: var(--fs-lg); font-weight: 700; cursor: pointer; line-height: 1; }
+.trackmap-zoom button { width: 32px; height: 32px; border: 1px solid var(--line); background: var(--overlay); color: var(--text); border-radius: var(--r-ctl); font-size: var(--fs-lg); font-weight: 700; cursor: pointer; line-height: 1; }
 .trackmap-zoom button:hover { background: var(--panel-2); }
 .replay-big { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 12px; align-items: start; margin-bottom: 12px; }
 @media (max-width: 1100px) { .replay-big { grid-template-columns: 1fr; } }

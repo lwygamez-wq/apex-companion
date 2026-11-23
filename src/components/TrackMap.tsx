@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { at, positionsAt, useReplay, type ReplayStore } from "../lib/replay";
 import { lapTime } from "../lib/format";
+import { mix } from "../lib/palette";
 import type { Comparison, TrackOverlay } from "../lib/types";
 
 /**
@@ -13,44 +14,44 @@ export type ColorMode = "delta" | "inputs" | "speed" | "studio";
 /** Taille de la carte : dans la page, moitié de l'écran, ou plein écran. */
 export type MapSize = "normal" | "half" | "full";
 
-const REF_LINE = "#b4b4c6";
-const CMP_LINE = "#5cc8ff";
-const BRAKE = "#ff3b30";
-const GAS = "#3dd9b3";
+const REF_LINE = "var(--ref)";
+const CMP_LINE = "var(--info)";
+const BRAKE = "var(--pedal-brake)";
+const GAS = "var(--pedal-full)";
 
 /**
  * Monoplace vue de dessus (dessin générique, 5 m × 2 m, avant vers +x), centrée sur l'origine.
  * `braking` allume le feu arrière.
  */
 function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: number; heading: number; scale: number; body: string; ghost?: boolean; braking: boolean }) {
-  const tyre = ghost ? "rgba(180,180,198,0.35)" : "#0d0d12";
+  const tyre = ghost ? mix("ref", 0.35) : "var(--car-tyre)";
   const op = ghost ? 0.9 : 1;
   return (
     <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${heading.toFixed(1)}) scale(${scale.toFixed(4)})`} opacity={op} style={{ pointerEvents: "none" }}>
       {/* ombre / halo de lisibilité */}
-      <ellipse cx={0} cy={0} rx={3.1} ry={1.5} fill="rgba(0,0,0,0.45)" />
-      {braking && <ellipse cx={-2.7} cy={0} rx={0.9} ry={0.7} fill="rgba(255,40,30,0.85)" />}
+      <ellipse cx={0} cy={0} rx={3.1} ry={1.5} fill="var(--car-shadow)" />
+      {braking && <ellipse cx={-2.7} cy={0} rx={0.9} ry={0.7} fill="var(--pedal-brake)" />}
       {/* aileron arrière */}
-      <rect x={-2.5} y={-0.78} width={0.42} height={1.56} rx={0.08} fill={body} stroke={ghost ? body : "#fff"} strokeWidth={0.08} />
+      <rect x={-2.5} y={-0.78} width={0.42} height={1.56} rx={0.08} fill={body} stroke={ghost ? body : "var(--text)"} strokeWidth={0.08} />
       {/* roues */}
-      <rect x={-2.02} y={-1.0} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
-      <rect x={-2.02} y={0.62} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
-      <rect x={1.18} y={-0.96} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
-      <rect x={1.18} y={0.62} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "#2a2a33"} strokeWidth={0.06} />
+      <rect x={-2.02} y={-1.0} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
+      <rect x={-2.02} y={0.62} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
+      <rect x={1.18} y={-0.96} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
+      <rect x={1.18} y={0.62} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
       {/* bras de suspension */}
-      <path d="M-1.65 -0.62 L-1.3 -0.3 M-1.65 0.62 L-1.3 0.3 M1.48 -0.62 L1.15 -0.18 M1.48 0.62 L1.15 0.18" stroke={ghost ? body : "#c8c8d0"} strokeWidth={0.07} />
+      <path d="M-1.65 -0.62 L-1.3 -0.3 M-1.65 0.62 L-1.3 0.3 M1.48 -0.62 L1.15 -0.18 M1.48 0.62 L1.15 0.18" stroke={ghost ? body : "var(--text-2)"} strokeWidth={0.07} />
       {/* coque et pontons */}
       <path
         d="M-2.1 -0.42 L-1.25 -0.58 L0.15 -0.55 L0.55 -0.24 L1.95 -0.12 L2.28 0 L1.95 0.12 L0.55 0.24 L0.15 0.55 L-1.25 0.58 L-2.1 0.42 Z"
-        fill={ghost ? "rgba(180,180,198,0.6)" : body}
-        stroke={ghost ? body : "#ffffff"}
+        fill={ghost ? mix("ref", 0.6) : body}
+        stroke={ghost ? body : "var(--text)"}
         strokeWidth={ghost ? 0.1 : 0.07}
         strokeDasharray={undefined}
       />
       {/* aileron avant */}
-      <rect x={2.12} y={-0.86} width={0.32} height={1.72} rx={0.08} fill={body} stroke={ghost ? body : "#fff"} strokeWidth={0.08} />
+      <rect x={2.12} y={-0.86} width={0.32} height={1.72} rx={0.08} fill={body} stroke={ghost ? body : "var(--text)"} strokeWidth={0.08} />
       {/* casque */}
-      <circle cx={-0.25} cy={0} r={0.24} fill={ghost ? body : "#ff9a5c"} stroke="#111" strokeWidth={0.05} />
+      <circle cx={-0.25} cy={0} r={0.24} fill={ghost ? body : "var(--accent)"} stroke="var(--bg-sunken)" strokeWidth={0.05} />
     </g>
   );
 }
@@ -112,7 +113,7 @@ function Hud({ cmp, ci, ri, ghostMode, compact }: { cmp: Comparison; ci: number;
     </div>
   );
 }
-const OFF_COLOR = "#ff8a00";
+const OFF_COLOR = "var(--danger)";
 
 interface Geo {
   X: number[];
@@ -156,7 +157,7 @@ function linePath(X: number[], Y: number[], step = 2): string {
   return d;
 }
 
-const SPEED_COLORS = ["#2f6bff", "#3fa7ff", "#3dd9b3", "#ff9a5c", "#ff8a00", "#e10600"];
+const SPEED_COLORS = [0, 1, 2, 3, 4, 5].map((k) => `var(--speed-${k})`);
 
 /** Couches fixes (ne dépendent pas du temps) : mémorisées. */
 const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false }: { c: Comparison; geo: Geo; mode: ColorMode; hasEdges?: boolean }) {
@@ -172,9 +173,9 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
         const rate = ((c.delta_s[j] ?? 0) - (c.delta_s[i] ?? 0)) / ((j - i) * c.step_m || 1);
         const k = Math.max(-1, Math.min(1, rate * 400));
         const q = Math.round(Math.abs(k) * 4) / 4;
-        if (k > 0.05) return `rgba(255,154,92,${(0.3 + 0.7 * q).toFixed(2)})`;
-        if (k < -0.05) return `rgba(61,217,179,${(0.3 + 0.7 * q).toFixed(2)})`;
-        return "#34344a";
+        if (k > 0.05) return mix("loss", 0.3 + 0.7 * q);
+        if (k < -0.05) return mix("gain", 0.3 + 0.7 * q);
+        return "var(--surface-3)";
       });
     } else if (mode === "studio") {
       band = [];
@@ -183,24 +184,24 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
         cmpColored = bucketPaths(CX, CY, step, (i) => {
           const b = t.brake[i] ?? 0;
           const th = t.throttle[i] ?? 0;
-          if (b > 0.05) return "#ff3b30";
-          if (th > 0.9) return "#3dd9b3";
-          if (th > 0.05) return "#b7e86a";
-          return "#e8e8ee";
+          if (b > 0.05) return "var(--pedal-brake)";
+          if (th > 0.9) return "var(--pedal-full)";
+          if (th > 0.05) return "var(--pedal-partial)";
+          return "var(--pedal-coast)";
         });
       }
     } else {
-      band = [["#2a2a3a", linePath(X, Y)]];
+      band = [["var(--surface-2)", linePath(X, Y)]];
       if (CX && CY) {
         const t = c.cmp_trace;
         cmpColored = bucketPaths(CX, CY, step, (i) => {
           if (mode === "inputs") {
             const b = t.brake[i] ?? 0;
             const th = t.throttle[i] ?? 0;
-            if (b > 0.05) return b > 0.5 ? "#ff2a1f" : "#ff7a6e";
-            if (th > 0.95) return "#3dd9b3";
-            if (th > 0.05) return "#ff9a5c";
-            return "#ffffff";
+            if (b > 0.05) return b > 0.5 ? "var(--pedal-brake)" : "var(--pedal-brake-light)";
+            if (th > 0.95) return "var(--pedal-full)";
+            if (th > 0.05) return "var(--pedal-partial)";
+            return "var(--pedal-coast)";
           }
           const v = t.speed_kmh[i] ?? 0;
           return SPEED_COLORS[Math.max(0, Math.min(SPEED_COLORS.length - 1, Math.floor((v - 60) / 45)))]!;
@@ -227,9 +228,9 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
     // référence en pointillés blancs, ton tour coloré selon les pédales (vert gaz, rouge frein, blanc roue libre).
     return (
       <g>
-        {!hasEdges && <path d={layers.refD} stroke="#3b3b46" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
-        {!hasEdges && <path d={layers.refD} stroke="#1d1d24" strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
-        <path d={layers.refD} stroke="rgba(255,255,255,0.85)" strokeWidth={1.6} strokeDasharray="2 4" fill="none" vectorEffect="non-scaling-stroke" />
+        {!hasEdges && <path d={layers.refD} stroke="var(--map-asphalt-edge)" strokeWidth={15} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
+        {!hasEdges && <path d={layers.refD} stroke="var(--map-asphalt)" strokeWidth={13.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
+        <path d={layers.refD} stroke={mix("text", 0.85)} strokeWidth={1.6} strokeDasharray="2 4" fill="none" vectorEffect="non-scaling-stroke" />
         {layers.cmpColored?.map(([col, d]) => <path key={col} d={d} stroke={col} strokeWidth={2.6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />)}
         {layers.cmpOff && <path d={layers.cmpOff} stroke={OFF_COLOR} strokeWidth={6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />}
       </g>
@@ -357,16 +358,16 @@ const OverlayLayer = memo(function OverlayLayer({ ov, studio, flip }: { ov: Trac
   }, [ov, studio, flip]);
   return (
     <g style={{ pointerEvents: "none" }}>
-      {d.ring && <path d={d.ring} fill={studio ? "#202029" : "rgba(52,52,70,0.55)"} fillRule="evenodd" />}
-      {d.off && <path d={d.off} fill="rgba(76,150,80,0.45)" />}
-      {d.left && <path d={d.left} stroke="rgba(255,255,255,0.75)" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
-      {d.right && <path d={d.right} stroke="rgba(255,255,255,0.75)" strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
-      {d.lines && <path d={d.lines} stroke="rgba(240,240,245,0.9)" strokeWidth={0.6} strokeLinejoin="round" fill="none" />}
-      {d.lineDots && <path d={d.lineDots} fill="rgba(240,240,245,0.8)" />}
+      {d.ring && <path d={d.ring} fill={studio ? "var(--map-asphalt)" : "var(--map-ring)"} fillRule="evenodd" />}
+      {d.off && <path d={d.off} fill="var(--map-grass)" />}
+      {d.left && <path d={d.left} stroke={mix("text", 0.75)} strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
+      {d.right && <path d={d.right} stroke={mix("text", 0.75)} strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
+      {d.lines && <path d={d.lines} stroke="var(--map-paint)" strokeWidth={0.6} strokeLinejoin="round" fill="none" />}
+      {d.lineDots && <path d={d.lineDots} fill="var(--map-paint)" />}
       {/* Vibreur : bande de 2,4 m au bord, rouge et blanc par pavés de 2 m, comme en vrai. */}
-      {d.kerbs && <path d={d.kerbs} stroke="#d42b25" strokeWidth={2.4} strokeLinejoin="round" fill="none" />}
-      {d.kerbs && <path d={d.kerbs} stroke="#f4f4f4" strokeWidth={2.4} strokeDasharray="2 2" strokeLinejoin="round" fill="none" />}
-      {d.kerbDots && <path d={d.kerbDots} fill="#e0302a" />}
+      {d.kerbs && <path d={d.kerbs} stroke="var(--kerb-red)" strokeWidth={2.4} strokeLinejoin="round" fill="none" />}
+      {d.kerbs && <path d={d.kerbs} stroke="var(--kerb-white)" strokeWidth={2.4} strokeDasharray="2 2" strokeLinejoin="round" fill="none" />}
+      {d.kerbDots && <path d={d.kerbDots} fill="var(--kerb-red)" />}
     </g>
   );
 });
@@ -415,8 +416,8 @@ const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y:
   const d = useMemo(() => linePath(geo.X, geo.Y, 6), [geo]);
   return (
     <svg className="trackmap-overview" viewBox={`${(b.x0 + b.x1) / 2 - s / 2} ${(b.y0 + b.y1) / 2 - s / 2} ${s} ${s}`}>
-      <path d={d} stroke="#6b6b80" strokeWidth={2} fill="none" vectorEffect="non-scaling-stroke" />
-      <circle cx={x} cy={y} r={s * 0.035} fill={CMP_LINE} stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      <path d={d} stroke="var(--text-2)" strokeWidth={2} fill="none" vectorEffect="non-scaling-stroke" />
+      <circle cx={x} cy={y} r={s * 0.035} fill={CMP_LINE} stroke="var(--text)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
     </svg>
   );
 });
@@ -646,7 +647,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
               const dx = geo.X[3]! - geo.X[0]!, dy = geo.Y[3]! - geo.Y[0]!;
               const l = Math.hypot(dx, dy) || 1;
               const s = 9 * mPerPx;
-              return <line x1={geo.X[0]! - (dy / l) * s} y1={geo.Y[0]! + (dx / l) * s} x2={geo.X[0]! + (dy / l) * s} y2={geo.Y[0]! - (dx / l) * s} stroke="#fff" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
+              return <line x1={geo.X[0]! - (dy / l) * s} y1={geo.Y[0]! + (dx / l) * s} x2={geo.X[0]! + (dy / l) * s} y2={geo.Y[0]! - (dx / l) * s} stroke="var(--text)" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
             })()}
             {labels.map((k) => {
               const off = 22 * mPerPx;
@@ -656,11 +657,11 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
               return (
                 <g key={k.id} style={{ cursor: "pointer" }} onPointerDown={(e) => e.stopPropagation()} onClick={() => { onSelectCorner(k.id); zoomTo(k.x, k.y, 380); }}>
                   <title>{k.name}</title>
-                  <circle cx={x} cy={y} r={r} fill={sel ? "#ffffff" : "#15151e"} stroke="#ffffff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  <circle cx={x} cy={y} r={r} fill={sel ? "var(--text)" : "var(--surface-1)"} stroke="var(--text)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
                   <g transform={upright(x, y)}>
-                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={(k.num.length > 2 ? 7.5 : 11) * mPerPx} fontWeight={800} fill={sel ? "#15151e" : "#ffffff"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
+                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={(k.num.length > 2 ? 7.5 : 11) * mPerPx} fontWeight={800} fill={sel ? "var(--surface-1)" : "var(--text)"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
                     {showNames && (
-                      <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="#ffffff" stroke="#101017" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">{k.name}</text>
+                      <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="var(--text)" stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">{k.name}</text>
                     )}
                   </g>
                 </g>
@@ -686,13 +687,13 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
                       </>
                     ) : (
                       <>
-                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeWidth={7} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--text)" strokeWidth={7} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                         <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth={4} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
                       </>
                     )}
                     {showText && (
                       <g transform={upright(tx, ty)}>
-                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "#fff"} stroke="#101017" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">
+                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "var(--text)"} stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">
                           {m.kind === "brake" ? "F" : "G"}
                         </text>
                       </g>
@@ -760,8 +761,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture grise transparente</span>
         <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
         {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
-        {mode === "delta" && <span><i style={{ background: "#3dd9b3" }} />gain <i style={{ background: "#ff9a5c", marginLeft: 6 }} />perte</span>}
-        {mode === "inputs" && <span><i style={{ background: "#ff2a1f" }} />frein <i style={{ background: "#ff9a5c", marginLeft: 6 }} />gaz partiel <i style={{ background: "#3dd9b3", marginLeft: 6 }} />plein gaz <i style={{ background: "#fff", marginLeft: 6 }} />roue libre</span>}
+        {mode === "delta" && <span><i style={{ background: "var(--gain)" }} />gain <i style={{ background: "var(--loss)", marginLeft: 6 }} />perte</span>}
+        {mode === "inputs" && <span><i style={{ background: "var(--pedal-brake)" }} />frein <i style={{ background: "var(--pedal-partial)", marginLeft: 6 }} />gaz partiel <i style={{ background: "var(--pedal-full)", marginLeft: 6 }} />plein gaz <i style={{ background: "var(--pedal-coast)", marginLeft: 6 }} />roue libre</span>}
         {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 6 }} />G gaz · contour bleu = réf., blanc = toi</span>}
         {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
       </div>}
