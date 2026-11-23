@@ -265,7 +265,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                       <button className="link" onClick={() => void findG61()} title="Cherche le tour le plus rapide des pilotes que tu suis sur Garage 61">chercher sur Garage 61</button>
                     )}
                   </div>
-                  {g61Msg && <div className="muted" style={{ fontSize: 13 }}>{g61Msg}</div>}
+                  {g61Msg && <div className="muted" style={{ fontSize: 14 }}>{g61Msg}</div>}
                 </div>
                 <div className="duel-gap">
                   <button className="btn ghost small" title="Inverser référence et tour analysé" aria-label="Inverser référence et tour analysé" style={{ minWidth: 32 }} onClick={() => { setRefId(cmpId); setCmpId(refId); }} disabled={!d.laps.some((l) => l.id === refId)}>⇄</button>

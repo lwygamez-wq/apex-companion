@@ -10,7 +10,8 @@ const here = join(process.cwd(), "src");
 const css = readFileSync(join(here, "styles.css"), "utf8");
 const rootEnd = css.indexOf("}", css.indexOf(":root {"));
 const root = css.slice(css.indexOf(":root {"), rootEnd);
-const rules = css.slice(rootEnd + 1);
+// Règles du desktop et de l'app iPhone (même système de design).
+const rules = css.slice(rootEnd + 1) + readFileSync(join(here, "mobile/mobile.css"), "utf8");
 const token = (name: string): string => {
   const m = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(root);
   if (!m) throw new Error(`jeton --${name} absent`);
@@ -66,9 +67,21 @@ const walk = (d: string): string[] => readdirSync(d).flatMap((f: string) => (sta
 describe("couleurs dans les composants", () => {
   it("aucune couleur en dur hors des fichiers encore à migrer", () => {
     const offenders = walk(here)
-      .filter((f) => f.endsWith(".tsx") && !f.includes("preview") && !f.includes("mobile"))
+      .filter((f) => f.endsWith(".tsx") && !f.includes("preview"))
       .map((f) => f.slice(here.length + 1).replace(/\\/g, "/"))
       .filter((f) => !PENDING.has(f) && /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(readFileSync(join(here, f), "utf8")));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("tailles de texte dans les composants", () => {
+  // Les textes de la carte de piste sont à l'échelle du zoom (« 11 * mPerPx ») : pas des tailles d'écran.
+  it("les tailles écrites dans le code restent sur l'échelle (12, 14, 16, 20, 28, 48)", () => {
+    const scale = new Set([12, 14, 16, 20, 28, 48]);
+    const bad = walk(here)
+      .filter((f) => f.endsWith(".tsx") && !f.includes("preview"))
+      .flatMap((f) => [...readFileSync(f, "utf8").matchAll(/fontSize[:=]\s*\{?\s*(\d+(?:\.\d+)?)\s*[},]/g)].map((m) => `${f.slice(here.length + 1)} : ${m[1]}`))
+      .filter((x) => !scale.has(Number(x.split(" : ")[1])));
+    expect(bad).toEqual([]);
   });
 });

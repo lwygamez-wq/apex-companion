@@ -5,6 +5,7 @@ import { useAsync } from "../lib/hooks";
 import { RadioControlCard } from "../components/RadioControlCard";
 import { FuelCalculator } from "../components/FuelCalculator";
 import { LiveFuelCard } from "../components/LiveFuelCard";
+import { LiveGlance } from "../components/LiveGlance";
 import type { StatusPayload } from "../lib/types";
 import { coachVoice, coachVolume, setCoachVoice, setCoachVolume, speak, voiceAvailable, voiceName } from "../lib/voice";
 
@@ -107,10 +108,9 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
     <>
       <div className="page-title">
         <h1>Au volant</h1>
-        <span className={`chip ${live?.on_track ? "good" : ""}`}>{status?.label ?? "—"}</span>
       </div>
-      <LiveFuelCard f={status?.fuel_live} />
-      <div className="grid cols-2" style={{ alignItems: "start" }}>
+      <LiveGlance status={status} />
+      <div className="grid cols-2 live-grid">
         <div className="card radio-card">
           <h2>Radio</h2>
           {live && (
@@ -127,7 +127,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
           )}
           {msgs.map((m, i) => (
             <div key={`${m.lap}-${i}`} className={`radio-msg ${m.kind} ${i === 0 ? "latest" : ""}`}>
-              <div className="row" style={{ justifyContent: "space-between" }}>
+              <div className="row row-between">
                 <span className="muted">{m.kind === "reply" ? "Réponse" : m.kind === "strategy" ? `Ingénieur · tour ${m.lap}` : m.kind === "callout" ? `Annonce · tour ${m.lap}` : m.lap > 0 ? `Tour ${m.lap}${m.lap_time_s ? ` · ${lapTime(m.lap_time_s)}` : ""}` : "Mise en route"}</span>
                 {m.lap_delta_s != null && <span className={`mono ${m.lap_delta_s > 0 ? "pos" : "neg"}`}>{delta(m.lap_delta_s)} s</span>}
               </div>
@@ -145,7 +145,9 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
           </details>
         </div>
         <div>
-          <div className="card" style={{ marginBottom: 14 }}>
+          <LiveFuelCard f={status?.fuel_live} />
+          <h3 className="section-sep">Réglages de la radio</h3>
+          <div className="card live-voice">
             <h2>Voix</h2>
             <div className="voice-row">
               <select value={sel} onChange={(e) => void choose(e.target.value)} aria-label="Voix du coach">
@@ -161,7 +163,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               </select>
               <button className="btn primary" onClick={() => void test()}>{sel !== "windows" && !sel.startsWith("azure:") && !selInfo?.installed ? "Télécharger et tester" : "Tester"}</button>
             </div>
-            <div className="row" style={{ marginTop: 10, gap: 10 }}>
+            <div className="row mt-12">
               <span className="muted">Volume</span>
               <input
                 type="range"
@@ -179,11 +181,11 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
                 onPointerUp={() => void saveVolume(vol)}
                 onKeyUp={() => void saveVolume(vol)}
               />
-              <span className="mono" style={{ width: 44, textAlign: "right" }}>{vol} %</span>
+              <span className="mono vol-val">{vol} %</span>
             </div>
             <details className="azure-box" open={azureMissing}>
               <summary>Clé Azure {voices.data?.some((v) => v.id.startsWith("azure:") && v.installed) ? "(enregistrée)" : ""}</summary>
-              <div className="muted" style={{ fontSize: 13, margin: "6px 0" }}>
+              <div className="muted t-sm azure-help">
                 portal.azure.com → ressource « Speech », niveau <b>Free F0</b>, région France Central → « Clés et point de terminaison » : copie la Clé 1. Seul le texte des messages radio est envoyé à Azure.
               </div>
               <div className="row" style={{ gap: 8 }}>
@@ -194,15 +196,15 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
                 <button className="btn" onClick={() => void saveAzure()}>Enregistrer</button>
               </div>
             </details>
-            {busy && <div className="muted" style={{ marginTop: 8 }}>{busy}</div>}
+            {busy && <div className="muted mt-8">{busy}</div>}
             {!voiceAvailable() && sel === "windows" && <div className="warning">Synthèse vocale Windows indisponible sur ce poste.</div>}
-            {sel === "windows" && winVoice && <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>{winVoice}</div>}
+            {sel === "windows" && winVoice && <div className="muted t-sm mt-8">{winVoice}</div>}
           </div>
           <RadioControlCard status={status} />
         </div>
       </div>
       {last && (
-        <div style={{ marginTop: 14 }}>
+        <div className="mt-16">
           <FuelCalculator combo={last} title={`Préparer la course : ${last.track} · ${last.car}`} />
         </div>
       )}

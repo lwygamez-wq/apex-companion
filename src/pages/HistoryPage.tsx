@@ -137,7 +137,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
               <div className="card"><h2>Tours propres</h2><div className="kpi">{current.timed_laps ? `${Math.round((current.clean_laps / current.timed_laps) * 100)} %` : "—"}</div><div className="kpi-sub">{current.clean_laps} sur {current.timed_laps} tours lancés</div></div>
               <div className="card">
                 <h2>Référence externe</h2>
-                <div className="kpi" style={{ fontSize: 26 }}>{current.external_reference ? lapTime(current.external_reference[1]) : "—"}</div>
+                <div className="kpi" style={{ fontSize: 28 }}>{current.external_reference ? lapTime(current.external_reference[1]) : "—"}</div>
                 <div className="kpi-sub">{current.external_reference ? current.external_reference[0] : "aucune : exporte un tour depuis Garage 61"}</div>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                 </span>
               </div>
               <LapChart laps={history.data ?? []} best={current.best_clean_s ?? current.best_any_s} external={current.external_reference} />
-              <div className="muted" style={{ fontSize: 13 }}>
+              <div className="muted" style={{ fontSize: 14 }}>
                 {current.sessions} session{current.sessions > 1 ? "s" : ""} du {dateTime(current.first_unix)} au {dateTime(current.last_unix)} · {NAMES_FR[current.corner_names]}
               </div>
             </div>
@@ -163,7 +163,7 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
                   <button className={sort === "date" ? "on" : ""} onClick={() => setSort("date")}>Par date</button>
                   <button className={sort === "time" ? "on" : ""} onClick={() => setSort("time")}>Par temps</button>
                 </div>
-                <label className="muted" style={{ fontSize: 13 }}>
+                <label className="muted" style={{ fontSize: 14 }}>
                   <input type="checkbox" checked={onlyClean} onChange={(e) => setOnlyClean(e.target.checked)} /> tours propres seulement
                 </label>
               </div>

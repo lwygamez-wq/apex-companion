@@ -96,14 +96,14 @@ export function RadioControlCard({ status }: { status: StatusPayload | null }) {
           <button className="btn primary" onClick={() => void install()}>Installer</button>
         )}
       </div>
-      <div className="form-row">
+      <label className="form-row">
         <div>Annonce avant le virage<div className="hint">« Virage 16, freine plus tard » ~3 s avant le freinage du focus</div></div>
         <input type="checkbox" checked={s?.coach_callouts ?? true} onChange={(e) => void save({ coach_callouts: e.target.checked })} />
-      </div>
-      <div className="form-row">
+      </label>
+      <label className="form-row">
         <div>Bips de freinage<div className="hint">Bip, bip, biiip : le dernier tombe au point de freinage de ta référence, sur le virage du focus</div></div>
         <input type="checkbox" checked={s?.coach_brake_beeps ?? true} onChange={(e) => void save({ coach_brake_beeps: e.target.checked })} />
-      </div>
+      </label>
       <div className="radio-cmds">
         {COMMANDS.map(([w, d]) => (
           <div key={w}><b>« {w} »</b> <span className="muted">{d}</span></div>
@@ -115,7 +115,7 @@ export function RadioControlCard({ status }: { status: StatusPayload | null }) {
         </div>
       )}
       {msg && <div className="muted" style={{ marginTop: 8 }}>{msg}</div>}
-      <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+      <div className="muted" style={{ fontSize: 14, marginTop: 8 }}>
         Maintiens le bouton, dis le mot, relâche : la voix du coach se coupe pendant que tu parles. En qualification, la radio se tait automatiquement (sauf réponses demandées).
       </div>
     </div>

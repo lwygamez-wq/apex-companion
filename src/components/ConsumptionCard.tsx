@@ -26,7 +26,7 @@ export function ConsumptionCard({ laps, combo }: { laps: LapRow[]; combo: Pick<C
           <div key={k} className={w === Math.max(...wear) ? "worst" : ""}><span>Pneu {WHEELS[k]}</span><b className="mono">−{n2(w)} %</b><small className="muted">par tour</small></div>
         ))}
       </div>
-      <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>Moyenne de tes {ok.length} tours propres de la séance.</div>
+      <div className="muted" style={{ fontSize: 14, marginTop: 8 }}>Moyenne de tes {ok.length} tours propres de la séance.</div>
       <details className="consumption-calc">
         <summary>Calculer une course ici (arrêts, niveau à reprendre, pneus)</summary>
         <FuelCalculator combo={combo} title="Calculateur carburant / énergie" />

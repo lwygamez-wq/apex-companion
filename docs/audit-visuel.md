@@ -191,3 +191,40 @@ Captures : `docs/audit/apres-0.52/`.
 | Couleurs en dur dans les composants desktop | 0 |
 
 Captures : `docs/audit/apres-0.53/`.
+
+## 7. Lot 0.54 : Au volant, Réglages, app iPhone
+
+- **Au volant** : un bandeau de lecture à distance en haut de page.
+  - État de la source en clair : « En piste », « Connecté, au stand », ou le message d'attente ou d'erreur du jeu.
+  - **Trois informations au plus**, chiffres à **48 px** : la consigne de l'ingénieur (« Box fin T21 », « Box ce tour », « Lift and coast », « Dans la cible », « Arrêt nécessaire »), la réserve d'énergie ou de carburant avec les tours possibles, et les tours restants.
+  - Couleur seulement quand elle a un sens : orange pour « Box ce tour » (action), jaune pour le lift and coast (perte), vert pour « dans la cible », rouge pour « arrêt nécessaire ».
+  - Aucune animation. Visible sans défilement à 1280×720.
+  - Logique dans `components/LiveGlance.tsx`, testée.
+  - Le « Détail du relais » ne répète plus l'énergie, les tours restants ni le message « Il manque… », déjà dans le bandeau. Il garde la conso par tour, le carburant à bord, le ratio et le bloc ingénieur (MFD, arrêt).
+  - Les réglages de voix et de bouton radio passent sous un titre « Réglages de la radio ».
+- **Réglages et radio** : chaque ligne à case à cocher est cliquable en entier (cible de la hauteur de la ligne, au lieu d'une case de 18 px). Curseurs à 32 px de haut.
+- **App iPhone** : `mobile.css` passe sur les mêmes jetons (6 tailles, couleurs, rayons). La barre du logo prend l'orange de l'accent au lieu du rouge.
+- **Tailles de texte écrites dans le code** : ramenées sur l'échelle (13 → 14, 26 → 28) et vérifiées par un test. Seuls échappent les textes de la carte, mis à l'échelle du zoom.
+
+## 8. Bilan des critères (fin de la refonte, 0.54)
+
+| Critère | Mesure | Statut |
+|---|---|---|
+| Contraste texte ≥ 4,5:1, éléments graphiques ≥ 3:1 | calculé par `design.test.ts` sur tous les jetons × toutes les surfaces | **vérifié** |
+| ≤ 6 tailles de texte, une échelle d'espacement, ≤ 3 rayons | 6 / 8 valeurs sur une grille de 4 / 3 rayons (CSS desktop et mobile, tailles écrites dans les composants) | **vérifié** (test) |
+| Aucune couleur écrite en dur hors jetons | 0 dans le CSS desktop et mobile et dans tous les composants | **vérifié** (test) |
+| États hover, focus, désactivé, vide, chargement, erreur | présents sur les composants de base ; chargement, erreur et vide sur Briefing, Stratégie, Séances, Références, Setups, Analyse, Progression | **vérifié** sur captures |
+| Cibles ≥ 32 px | 0 cible plus petite sur les 8 pages, de 1280 à 2560, dans les 4 états | **vérifié** (mesure Playwright) |
+| Navigation clavier avec focus visible | anneau orange `:focus-visible` sur tous les contrôles ; lignes de séance activables à Entrée | vérifié sur le code, **pas testé de bout en bout au clavier** |
+| Aucun défilement horizontal, 1280 → 2560 | aucun mesuré | **vérifié** |
+| Au volant : texte principal ≥ 48 px, ≤ 3 informations, sans défilement | 48 px, 3 tuiles, bandeau entier à 1280×720 | **vérifié** sur captures ; **à valider en jeu** sur l'écran réel d'Alex, à distance de volant |
+| Un seul style de tableau, une seule carte de statistique, une seule alerte | composants `Stat` et `Alert` uniques ; anciennes classes (`.ss-kpi`, `.lf-main`, `.warning`) encore utilisées à quelques endroits | **partiel** |
+| Tests existants verts, aucun calcul modifié | Vitest 63/63, aucun fichier Rust de logique touché | **vérifié** |
+
+### Reste à faire (listé)
+
+- Remplacer les dernières variantes de chiffres clés (`.ss-kpi`, `.lf-main`, `.kpi`) et de messages (`.warning`, `.error`) par `Stat` et `Alert`.
+- Tester toute la navigation au clavier, page par page.
+- Vérifier dans WebView2 (PC d'Alex) le rendu de `color-mix` et de `var()` dans les attributs SVG. Ce n'est vérifié que sous Chromium Linux.
+
+Captures : `docs/audit/apres-0.54/`.

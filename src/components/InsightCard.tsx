@@ -36,7 +36,7 @@ export function InsightCard({ insight, active, onFocus, sessionId, rank, onAsk }
               ))}
             </tbody>
           </table>
-          <div className="muted" style={{ fontSize: 13 }}>Confiance : {CONFIDENCE_FR[insight.confidence]}{insight.confidence_notes.length > 0 ? ` · ${insight.confidence_notes.join(" · ")}` : ""}</div>
+          <div className="muted" style={{ fontSize: 14 }}>Confiance : {CONFIDENCE_FR[insight.confidence]}{insight.confidence_notes.length > 0 ? ` · ${insight.confidence_notes.join(" · ")}` : ""}</div>
         </details>
         {onAsk && (
           <button className="btn ghost small" title="Pose la question à l'ingénieur IA" onClick={(e) => { e.stopPropagation(); onAsk(`Explique-moi ce conseil et comment l'appliquer au prochain tour : « ${insight.title} ».`); }}>
