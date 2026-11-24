@@ -228,3 +228,18 @@ Captures : `docs/audit/apres-0.53/`.
 - Vérifier dans WebView2 (PC d'Alex) le rendu de `color-mix` et de `var()` dans les attributs SVG. Ce n'est vérifié que sous Chromium Linux.
 
 Captures : `docs/audit/apres-0.54/`.
+
+## 9. Lot 0.55 : identité « mur des stands »
+
+Retour d'Alex sur la 0.54 (23 nov.) : « on voit de suite que c'est une IA qui l'a faite ». Il avait raison. Les lots 0.51 à 0.54 ont rangé le code (jetons, états, contraste), mais l'apparence n'a presque pas bougé : même police Manrope, mêmes cartes grises arrondies, mêmes petits libellés en capitales. En plus, l'aperçu local ne chargeait pas les polices, donc les captures de ces lots montraient une police système. Corrigé : `preview.tsx` importe maintenant les mêmes polices que `main.tsx`.
+
+Ce qui change, et pourquoi c'est propre au sujet :
+
+- **Panneau de stand** : c'est l'élément signature. La plaque noire est faite de lames séparées par un cadre, avec des lettres peintes (Big Shoulders Display, en capitales parce que c'est le langage d'un panneau). Il sert au message principal : la consigne du prochain run (Briefing), les tuiles d'Au volant et le plan de plein (Stratégie). C'est exactement l'objet qu'on lit en roulant.
+- **Écrans d'ingénieur** : chaque panneau a un bandeau de titre comme une fenêtre de logiciel de télémétrie, un trait de 1 px et des rayons de 2 à 4 px. Les tableaux de chronométrage sont denses, avec des lignes alternées.
+- **Typographie** : Saira (largeur variable) pour toute l'interface et les chiffres alignés ; Big Shoulders Display seulement pour les panneaux. Il n'y a plus de libellés en capitales espacées ni de chiffres en italique large.
+- **Navigation** : elle est rangée par moment du week-end (Avant de rouler, En piste, Après la séance), sans icônes. L'en-tête est un mot-marque « APEX/ ».
+- **Couleurs** : le fond nuit bleutée (`#0f141b`) et l'orange d'action (`#ff7a1f`) ont été ajustés. Les sens des couleurs sont inchangés (violet meilleur, vert gain, jaune perte, rouge erreur, bleu info, orange action). La sélection d'un onglet est en blanc, pas en orange : l'orange reste réservé à l'action.
+- **Inchangé** : les garde-fous de `design.test.ts` (contraste, 6 tailles, grille de 4, 3 rayons, aucune couleur en dur), aucun calcul modifié.
+
+Captures : `docs/audit/apres-0.55/` (Briefing, Stratégie, Séances, Setups, Progression, Au volant en piste, iPhone).

@@ -65,13 +65,16 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
             const o = plan.data.objectives[0]!;
             const [where, what] = o.title.includes(" : ") ? o.title.split(" : ", 2) : ["", o.title];
             return (
-              <div className="card one-thing">
-                <div>
-                  <span className="label">Prochain run · une seule chose</span>
-                  <h2>{where && <>{where} · </>}<em>{what}</em></h2>
-                  <p>{o.why}</p>
+              <section className="pitboard one-thing" aria-label="Consigne du prochain run">
+                <div className="pitboard-head">
+                  <span>Ton prochain run : une seule chose</span>
                 </div>
-              </div>
+                <h2 className="m-0">
+                  {where && <span className="pitboard-slat">{where}</span>}
+                  <span className="pitboard-slat call">{what}</span>
+                </h2>
+                <p className="pitboard-why">{o.why}</p>
+              </section>
             );
           })()}
           <div className="briefing-top">

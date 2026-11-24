@@ -659,9 +659,9 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
                   <title>{k.name}</title>
                   <circle cx={x} cy={y} r={r} fill={sel ? "var(--text)" : "var(--surface-1)"} stroke="var(--text)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
                   <g transform={upright(x, y)}>
-                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={(k.num.length > 2 ? 7.5 : 11) * mPerPx} fontWeight={800} fill={sel ? "var(--surface-1)" : "var(--text)"} fontFamily="Archivo Variable, sans-serif">{k.num}</text>
+                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={(k.num.length > 2 ? 7.5 : 11) * mPerPx} fontWeight={800} fill={sel ? "var(--surface-1)" : "var(--text)"} fontFamily="Saira Variable, sans-serif">{k.num}</text>
                     {showNames && (
-                      <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="var(--text)" stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">{k.name}</text>
+                      <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="var(--text)" stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Saira Variable, sans-serif">{k.name}</text>
                     )}
                   </g>
                 </g>
@@ -693,7 +693,7 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
                     )}
                     {showText && (
                       <g transform={upright(tx, ty)}>
-                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "var(--text)"} stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Archivo Variable, sans-serif">
+                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "var(--text)"} stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Saira Variable, sans-serif">
                           {m.kind === "brake" ? "F" : "G"}
                         </text>
                       </g>
