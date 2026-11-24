@@ -55,3 +55,7 @@ body { -webkit-tap-highlight-color: transparent; }
 .m-app .replay .btn.primary { padding-top: 12px; padding-bottom: 12px; }
 .m-app .replay .rp-scrub { height: 28px; }
 .m-app .chart { padding: 4px 8px 0; }
+/* Identité « mur des stands » (0.55) : mêmes polices et panneaux que l'app PC. */
+.m-logo { font-family: var(--font-board); font-style: normal; font-stretch: 100%; font-weight: 800; letter-spacing: 0.04em; border-left: 0; padding-left: 0; }
+.m-title b, .m-empty h2 { font-style: normal; font-weight: 700; }
+.m-card { clip-path: none; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface-1); }

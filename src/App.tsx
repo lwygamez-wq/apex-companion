@@ -29,16 +29,12 @@ export type Route =
   | { page: "references" }
   | { page: "settings" };
 
-/** Navigation rangée par moment : avant (Briefing, Stratégie), après (Séances, Progression), pendant (Au volant). */
-const NAV: { page: Route["page"]; label: string; also?: Route["page"][]; icon: string }[] = [
-  { page: "dashboard", label: "Briefing", icon: "M4 12l8-8 8 8M6 10v10h12V10" },
-  { page: "strategy", label: "Stratégie", icon: "M5 21V4M5 4h11l-2 4 2 4H5" },
-  { page: "setups", label: "Setups", icon: "M7 4v16M17 4v16M4 9h6M14 15h6" },
-  { page: "sessions", label: "Séances", also: ["analysis", "comparison"], icon: "M4 6h16M4 12h16M4 18h10" },
-  { page: "references", label: "Références", icon: "M6 4h12v16l-6-4-6 4z" },
-  { page: "history", label: "Progression", icon: "M4 18l6-6 4 4 6-8" },
-  { page: "live", label: "Au volant", icon: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 3v6M3.5 14h6M14.5 14h6" },
-  { page: "settings", label: "Réglages", icon: "M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6" },
+/** Navigation rangée par moment du week-end : avant de rouler, en piste, après la séance. */
+const NAV: { group: string; items: { page: Route["page"]; label: string; also?: Route["page"][] }[] }[] = [
+  { group: "Avant de rouler", items: [{ page: "dashboard", label: "Briefing" }, { page: "strategy", label: "Stratégie" }, { page: "setups", label: "Setups" }] },
+  { group: "En piste", items: [{ page: "live", label: "Au volant" }] },
+  { group: "Après la séance", items: [{ page: "sessions", label: "Séances", also: ["analysis", "comparison"] }, { page: "references", label: "Références" }, { page: "history", label: "Progression" }] },
+  { group: "Application", items: [{ page: "settings", label: "Réglages" }] },
 ];
 
 export function App() {
@@ -50,16 +46,20 @@ export function App() {
     <div className="app">
       <nav className="sidebar">
         <div className="brand">
-          <svg width="22" height="22" viewBox="0 0 1024 1024" aria-hidden>
-            <path d="M190 780 C 330 780, 400 700, 470 560 S 640 250, 834 244" fill="none" stroke="var(--brand)" strokeWidth="120" strokeLinecap="round" />
-          </svg>
-          Apex Companion
+          <span className="brand-mark">
+            APEX<span aria-hidden>/</span>
+          </span>
+          <span className="brand-sub">Companion, ingénieur de course</span>
         </div>
-        {NAV.map((n) => (
-          <button key={n.page} className={`nav-item ${route.page === n.page || n.also?.includes(route.page) ? "active" : ""}`} onClick={() => setRoute({ page: n.page } as Route)}>
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={n.icon} /></svg>
-            {n.label}
-          </button>
+        {NAV.map((g) => (
+          <div key={g.group} role="group" aria-label={g.group}>
+            <div className="nav-group">{g.group}</div>
+            {g.items.map((n) => (
+              <button key={n.page} className={`nav-item ${route.page === n.page || n.also?.includes(route.page) ? "active" : ""}`} aria-current={route.page === n.page || n.also?.includes(route.page) ? "page" : undefined} onClick={() => setRoute({ page: n.page } as Route)}>
+                {n.label}
+              </button>
+            ))}
+          </div>
         ))}
         <div className="spacer" />
         <StatusBadge status={status} />

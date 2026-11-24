@@ -18,7 +18,7 @@ const C = {
   get grid() { return { stroke: tok("surface-2"), width: 1 }; },
   get axis() { return { stroke: tok("text-2"), grid: this.grid, ticks: { show: false }, font: FONT }; },
 };
-const FONT = "12px 'Archivo Variable', system-ui, sans-serif";
+const FONT = "12px 'Saira Variable', system-ui, sans-serif";
 /** Largeur de la fenêtre glissante pendant la relecture. */
 const WINDOW = { distance: 700, time: 12 };
 
@@ -143,7 +143,7 @@ function SyncedChart({ view, spec, onCursor, selected, onReady, showX, syncKey }
               ctx.stroke();
             }
             if (spec.labels) {
-              ctx.font = `700 ${11 * devicePixelRatio}px "Archivo Variable", system-ui, sans-serif`;
+              ctx.font = `700 ${11 * devicePixelRatio}px "Saira Variable", system-ui, sans-serif`;
               ctx.textAlign = "center";
               let lastEnd = -Infinity;
               for (const b of view.bands) {
