@@ -137,9 +137,6 @@ button, select, input { font: inherit; color: inherit; }
 .card h2 { font-size: var(--fs-sm); color: var(--muted); margin: 0 0 8px; font-weight: 550; }
 
 /* Temps au tour : l'élément signature, façon panneau de chronométrage. */
-.kpi { font-stretch: 125%; font-weight: 900; font-style: italic; font-size: var(--fs-xl); line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.kpi.best { color: var(--purple); }
-.kpi-sub { color: var(--muted); font-size: var(--fs-sm); margin-top: 8px; }
 
 /* Chiffres alignés partout (tableaux, écarts). */
 .mono, td.num, th.num { font-variant-numeric: tabular-nums; font-stretch: 108%; }
@@ -179,8 +176,6 @@ td.num, th.num { text-align: right; }
 .dot.wait { background: var(--yellow); }
 
 /* Messages -------------------------------------------------------------- */
-.warning { background: color-mix(in srgb, var(--loss) 10%, transparent); border-left: 3px solid var(--yellow); color: var(--loss); border-radius: var(--r-card); padding: 8px 12px; margin-bottom: 12px; font-size: var(--fs-sm); }
-.error { background: color-mix(in srgb, var(--danger) 14%, transparent); border-left: 3px solid var(--red); color: var(--danger-text); border-radius: var(--r-card); padding: 8px 12px; margin-bottom: 12px; }
 .muted { color: var(--muted); }
 .pos { color: var(--yellow); }  /* temps perdu */
 .neg { color: var(--green); }   /* temps gagné */
@@ -298,14 +293,10 @@ td.num, th.num { text-align: right; }
 .history-kpi { font-size: var(--fs-lg); }
 .history-chart { width: 100%; height: auto; display: block; margin: 8px 0; }
 .history-time { font-variant-numeric: tabular-nums; font-weight: 700; }
-.history-time.kpi { font-size: var(--fs-sm); }
 @media (max-width: 1100px) { .history { grid-template-columns: 1fr; } .history-list { position: static; } }
 
 /* Coach de course */
 .race { border-left: 4px solid var(--accent); }
-.race-kpi { display: flex; flex-direction: column; gap: 2px; background: var(--panel-2); border-radius: var(--r-card); padding: 8px 12px; }
-.race-kpi b { font-size: var(--fs-lg); font-family: var(--mono, monospace); }
-.race-kpi span { font-size: var(--fs-sm); }
 .good-txt { color: var(--green); }
 .race-chart { width: 100%; height: auto; display: block; margin: 4px 0 12px; }
 .race-insights { display: flex; flex-direction: column; gap: 4px; }
@@ -478,7 +469,8 @@ td.num, th.num { text-align: right; }
 .session-list { background: var(--panel); border-radius: var(--r-card); overflow: visible; }
 .session-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto 90px 110px 40px; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--surface-2); cursor: pointer; }
 .session-row:last-child { border-bottom: 0; }
-.session-row:hover, .session-row:focus-visible { background: var(--panel-2); outline: none; }
+.session-row:hover, .session-row:focus-visible { background: var(--panel-2); }
+.session-row:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
 .session-row.dim { opacity: 0.55; }
 .sr-time { color: var(--muted); }
 .sr-where { display: flex; flex-direction: column; min-width: 0; }
@@ -514,9 +506,6 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 .ss-where b { font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ss-where .muted { font-size: var(--fs-sm); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ss-facts { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ss-kpi span { font-size: var(--fs-sm); color: var(--muted); }
-.ss-kpi b { font-size: var(--fs-lg); font-weight: 800; }
-.ss-kpi b.best { color: var(--best-text); }
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 8px 0 16px; }
 .tabs button { background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--muted); padding: 8px 16px; font-weight: 650; font-size: var(--fs-sm); cursor: pointer; margin-bottom: -2px; }
 .tabs button:hover { color: var(--text); }
@@ -635,7 +624,6 @@ details.how ul { margin: 8px 0 0; padding-left: 16px; }
 .page-title h1::after { display: none; }
 .card { border-radius: var(--r-card); padding: 24px 24px; }
 .card h2 { font-size: var(--fs-sm); font-weight: 700; color: var(--muted); }
-.kpi { font-family: var(--big); }
 .duel-delta, .duel-time { font-family: var(--big); font-stretch: 112%; }
 .btn { border-radius: var(--r-ctl); padding: 8px 16px; font-weight: 600; }
 .btn.primary { background: var(--accent); color: var(--on-accent); font-weight: 800; padding-right: 16px; }
@@ -651,7 +639,6 @@ select, input[type="text"], input[type="number"], input[type="password"] { borde
 .seg button.on { background: var(--text); color: var(--asphalt); }
 .session-strip { border-radius: var(--r-card); }
 .session-strip > div { border-left-color: var(--line); padding: 16px 16px; }
-.ss-kpi b { font-family: var(--big); font-size: var(--fs-xl); font-stretch: 110%; }
 .duel-lap { border-radius: var(--r-card); border-top: 0; box-shadow: inset 0 3px 0 var(--line); }
 .duel-lap.ref { box-shadow: inset 0 3px 0 var(--text-2); }
 .duel-lap.cmp { box-shadow: inset 0 3px 0 var(--cmp); }
@@ -665,7 +652,6 @@ select, input[type="text"], input[type="number"], input[type="password"] { borde
 .plan { border-left: 0; }
 .card.notice.hint { border-left: 0; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--loss) 50%, transparent); }
 .card.notice.fresh { border-left: 0; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gain) 50%, transparent); }
-.warning, .error { border-left: 0; border-radius: var(--r-card); }
 th { background: transparent; border-bottom: 1px solid var(--line); }
 .status { border-radius: var(--r-ctl); border-left: 0; }
 .settings-nav a { border-radius: var(--r-ctl); padding: 8px 16px; }
@@ -746,10 +732,6 @@ th { background: transparent; border-bottom: 1px solid var(--line); }
 
 /* ---- Relais en direct ---- */
 .livefuel { margin-bottom: 16px; }
-.lf-main { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
-.lf-main div { background: var(--panel-2); border-radius: var(--r-card); padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
-.lf-main span { font-size: var(--fs-sm); color: var(--muted); font-weight: 700; }
-.lf-main b { font-family: var(--big); font-stretch: 110%; font-size: var(--fs-xl); font-weight: 900; line-height: 1.1; }
 .lf-verdict { margin-top: 12px; font-size: var(--fs-lg); font-weight: 700; }
 .lf-verdict.ok { color: var(--gain); }
 .lf-verdict.warn { color: var(--yellow); }
@@ -1023,12 +1005,11 @@ body { background: var(--bg); }
 .card > h2:first-child, .card > .ui-card-head:first-child, .card > .row:first-child:has(> h2) { margin: -16px -16px 16px; padding: 8px 16px; min-height: 40px; background: var(--surface-2); border-bottom: 1px solid var(--line); border-radius: var(--r-card) var(--r-card) 0 0; display: flex; align-items: center; }
 .card > h2:first-child, .card > .ui-card-head:first-child > h2, .card > .row:first-child > h2 { font-size: var(--fs-sm); font-weight: 650; font-stretch: 92%; color: var(--text); }
 .card > .ui-card-head:first-child > h2, .card > .row:first-child > h2 { margin: 0; }
-.lf-main { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
 .insight, .session-list, .session-strip, .chart, .history-item { border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: none; }
 
 /* Chiffres : Saira droite, alignés. */
-.kpi, .ui-stat-value, .ss-kpi b, .lf-main b, .lf-eng-main b, .fc-order-row > b, .duel-delta, .duel-time { font-family: var(--font-ui); font-style: normal; font-stretch: 100%; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.ui-stat-label, .lf-main span, .lf-eng-main span, .ss-kpi span, .rd-class-grid span { font-size: var(--fs-xs); font-weight: 500; color: var(--text-2); }
+.ui-stat-value, .lf-eng-main b, .fc-order-row > b, .duel-delta, .duel-time { font-family: var(--font-ui); font-style: normal; font-stretch: 100%; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.ui-stat-label, .lf-eng-main span, .rd-class-grid span { font-size: var(--fs-xs); font-weight: 500; color: var(--text-2); }
 
 /* Tableaux de chronométrage : denses, lignes alternées, chiffres à droite. */
 table { font-stretch: 92%; }
@@ -1070,3 +1051,10 @@ tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--surface-2) 
 .fc-order-k { color: var(--text-2); }
 .chip, .ui-badge { border-radius: var(--r-ctl); }
 .seg button.on, .tabs button.on, .tabs button.active { background: var(--text); color: var(--bg); }
+
+/* Groupes de chiffres clés (Stat) : grille souple, chaque chiffre sur sa plaque. */
+.ui-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px; margin-top: 12px; }
+.ui-stats > .ui-stat { background: var(--surface-2); border-radius: var(--r-card); padding: 12px 16px; }
+.session-strip > .ui-stat .ui-stat-value { font-size: var(--fs-xl); }
+.ui-alert { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }

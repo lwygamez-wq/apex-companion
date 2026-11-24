@@ -187,7 +187,7 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
           >
             {[0, 0.5, 1, 2].map((x) => <option key={x} value={x}>{x === 0 ? "aucune" : `${String(x).replace(".", ",")} tour${x > 1 ? "s" : ""}`}</option>)}
           </select>
-          <small className="muted toolbar-check"><input type="checkbox" checked={formation} onChange={(e) => setFormation(e.target.checked)} /> tour de formation</small>
+          <label className="muted toolbar-check t-sm"><input type="checkbox" checked={formation} onChange={(e) => setFormation(e.target.checked)} /> tour de formation</label>
         </label>
       </div>
 
@@ -240,7 +240,7 @@ export function FuelCalculator({ combo, title = "Calculateur carburant / énergi
             </div>
             <small className="muted">{MODES.find((x) => x.mode === m)?.hint}.</small>
           </div>
-          {saveErr && <div className="error" style={{ marginTop: 6 }}>{saveErr}</div>}
+          {saveErr && <Alert tone="danger" title="Enregistrement impossible">{saveErr}</Alert>}
 
           {s.fuel_limited && v.fuel_tank_l != null && ratio != null && (
             <div className="fc-warn">

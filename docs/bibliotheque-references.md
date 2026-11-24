@@ -51,6 +51,29 @@ Apex 0.48 ne lit pas encore ces fichiers. Au démarrage, il fait un inventaire e
 
 Aucun contenu n'est ouvert ni copié. Si la sonde trouve des fichiers DuckDB, l'étape suivante est de lire les tables sur une copie, pour comparer canaux et fréquence à l'enregistrement `.apexlmu` d'Apex (50–60 Hz) avant de décider d'importer ces fichiers. Le lecteur DuckDB est une grosse dépendance (moteur C++) : on ne l'ajoute que si la sonde montre un gain réel (ex. séances roulées sans Apex ouvert).
 
+### Verdict de la sonde (état au 24 nov.)
+
+| Question | Réponse | Statut |
+|---|---|---|
+| Le jeu écrit-il des fichiers ? | Oui : 327 fichiers dans `UserData\Telemetry` sur le PC d'Alex (sonde Apex du 22 nov.), en-tête « DUCK » à l'octet 8. | **Vérifié** (en-tête seulement) |
+| Format | DuckDB. | **Vérifié** (en-tête) |
+| Tables, canaux, types | Une table par canal, plus `metadata` / `channelsList` / `eventsList`, d'après les outils communautaires. | **Hypothèse** : aucune table ouverte |
+| Fréquence par canal | Inconnue. | **Non mesuré** |
+| Setup dans le fichier | `metadata` le contiendrait, en JSON. | **Hypothèse** |
+| Canaux manquants (lacet, accélérations, braquage, aéro) | Selon les outils communautaires. | **Hypothèse** |
+| Exploitable par Apex ? | Pas de décision tant que les 4 lignes précédentes ne sont pas mesurées. | **En attente** |
+
+La sonde d'Apex ne lit que l'en-tête, volontairement. Pour mesurer le reste sans ajouter le moteur DuckDB à Apex, on lance une fois sur le PC d'Alex le script en lecture seule `docs/sonde-duckdb.sql`. Il ne lit qu'un fichier de télémétrie d'Alex et n'ouvre aucun fichier de physique. Il donne les tables, colonnes et types, le nombre exact de lignes, la plage de la colonne de temps (donc la fréquence = lignes ÷ durée) et 3 lignes d'aperçu par table. Logique vérifiée sur une base factice (module DuckDB 1.1.3), pas encore sur un vrai fichier LMU.
+
+Procédure (5 minutes) :
+1. Installer l'outil DuckDB en ligne de commande (gratuit) : `winget install DuckDB.cli` dans un terminal Windows.
+2. Créer un dossier de travail, par exemple `C:\sonde-duckdb`, et y copier `docs/sonde-duckdb.sql`.
+3. Choisir un fichier récent de `Le Mans Ultimate\UserData\Telemetry` (une course de Monza si possible, pour comparer avec l'enregistrement d'Apex de la même séance).
+4. Dans ce dossier : `duckdb -readonly "<chemin du fichier>" -c ".read sonde-duckdb.sql"`.
+5. Envoyer les 4 fichiers `sonde-duckdb-*.json`. L'aperçu peut contenir ton pseudo dans `metadata` : rien n'est versionné sans être anonymisé.
+
+Critère de décision : on ajoute un lecteur à Apex seulement si au moins une condition est remplie. Soit les fichiers couvrent des séances absentes d'Apex (roulées sans Apex ouvert). Soit ils apportent un canal utile au coaching qu'Apex n'enregistre pas, à au moins 50 Hz pour les canaux de pilotage.
+
 ## Télémétrie en accès libre (recherche du 22 nov.)
 
 - **Le jeu lui-même** : les fichiers DuckDB ci-dessus, à toi, gratuits. C'est la seule source qui entre dans les règles d'Apex sans condition.

@@ -16,6 +16,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { StrategyPage } from "./pages/StrategyPage";
 import { SetupsPage } from "./pages/SetupsPage";
 import { ReferencesPage } from "./pages/ReferencesPage";
+import { Alert } from "./components/ui";
 
 export type Route =
   | { page: "dashboard" }
@@ -68,7 +69,7 @@ export function App() {
         <UpdateBanner />
         <RecordingAlert status={status} />
         <NewSessionBanner onOpen={(id) => setRoute({ page: "analysis", sessionId: id })} />
-        {!isTauri() && <div className="error">Mode navigateur : lance l'application avec « npm run tauri dev » pour accéder aux données.</div>}
+        {!isTauri() && <Alert tone="danger" title="Mode navigateur">Lance l'application avec « npm run tauri dev » pour accéder aux données.</Alert>}
 <PageBoundary key={route.page} onHome={() => setRoute({ page: "dashboard" })}>
         {route.page === "dashboard" && <DashboardPage navigate={setRoute} status={status} />}
         {route.page === "sessions" && <SessionsPage navigate={setRoute} />}

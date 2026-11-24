@@ -1,5 +1,6 @@
 import type { EngineerCall, FuelUnit, LiveFuel } from "../lib/types";
 import { perLap, setting } from "./FuelCalculator";
+import { Stat } from "./ui";
 
 const n1 = (v: number) => v.toFixed(1).replace(".", ",");
 const n2 = (v: number) => v.toFixed(2).replace(".", ",");
@@ -71,10 +72,10 @@ export function LiveFuelCard({ f }: { f: LiveFuel | null | undefined }) {
           <i style={{ width: `${pct * 100}%` }} />
         </div>
       )}
-      <div className="lf-main">
-        <div><span>Par tour</span><b className="mono">{f.per_lap != null ? perLap(u, f.per_lap) : "—"}</b><small className="muted">3 derniers tours</small></div>
-        {f.fuel_l != null && <div><span>Carburant à bord</span><b className="mono">{n1(f.fuel_l)} L</b>{f.fuel_laps != null && <small className="muted">{n1(f.fuel_laps)} tours</small>}</div>}
-        {u === "energy" && f.fuel_ratio != null && <div><span>Ratio conseillé</span><b className="mono">{n2(f.fuel_ratio)}</b><small className="muted">L par %</small></div>}
+      <div className="ui-stats">
+        <Stat label="Par tour" value={f.per_lap != null ? perLap(u, f.per_lap) : "—"} hint="3 derniers tours" />
+        {f.fuel_l != null && <Stat label="Carburant à bord" value={`${n1(f.fuel_l)} L`} hint={f.fuel_laps != null ? `${n1(f.fuel_laps)} tours` : undefined} />}
+        {u === "energy" && f.fuel_ratio != null && <Stat label="Ratio conseillé" value={n2(f.fuel_ratio)} hint="L par %" />}
       </div>
       {f.per_lap == null && <div className="muted mt-12">Consommation mesurée à la fin du premier tour lancé.</div>}
       {f.engineer && <EngineerBlock e={f.engineer} u={u} />}

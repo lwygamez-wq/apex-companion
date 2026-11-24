@@ -5,7 +5,7 @@ import { dateTime, delta, lapTime, SESSION_KIND_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { CircuitOverview, HistoryLap } from "../lib/types";
 import { SetupChip } from "../components/SetupChip";
-import { EmptyState, LoadError, Skeleton } from "../components/ui";
+import { deltaTone, EmptyState, LoadError, Skeleton, Stat } from "../components/ui";
 import { FuelCalculator } from "../components/FuelCalculator";
 import { SessionTrend } from "../components/SessionTrend";
 import { sessionTrend } from "../lib/trend";
@@ -132,14 +132,10 @@ export function HistoryPage({ navigate }: { navigate: (r: Route) => void }) {
           </div>
           <div className="history-main">
             <div className="grid cols-4" style={{ marginBottom: 12 }}>
-              <div className="card"><h2>Record propre</h2><div className="kpi best">{lapTime(current.best_clean_s)}</div>{current.best_clean_s == null && <div className="kpi-sub">aucun tour propre</div>}</div>
-              <div className="card"><h2>Progression</h2><div className="kpi">{firstClean != null && current.best_clean_s != null ? `${delta(current.best_clean_s - firstClean)} s` : "—"}</div><div className="kpi-sub">depuis ton 1er tour propre ici</div></div>
-              <div className="card"><h2>Tours propres</h2><div className="kpi">{current.timed_laps ? `${Math.round((current.clean_laps / current.timed_laps) * 100)} %` : "—"}</div><div className="kpi-sub">{current.clean_laps} sur {current.timed_laps} tours lancés</div></div>
-              <div className="card">
-                <h2>Référence externe</h2>
-                <div className="kpi" style={{ fontSize: 28 }}>{current.external_reference ? lapTime(current.external_reference[1]) : "—"}</div>
-                <div className="kpi-sub">{current.external_reference ? current.external_reference[0] : "aucune : exporte un tour depuis Garage 61"}</div>
-              </div>
+              <div className="card"><Stat label="Record propre" value={lapTime(current.best_clean_s)} tone="best" hint={current.best_clean_s == null ? "aucun tour propre" : undefined} /></div>
+              <div className="card"><Stat label="Progression" value={firstClean != null && current.best_clean_s != null ? `${delta(current.best_clean_s - firstClean)} s` : "—"} tone={firstClean != null && current.best_clean_s != null ? deltaTone(current.best_clean_s - firstClean) : "neutral"} hint="depuis ton 1er tour propre ici" /></div>
+              <div className="card"><Stat label="Tours propres" value={current.timed_laps ? `${Math.round((current.clean_laps / current.timed_laps) * 100)} %` : "—"} hint={`${current.clean_laps} sur ${current.timed_laps} tours lancés`} /></div>
+              <div className="card"><Stat label="Référence externe" value={current.external_reference ? lapTime(current.external_reference[1]) : "—"} hint={current.external_reference ? current.external_reference[0] : "aucune : exporte un tour depuis Garage 61"} /></div>
             </div>
             <SessionTrend points={trend} />
             <div className="card" style={{ marginBottom: 12 }}>

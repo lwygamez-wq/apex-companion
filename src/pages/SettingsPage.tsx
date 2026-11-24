@@ -7,6 +7,8 @@ import { setCoachVoice, setCoachVolume } from "../lib/voice";
 import { SUPPORT_FR } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { AppSettings, Capabilities, Support } from "../lib/types";
+import { Alert } from "../components/ui";
+import { RenderCheckCard } from "../components/RenderCheckCard";
 
 const CAP_LABELS: [keyof Capabilities, string][] = [
   ["live_telemetry", "Télémétrie live"],
@@ -141,7 +143,7 @@ export function SettingsPage() {
         <h1>Réglages</h1>
         <span className={`save-state ${saveState}`}>{saveState === "saving" ? "Enregistrement…" : saveState === "saved" ? "✓ Enregistré" : saveState === "error" ? "Non enregistré" : ""}</span>
       </div>
-      {msg && <div className="warning">{msg}</div>}
+      {msg && <Alert tone="info">{msg}</Alert>}
       <nav className="settings-nav">
         <a href="#reg-volant">Au volant</a>
         <a href="#reg-donnees">Données</a>
@@ -156,7 +158,7 @@ export function SettingsPage() {
           <label className="form-row"><div>Actif en course<div className="hint">Désactivé par défaut : entraînement et qualifications uniquement.</div></div><input type="checkbox" checked={s.coach_in_race} onChange={(e) => upd("coach_in_race", e.target.checked)} /></label>
           <label className="form-row"><div>Ingénieur de course<div className="hint">En course : relais, cible par tour (lift ou attaque), appel aux stands avec l'énergie et le ratio à régler. Parle même si le coaching est coupé en course.</div></div><input type="checkbox" checked={s.engineer_calls} onChange={(e) => upd("engineer_calls", e.target.checked)} /></label>
           <label className="form-row"><div>Voix activée</div><input type="checkbox" checked={s.coach_audio} onChange={(e) => upd("coach_audio", e.target.checked)} /></label>
-          <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
+          <div className="form-row"><div>Intervalle minimum entre deux conseils (s)</div><input type="number" aria-label="Intervalle minimum entre deux conseils, en secondes" min={3} max={60} value={s.coach_min_interval_s} onChange={(e) => upd("coach_min_interval_s", Number(e.target.value))} style={{ width: 80 }} /></div>
         </div>
       )}
 
@@ -196,7 +198,7 @@ export function SettingsPage() {
           <div className="form-row">
             <div>Dossier de télémétrie iRacing<div className="hint">Vide = Documents\iRacing\telemetry</div></div>
             <div className="row">
-              <input type="text" style={{ flex: 1, minWidth: 320 }} value={s.iracing_telemetry_dir ?? ""} placeholder="par défaut" onChange={(e) => upd("iracing_telemetry_dir", e.target.value || null)} />
+              <input type="text" style={{ flex: 1, minWidth: 320 }} aria-label="Dossier de télémétrie iRacing" value={s.iracing_telemetry_dir ?? ""} placeholder="par défaut" onChange={(e) => upd("iracing_telemetry_dir", e.target.value || null)} />
               <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("iracing_telemetry_dir", d), (e: unknown) => setMsg(String(e)))}>Parcourir</button>
             </div>
           </div>
@@ -208,7 +210,7 @@ export function SettingsPage() {
               </div>
             </div>
             <div className="row">
-              <input type="text" style={{ flex: 1, minWidth: 320 }} value={s.mobile_export_dir ?? ""} placeholder="désactivé" onChange={(e) => upd("mobile_export_dir", e.target.value || null)} />
+              <input type="text" style={{ flex: 1, minWidth: 320 }} aria-label="Dossier de copie pour le mobile" value={s.mobile_export_dir ?? ""} placeholder="désactivé" onChange={(e) => upd("mobile_export_dir", e.target.value || null)} />
               <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("mobile_export_dir", d), (e: unknown) => setMsg(String(e)))}>Parcourir</button>
             </div>
           </div>
@@ -241,7 +243,7 @@ export function SettingsPage() {
           </label>
           <div className="form-row">
             <div>Fréquence d'enregistrement live<div className="hint">60 Hz (conseillé) : points de freinage précis à 1–2 m près. 20 Hz : moins précis, pour un PC juste en puissance.</div></div>
-            <select value={s.sample_rate_hz} onChange={(e) => upd("sample_rate_hz", Number(e.target.value))}>
+            <select aria-label="Fréquence d'enregistrement live" value={s.sample_rate_hz} onChange={(e) => upd("sample_rate_hz", Number(e.target.value))}>
               {[20, 30, 60].map((h) => <option key={h} value={h}>{h} Hz</option>)}
             </select>
           </div>
@@ -251,7 +253,7 @@ export function SettingsPage() {
           </label>
           <div className="form-row">
             <div>Unités</div>
-            <select value={s.units} onChange={(e) => upd("units", e.target.value as AppSettings["units"])}>
+            <select aria-label="Unités" value={s.units} onChange={(e) => upd("units", e.target.value as AppSettings["units"])}>
               <option value="metric">Métriques (km/h, m)</option>
               <option value="imperial">Impériales (mph)</option>
             </select>
@@ -272,7 +274,7 @@ export function SettingsPage() {
           <div className="form-row">
             <div>Dossier de téléchargements<div className="hint">Vide = le dossier Téléchargements de Windows, détecté automatiquement même s'il a été déplacé (ex. D:\Téléchargements).</div></div>
             <div className="row">
-              <input type="text" style={{ flex: 1, minWidth: 280 }} value={s.downloads_dir ?? ""} placeholder="détection automatique" onChange={(e) => upd("downloads_dir", e.target.value || null)} />
+              <input type="text" style={{ flex: 1, minWidth: 280 }} aria-label="Dossier des téléchargements" value={s.downloads_dir ?? ""} placeholder="détection automatique" onChange={(e) => upd("downloads_dir", e.target.value || null)} />
               <button className="btn" onClick={() => void open({ directory: true }).then((d) => typeof d === "string" && upd("downloads_dir", d), (e: unknown) => setMsg(String(e)))}>Parcourir</button>
             </div>
           </div>
@@ -284,7 +286,7 @@ export function SettingsPage() {
               </div>
             </div>
             <div className="row">
-              <input type="password" style={{ flex: 1, minWidth: 280 }} value={s.garage61_token ?? ""} placeholder="non configuré" onChange={(e) => upd("garage61_token", e.target.value || null)} />
+              <input type="password" style={{ flex: 1, minWidth: 280 }} aria-label="Jeton Garage 61" value={s.garage61_token ?? ""} placeholder="non configuré" onChange={(e) => upd("garage61_token", e.target.value || null)} />
               <button className="btn" onClick={() => void checkG61()} disabled={!s.garage61_token} title="Vérifie le jeton puis cherche une référence pour chaque circuit/voiture déjà roulé">Vérifier et chercher</button>
               <button className="btn" onClick={() => void recoverG61()} disabled={!s.garage61_token} title="Recrée dans Apex tes sessions envoyées sur Garage 61 dont le fichier .ibt a disparu (30 derniers jours)">Récupérer mes sessions</button>
             </div>
@@ -295,7 +297,7 @@ export function SettingsPage() {
               Pilotes de référence
               <div className="hint">Un par ligne : colle l'adresse de la page de profil Garage 61 du pilote (ou son identifiant). Leurs meilleurs tours sont cherchés en plus de ceux des pilotes que tu suis.</div>
             </div>
-            <textarea
+            <textarea aria-label="Pilotes de référence, un par ligne"
               rows={4}
               style={{ width: "100%", background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: 4, padding: 8, color: "inherit", font: "inherit" }}
               value={(s.garage61_drivers ?? []).join("\n")}
@@ -320,20 +322,20 @@ export function SettingsPage() {
           </p>
           <div className="form-row">
             <div>Fournisseur<div className="hint">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.hint}</div></div>
-            <select value={s.ai_provider || "anthropic"} onChange={(e) => { const p = PROVIDERS.find((x) => x.id === e.target.value)!; setS((x) => (x ? { ...x, ai_provider: p.id, ai_model: p.models[0]!, ai_api_key: x.ai_provider === p.id ? x.ai_api_key : null } : x)); setAiMsg(null); setAiModels([]); }}>
+            <select aria-label="Fournisseur d'IA" value={s.ai_provider || "anthropic"} onChange={(e) => { const p = PROVIDERS.find((x) => x.id === e.target.value)!; setS((x) => (x ? { ...x, ai_provider: p.id, ai_model: p.models[0]!, ai_api_key: x.ai_provider === p.id ? x.ai_api_key : null } : x)); setAiMsg(null); setAiModels([]); }}>
               {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
             </select>
           </div>
           {(s.ai_provider || "anthropic") !== "ollama" && (
             <div className="form-row">
               <div>Clé API<div className="hint">{PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.keyHint} Elle reste sur ce PC.</div></div>
-              <input type="password" style={{ minWidth: 280 }} value={s.ai_api_key ?? ""} placeholder="non configurée" onChange={(e) => { upd("ai_api_key", e.target.value || null); setAiMsg(null); }} />
+              <input type="password" style={{ minWidth: 280 }} aria-label="Clé de l'IA" value={s.ai_api_key ?? ""} placeholder="non configurée" onChange={(e) => { upd("ai_api_key", e.target.value || null); setAiMsg(null); }} />
             </div>
           )}
           <div className="form-row">
             <div>Modèle<div className="hint">« Tester » vérifie qu'il existe et le remplace au besoin par le meilleur modèle disponible avec ta clé ; la liste se remplit alors avec les modèles de ton compte.</div></div>
             <div className="row" style={{ justifyContent: "flex-end" }}>
-              <input type="text" list="ai-models" style={{ minWidth: 240 }} value={s.ai_model} onChange={(e) => { upd("ai_model", e.target.value); setAiMsg(null); }} />
+              <input type="text" aria-label="Modèle d'IA" list="ai-models" style={{ minWidth: 240 }} value={s.ai_model} onChange={(e) => { upd("ai_model", e.target.value); setAiMsg(null); }} />
               <datalist id="ai-models">{(aiModels.length ? aiModels : PROVIDERS.find((p) => p.id === (s.ai_provider || "anthropic"))?.models ?? []).map((m) => <option key={m} value={m} />)}</datalist>
               <button className="btn" disabled={((s.ai_provider || "anthropic") !== "ollama" && !s.ai_api_key?.trim()) || aiMsg?.kind === "wait"} onClick={() => {
                 setAiMsg({ kind: "wait", text: "Test en cours…" });
@@ -348,11 +350,13 @@ export function SettingsPage() {
               }}>Tester</button>
             </div>
           </div>
-          {aiMsg && <div className={aiMsg.kind === "ok" ? "ok-msg" : aiMsg.kind === "err" ? "error" : "muted"} style={{ marginTop: 8 }}>{aiMsg.kind === "ok" ? "✓ " : ""}{aiMsg.text}</div>}
+          {aiMsg && aiMsg.kind === "err" && <Alert tone="danger" title="Clé refusée">{aiMsg.text}</Alert>}
+          {aiMsg && aiMsg.kind !== "err" && <div className={aiMsg.kind === "ok" ? "ok-msg" : "muted"} style={{ marginTop: 8 }}>{aiMsg.text}</div>}
         </div>
       )}
 
       <h3 className="section-title settings-sec" id="reg-avance">Avancé<span className="muted"> · mises à jour, confidentialité, simulateurs</span></h3>
+      <RenderCheckCard />
       {s && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h2>Mises à jour</h2>
@@ -376,7 +380,7 @@ export function SettingsPage() {
         <p className="muted" style={{ marginTop: 0 }}>
           Un fichier .zip à envoyer au développeur : ta note, le journal d'Apex (clés et jetons masqués), tes 3 dernières séances Le Mans Ultimate et ce que le jeu a annoncé. Ni base de données, ni réglages. Rien n'est envoyé : tu choisis où l'enregistrer.
         </p>
-        <textarea className="fb-note" rows={3} value={fbNote} placeholder="Ce qui s'est passé, ce que tu attendais (circuit, voiture, tour…)" onChange={(e) => setFbNote(e.target.value)} />
+        <textarea className="fb-note" aria-label="Description du problème" rows={3} value={fbNote} placeholder="Ce qui s'est passé, ce que tu attendais (circuit, voiture, tour…)" onChange={(e) => setFbNote(e.target.value)} />
         <div className="row" style={{ marginTop: 8 }}>
           <button className="btn primary" onClick={() => void save({ defaultPath: `apex-retour-${new Date().toISOString().slice(0, 10)}.zip`, filters: [{ name: "Archive", extensions: ["zip"] }] })
             .then(async (p) => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, onSessionsChanged } from "../lib/api";
 import { dateTime } from "../lib/format";
 import type { PlanView } from "../lib/types";
+import { Alert } from "./ui";
 
 /** Programme d'entraînement de la prochaine séance (circuit + voiture), puis son bilan. */
 export function PlanCard({ sessionId }: { sessionId: number }) {
@@ -22,7 +23,7 @@ export function PlanCard({ sessionId }: { sessionId: number }) {
   }, [sessionId]);
   const renew = () => api.newTrainingPlan(sessionId).then((p) => (setPlan(p), setErr(null)), fail);
 
-  if (err) return <div className="error">{err}</div>;
+  if (err) return <Alert tone="danger" title="Programme illisible">{err}</Alert>;
   if (!plan) return null;
   const evaluated = plan.evaluated_session_id != null;
   const done = plan.objectives.filter((o) => o.result?.achieved).length;

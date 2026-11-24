@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { ChatMessage } from "../lib/types";
+import { Alert } from "./ui";
 
 const STARTERS = [
   "Résume ma séance en 3 points.",
@@ -103,7 +104,7 @@ export function DebriefChat({ sessionId, configured, onSetup, question, onAsked 
         {busy && <div className="debrief-msg assistant muted">L'ingénieur regarde tes données…</div>}
         <div ref={end} />
       </div>
-      {err && <div className="error" style={{ marginTop: 8 }}>{err}</div>}
+      {err && <Alert tone="danger" title="Débrief impossible">{err}</Alert>}
       <form
         className="debrief-input"
         onSubmit={(e) => {
