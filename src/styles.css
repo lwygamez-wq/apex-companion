@@ -1058,3 +1058,23 @@ tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--surface-2) 
 .session-strip > .ui-stat .ui-stat-value { font-size: var(--fs-xl); }
 .ui-alert { margin-bottom: 12px; }
 .mb-16 { margin-bottom: 16px; }
+
+/* ===== Carte du circuit (0.57) ===== */
+.trackmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.trackmap-labels .tm-label { pointer-events: auto; cursor: pointer; }
+.trackmap-labels text { font-family: var(--font-ui); }
+.trackmap-canvas:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.trackmap-tools { justify-content: flex-start; align-items: center; }
+.tm-mode { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-2); }
+.tm-mode select { min-height: 32px; }
+.tm-more { position: relative; margin-left: auto; }
+.tm-more > summary { list-style: none; cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; padding: 4px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-ctl); font-size: var(--fs-sm); font-weight: 650; }
+.tm-more > summary::-webkit-details-marker { display: none; }
+.tm-more-body { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; padding: 12px; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--elev-2); }
+.trackmap-hud-row { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.trackmap-hud-row .hud { position: static; }
+.trackmap-hud-row .hud-clock { position: static; align-self: center; }
+.tm-scale { display: inline-flex; align-items: center; gap: 8px; }
+.tm-scale b { font-weight: 650; color: var(--text); }
+.trackmap-legend .tm-scale-bar { width: 120px; height: 8px; border-radius: var(--r-ctl); background: linear-gradient(to right, var(--gain), var(--surface-3), var(--loss)); margin: 0; }
+.tm-scale small { color: var(--text-2); }

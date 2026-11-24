@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { at, positionsAt, useReplay, type ReplayStore } from "../lib/replay";
 import { lapTime } from "../lib/format";
 import { mix } from "../lib/palette";
+import { overlaps, placeLabels, type Box } from "../lib/mapLabels";
 import type { Comparison, TrackOverlay } from "../lib/types";
 
 /**
@@ -20,38 +21,30 @@ const BRAKE = "var(--pedal-brake)";
 const GAS = "var(--pedal-full)";
 
 /**
- * Monoplace vue de dessus (dessin générique, 5 m × 2 m, avant vers +x), centrée sur l'origine.
- * `braking` allume le feu arrière.
+ * Voiture vue de dessus : silhouette générique de prototype fermé (≈ 4,9 × 2,0 m, avant vers +x), sans
+ * marque ni modèle réel. Feux arrière allumés au freinage. Le fantôme (référence) est en contour pointillé.
  */
 function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: number; heading: number; scale: number; body: string; ghost?: boolean; braking: boolean }) {
-  const tyre = ghost ? mix("ref", 0.35) : "var(--car-tyre)";
-  const op = ghost ? 0.9 : 1;
+  const line = ghost ? body : "var(--text)";
   return (
-    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${heading.toFixed(1)}) scale(${scale.toFixed(4)})`} opacity={op} style={{ pointerEvents: "none" }}>
-      {/* ombre / halo de lisibilité */}
-      <ellipse cx={0} cy={0} rx={3.1} ry={1.5} fill="var(--car-shadow)" />
-      {braking && <ellipse cx={-2.7} cy={0} rx={0.9} ry={0.7} fill="var(--pedal-brake)" />}
-      {/* aileron arrière */}
-      <rect x={-2.5} y={-0.78} width={0.42} height={1.56} rx={0.08} fill={body} stroke={ghost ? body : "var(--text)"} strokeWidth={0.08} />
-      {/* roues */}
-      <rect x={-2.02} y={-1.0} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
-      <rect x={-2.02} y={0.62} width={0.7} height={0.38} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
-      <rect x={1.18} y={-0.96} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
-      <rect x={1.18} y={0.62} width={0.6} height={0.34} rx={0.1} fill={tyre} stroke={ghost ? body : "var(--surface-2)"} strokeWidth={0.06} />
-      {/* bras de suspension */}
-      <path d="M-1.65 -0.62 L-1.3 -0.3 M-1.65 0.62 L-1.3 0.3 M1.48 -0.62 L1.15 -0.18 M1.48 0.62 L1.15 0.18" stroke={ghost ? body : "var(--text-2)"} strokeWidth={0.07} />
-      {/* coque et pontons */}
+    <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${heading.toFixed(1)}) scale(${scale.toFixed(4)})`} style={{ pointerEvents: "none" }}>
+      {!ghost && <ellipse cx={0} cy={0} rx={3.2} ry={1.6} fill="var(--car-shadow)" />}
+      {/* caisse : nez arrondi, flancs droits, poupe large */}
       <path
-        d="M-2.1 -0.42 L-1.25 -0.58 L0.15 -0.55 L0.55 -0.24 L1.95 -0.12 L2.28 0 L1.95 0.12 L0.55 0.24 L0.15 0.55 L-1.25 0.58 L-2.1 0.42 Z"
-        fill={ghost ? mix("ref", 0.6) : body}
-        stroke={ghost ? body : "var(--text)"}
-        strokeWidth={ghost ? 0.1 : 0.07}
-        strokeDasharray={undefined}
+        d="M-2.45 -1 L1.2 -1 Q2.3 -0.95 2.55 -0.35 L2.6 0 L2.55 0.35 Q2.3 0.95 1.2 1 L-2.45 1 Q-2.6 0 -2.45 -1 Z"
+        fill={ghost ? mix("ref", 0.3) : body}
+        stroke={line}
+        strokeWidth={ghost ? 0.14 : 0.1}
+        strokeDasharray={ghost ? "0.4 0.25" : undefined}
       />
-      {/* aileron avant */}
-      <rect x={2.12} y={-0.86} width={0.32} height={1.72} rx={0.08} fill={body} stroke={ghost ? body : "var(--text)"} strokeWidth={0.08} />
-      {/* casque */}
-      <circle cx={-0.25} cy={0} r={0.24} fill={ghost ? body : "var(--accent)"} stroke="var(--bg-sunken)" strokeWidth={0.05} />
+      {/* habitacle fermé */}
+      <path d="M-0.7 -0.5 L0.55 -0.45 Q1.05 0 0.55 0.45 L-0.7 0.5 Q-0.95 0 -0.7 -0.5 Z" fill={ghost ? "none" : "var(--bg-sunken)"} stroke={ghost ? body : "none"} strokeWidth={0.08} />
+      {/* aileron arrière */}
+      <rect x={-2.75} y={-0.95} width={0.32} height={1.9} fill={ghost ? "none" : line} stroke={ghost ? body : "none"} strokeWidth={0.08} />
+      {/* feux arrière */}
+      <rect x={-2.55} y={-0.8} width={0.16} height={0.42} fill={braking ? "var(--pedal-brake)" : "var(--surface-3)"} />
+      <rect x={-2.55} y={0.38} width={0.16} height={0.42} fill={braking ? "var(--pedal-brake)" : "var(--surface-3)"} />
+      {braking && <ellipse cx={-3.1} cy={0} rx={0.55} ry={1.1} fill="var(--pedal-brake)" opacity={0.45} />}
     </g>
   );
 }
@@ -159,24 +152,33 @@ function linePath(X: number[], Y: number[], step = 2): string {
 
 const SPEED_COLORS = [0, 1, 2, 3, 4, 5].map((k) => `var(--speed-${k})`);
 
+/** Échelle du delta continu : 0,2 s gagnés ou perdus sur 100 m = couleur pleine. */
+export const DELTA_FULL_S_PER_100M = 0.2;
+
+/** Vitesse de variation de l'écart (s par mètre) autour de l'index `i`, sur ±15 m. */
+export function deltaRate(c: Comparison, i: number): number {
+  const w = Math.max(1, Math.round(15 / c.step_m));
+  const a = Math.max(0, i - w), b = Math.min(c.delta_s.length - 1, i + w);
+  return ((c.delta_s[b] ?? 0) - (c.delta_s[a] ?? 0)) / ((b - a) * c.step_m || 1);
+}
+
+/** Couleur du delta continu : vert gain, jaune perte, saturation selon l'ampleur (6 crans par côté). */
+export function deltaColor(rate: number): string {
+  const k = Math.max(-1, Math.min(1, (rate * 100) / DELTA_FULL_S_PER_100M));
+  if (Math.abs(k) < 0.08) return "var(--surface-3)";
+  const q = Math.ceil(Math.abs(k) * 6) / 6;
+  return mix(k > 0 ? "loss" : "gain", 0.25 + 0.75 * q);
+}
+
 /** Couches fixes (ne dépendent pas du temps) : mémorisées. */
-const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false }: { c: Comparison; geo: Geo; mode: ColorMode; hasEdges?: boolean }) {
+const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false, ribbonM = 12 }: { c: Comparison; geo: Geo; mode: ColorMode; hasEdges?: boolean; ribbonM?: number }) {
   const layers = useMemo(() => {
     const { X, Y, CX, CY } = geo;
     const step = Math.max(1, Math.round(4 / c.step_m));
     let band: [string, string][] = [];
     let cmpColored: [string, string][] | null = null;
     if (mode === "delta") {
-      const s20 = Math.max(1, Math.round(20 / c.step_m));
-      band = bucketPaths(X, Y, s20, (i) => {
-        const j = Math.min(i + s20, c.delta_s.length - 1);
-        const rate = ((c.delta_s[j] ?? 0) - (c.delta_s[i] ?? 0)) / ((j - i) * c.step_m || 1);
-        const k = Math.max(-1, Math.min(1, rate * 400));
-        const q = Math.round(Math.abs(k) * 4) / 4;
-        if (k > 0.05) return mix("loss", 0.3 + 0.7 * q);
-        if (k < -0.05) return mix("gain", 0.3 + 0.7 * q);
-        return "var(--surface-3)";
-      });
+      band = bucketPaths(X, Y, Math.max(1, Math.round(10 / c.step_m)), (i) => deltaColor(deltaRate(c, i)));
     } else if (mode === "studio") {
       band = [];
       if (CX && CY) {
@@ -191,7 +193,7 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
         });
       }
     } else {
-      band = [["var(--surface-2)", linePath(X, Y)]];
+      band = [];
       if (CX && CY) {
         const t = c.cmp_trace;
         cmpColored = bucketPaths(CX, CY, step, (i) => {
@@ -238,10 +240,13 @@ const StaticLayers = memo(function StaticLayers({ c, geo, mode, hasEdges = false
   }
   return (
     <g>
+      {/* Ruban de piste : bords relevés quand ils existent (couche OverlayLayer), sinon largeur constante de 12 m. */}
+      {!hasEdges && <path d={layers.refD} stroke="var(--map-asphalt-edge)" strokeWidth={ribbonM + 1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
+      {!hasEdges && <path d={layers.refD} stroke="var(--map-asphalt)" strokeWidth={ribbonM} strokeLinecap="round" strokeLinejoin="round" fill="none" />}
       {layers.band.map(([col, d]) => (
-        <path key={col} d={d} stroke={col} strokeWidth={mode === "delta" ? 12 : 9} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />
+        <path key={col} d={d} stroke={col} strokeWidth={mode === "delta" ? 11 : 6} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />
       ))}
-      <path d={layers.refD} stroke={REF_LINE} strokeWidth={1.4} fill="none" vectorEffect="non-scaling-stroke" />
+      <path d={layers.refD} stroke={REF_LINE} strokeWidth={1} opacity={mode === "delta" ? 0.6 : 1} fill="none" vectorEffect="non-scaling-stroke" />
       {layers.cmpColored
         ? layers.cmpColored.map(([col, d]) => <path key={col} d={d} stroke={col} strokeWidth={3} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />)
         : layers.cmpD && <path d={layers.cmpD} stroke={CMP_LINE} strokeWidth={1.6} fill="none" vectorEffect="non-scaling-stroke" />}
@@ -358,10 +363,10 @@ const OverlayLayer = memo(function OverlayLayer({ ov, studio, flip }: { ov: Trac
   }, [ov, studio, flip]);
   return (
     <g style={{ pointerEvents: "none" }}>
-      {d.ring && <path d={d.ring} fill={studio ? "var(--map-asphalt)" : "var(--map-ring)"} fillRule="evenodd" />}
+      {d.ring && <path d={d.ring} fill="var(--map-asphalt)" fillRule="evenodd" />}
       {d.off && <path d={d.off} fill="var(--map-grass)" />}
-      {d.left && <path d={d.left} stroke={mix("text", 0.75)} strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
-      {d.right && <path d={d.right} stroke={mix("text", 0.75)} strokeWidth={1.2} fill="none" vectorEffect="non-scaling-stroke" />}
+      {d.left && <path d={d.left} stroke={mix("text", 0.45)} strokeWidth={1} fill="none" vectorEffect="non-scaling-stroke" />}
+      {d.right && <path d={d.right} stroke={mix("text", 0.45)} strokeWidth={1} fill="none" vectorEffect="non-scaling-stroke" />}
       {d.lines && <path d={d.lines} stroke="var(--map-paint)" strokeWidth={0.6} strokeLinejoin="round" fill="none" />}
       {d.lineDots && <path d={d.lineDots} fill="var(--map-paint)" />}
       {/* Vibreur : bande de 2,4 m au bord, rouge et blanc par pavés de 2 m, comme en vrai. */}
@@ -393,13 +398,15 @@ function cornerLabels(c: Comparison, geo: Geo) {
     const [tx, ty] = tan(i);
     // Normale vers l'extérieur du virage.
     const nx = -ty * -turn, ny = tx * -turn;
-    // Numéro officiel quand le nom en contient un (« Virage 12 », « V3 »), sinon numéro d'ordre.
-    const official = /(\d+(?:-\d+)?)\s*$/.exec(k.corner.name)?.[1];
-    return { id: k.corner.id, num: official ?? String(num + 1), name: k.corner.name, x: X[i]!, y: Y[i]!, nx, ny, loss: k.time_delta_s };
+    // Numéro d'ordre sur le tour : les chiffres d'un nom (« Lesmo 1 ») ne sont pas des numéros de virage.
+    return { id: k.corner.id, num: String(num + 1), name: k.corner.name, x: X[i]!, y: Y[i]!, nx, ny, loss: k.time_delta_s };
   });
 }
 
 interface View { cx: number; cy: number; w: number }
+
+/** Largeur estimée d'un nom de virage en Saira 14 px (6,9 px par caractère en moyenne, mesuré). */
+const textW = (t: string) => Math.ceil(t.length * 6.9) + 4;
 
 /** Cap (degrés, repère écran) de la trajectoire autour de l'index `fi`, sur ±15 m. */
 function headingAt(X: number[], Y: number[], fi: number, span: number): number {
@@ -584,11 +591,97 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
 
   const hView = v.w * (height / px);
   const vb = `${v.cx - v.w / 2} ${v.cy - hView / 2} ${v.w} ${hView}`;
-  const showNames = v.w < 1200;
   const zoomTo = (x: number, y: number, w: number) => { setFollow(false); setView({ cx: x, cy: y, w }); };
   const g = `rotate(${rot.toFixed(2)} ${v.cx} ${v.cy})`;
-  /** Garde les textes lisibles (droits) quand la carte tourne. */
-  const upright = (x: number, y: number) => `rotate(${(-rot).toFixed(2)} ${x} ${y})`;
+  // Repère monde → pixels de la carte (rotation de la vue pilote comprise) : les étiquettes sont posées
+  // dans un calque en pixels, toujours droites et à taille fixe.
+  const cosR = Math.cos((rot * Math.PI) / 180), sinR = Math.sin((rot * Math.PI) / 180);
+  const toScreen = (x: number, y: number): [number, number] => {
+    const dx = x - v.cx, dy = y - v.cy;
+    return [(dx * cosR - dy * sinR) / mPerPx + px / 2, (dx * sinR + dy * cosR) / mPerPx + height / 2];
+  };
+  const ribbonM = Math.max(12, 9 * mPerPx);
+
+  // Étiquettes de virage : numéro d'ordre, nom quand la place le permet, jamais l'une sur l'autre.
+  const obstacles: Box[] = [{ x: px - 48, y: height - (onSize ? 128 : 88), w: 48, h: onSize ? 128 : 88 }];
+  if (zoomed) obstacles.push({ x: 0, y: height - 128, w: 128, h: 128 });
+  if (studio) obstacles.push({ x: 0, y: 0, w: Math.min(px, 560), h: 52 });
+  /** Trajectoire à l'écran, en petits carrés tous les ~12 px : les étiquettes l'évitent si elles peuvent. */
+  function trackBoxes(): Box[] {
+    const out: Box[] = [];
+    // Carrés de la largeur du ruban (+ repères F / G), espacés de la moitié de leur côté.
+    const side = Math.max(12, ribbonM / mPerPx + 10);
+    const stride = Math.max(1, Math.round((side * 0.5 * mPerPx) / cmp.step_m));
+    for (let i = 0; i < geo!.X.length; i += stride) {
+      const [x, y] = toScreen(geo!.X[i]!, geo!.Y[i]!);
+      if (x > -side && y > -side && x < px + side && y < height + side) out.push({ x: x - side / 2, y: y - side / 2, w: side, h: side });
+    }
+    return out;
+  }
+  const placed = tilt && follow ? [] : placeLabels(
+    labels.map((k) => {
+      const [sx, sy] = toScreen(k.x, k.y);
+      const n = [k.nx * cosR - k.ny * sinR, k.nx * sinR + k.ny * cosR];
+      return { id: k.id, x: sx, y: sy, nx: n[0]!, ny: n[1]!, small: { w: 26, h: 26 }, big: { w: 26 + 8 + textW(k.name), h: 26 }, priority: (selected === k.id ? 100 : 0) + Math.max(0, k.loss) };
+    }).filter((k) => k.x > -40 && k.y > -40 && k.x < px + 40 && k.y < height + 40),
+    px, height, obstacles, 3, trackBoxes(),
+  );
+  const byId = new Map(labels.map((k) => [k.id, k]));
+
+  // Repères de distance tous les 100 m (traits discrets), cote tous les 500 m quand on est assez près.
+  const ticks = (() => {
+    const n = geo.X.length, each = Math.round(100 / cmp.step_m);
+    let d = "";
+    const texts: { x: number; y: number; t: string }[] = [];
+    const half = ribbonM / 2 + 2 * mPerPx, len = 5 * mPerPx;
+    for (let i = each; i < n - each / 2; i += each) {
+      const a = Math.max(0, i - 3), b = Math.min(n - 1, i + 3);
+      const dx = geo.X[b]! - geo.X[a]!, dy = geo.Y[b]! - geo.Y[a]!;
+      const l = Math.hypot(dx, dy) || 1;
+      const nx = -dy / l, ny = dx / l;
+      const x0 = geo.X[i]! + nx * half, y0 = geo.Y[i]! + ny * half;
+      d += `M${x0.toFixed(1)} ${y0.toFixed(1)}L${(x0 + nx * len).toFixed(1)} ${(y0 + ny * len).toFixed(1)}`;
+      const m = Math.round(i * cmp.step_m);
+      if (m % 500 === 0 && v.w < 1600) {
+        const [sx, sy] = toScreen(x0 + nx * (len + 9 * mPerPx), y0 + ny * (len + 9 * mPerPx));
+        texts.push({ x: sx, y: sy, t: m % 1000 === 0 ? `${m / 1000} km` : `${m} m` });
+      }
+    }
+    // Une cote n'est écrite que si elle ne touche aucune étiquette de virage.
+    return { d, texts: texts.filter((t) => !placed.some((b) => overlaps({ x: t.x - 22, y: t.y - 9, w: 44, h: 18 }, b, 2))) };
+  })();
+
+  // Départ : trait en travers de la piste ; sens : chevron 120 m après la ligne.
+  const startMark = (() => {
+    const X = geo.X, Y = geo.Y;
+    const dir = (i: number) => {
+      const a = Math.max(0, i - 3), b = Math.min(X.length - 1, i + 3);
+      const dx = X[b]! - X[a]!, dy = Y[b]! - Y[a]!;
+      const l = Math.hypot(dx, dy) || 1;
+      return [dx / l, dy / l] as const;
+    };
+    const [tx, ty] = dir(0);
+    const s0 = ribbonM / 2 + 3 * mPerPx;
+    const line = { x1: X[0]! - ty * s0, y1: Y[0]! + tx * s0, x2: X[0]! + ty * s0, y2: Y[0]! - tx * s0 };
+    const k = Math.min(X.length - 1, Math.round(120 / cmp.step_m));
+    const [ux, uy] = dir(k);
+    const L = 9 * mPerPx, W = 6 * mPerPx, cx = X[k]!, cy = Y[k]!;
+    const arrow = `M${cx + ux * L} ${cy + uy * L}L${cx - ux * L * 0.4 - uy * W} ${cy - uy * L * 0.4 + ux * W}L${cx - ux * L * 0.1} ${cy - uy * L * 0.1}L${cx - ux * L * 0.4 + uy * W} ${cy - uy * L * 0.4 - ux * W}Z`;
+    return { line, arrow };
+  })();
+
+  const selectCorner = (id: number) => {
+    const k = byId.get(id);
+    onSelectCorner(id);
+    if (k) zoomTo(k.x, k.y, 380);
+  };
+  /** Virage suivant / précédent au clavier (flèches gauche / droite sur la carte). */
+  const step = (dir: 1 | -1) => {
+    if (!labels.length) return;
+    const i = labels.findIndex((k) => k.id === selected);
+    const next = labels[(i < 0 ? (dir > 0 ? 0 : labels.length - 1) : (i + dir + labels.length) % labels.length)]!;
+    selectCorner(next.id);
+  };
 
   return (
     <div className={`trackmap ${studio ? "trackmap-studio" : ""}`}>
@@ -597,36 +690,56 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           <button className="btn ghost small" onClick={() => setTools(true)}>Options de la carte</button>
         </div>
       )}
-      {!studio && tools && <div className="trackmap-tools">
-        <div className="seg">
-          {([["delta", "Gain / perte"], ["inputs", "Frein / gaz"], ["speed", "Vitesse"]] as const).map(([k, l]) => (
-            <button key={k} className={mode === k ? "on" : ""} onClick={() => setMode(k)}>{l}</button>
-          ))}
-        </div>
-        <div className="seg" title="Où placer la voiture de la référence">
-          <span className="seg-label">Réf.</span>
-          <button className={rs.ghost === "time" ? "on" : ""} onClick={() => store.setGhost("time")} title="Où était la référence au même instant : elle se détache devant ou derrière toi">Même temps</button>
-          <button className={rs.ghost === "distance" ? "on" : ""} onClick={() => store.setGhost("distance")} title="La référence roule à ta hauteur : compare freinages et remises des gaz au même endroit">Même endroit</button>
-        </div>
-        <div className="seg">
-          <button className={marks ? "on" : ""} onClick={() => setMarks((m) => !m)} title="Points de freinage (F) et de remise des gaz (G), les tiens et ceux de la référence">Repères F / G</button>
-          {overlay && (overlay.edges || overlay.kerbs.length > 0) && <button className={showSurf ? "on" : ""} onClick={() => setShowSurf((m) => !m)} title={`Bords de piste et vibreurs relevés sur ${overlay.laps} tours`}>Bords / vibreurs</button>}
-          <button className={follow ? "on" : ""} onClick={() => setFollow((f) => !f)} title="La caméra suit la voiture (molette : zoom). Activé automatiquement en lecture.">Suivre</button>
-          {follow && <button className={carUp ? "on" : ""} onClick={() => setCarUp((x) => !x)} title="La carte tourne pour que la voiture pointe vers le haut">Vue pilote</button>}
-          <button onClick={() => { setFollow(false); setView(null); }} title="Voir tout le circuit">Circuit</button>
-        </div>
-        {onSize && (
-          <div className="seg" title="Taille de la carte (Échap : quitter le plein écran)">
-            <button className={size === "normal" ? "on" : ""} onClick={() => onSize("normal")}>Normal</button>
-            <button className={size === "half" ? "on" : ""} onClick={() => onSize("half")}>50 %</button>
-            <button className={size === "full" ? "on" : ""} onClick={() => onSize("full")}>Relecture plein écran</button>
+      {!studio && tools && (
+        <div className="trackmap-tools">
+          <label className="tm-mode">
+            Couleur
+            <select value={mode} onChange={(e) => setMode(e.target.value as ColorMode)} aria-label="Couleur du tracé">
+              <option value="delta">Écart de temps</option>
+              <option value="inputs">Pédales</option>
+              <option value="speed">Vitesse</option>
+            </select>
+          </label>
+          <div className="seg">
+            <button className={marks ? "on" : ""} onClick={() => setMarks((m) => !m)} title="Points de freinage (F) et de remise des gaz (G), les tiens et ceux de la référence">Repères F / G</button>
+            {overlay && (overlay.edges || overlay.kerbs.length > 0) && <button className={showSurf ? "on" : ""} onClick={() => setShowSurf((m) => !m)} title={`Bords de piste et vibreurs relevés sur ${overlay.laps} tours`}>Bords</button>}
+            <button className={follow ? "on" : ""} onClick={() => setFollow((f) => !f)} title="La caméra suit la voiture (molette : zoom). Activé automatiquement en lecture.">Suivre</button>
+            <button onClick={() => { setFollow(false); setView(null); }} title="Voir tout le circuit">Circuit</button>
           </div>
-        )}
-      </div>}
+          <details className="tm-more">
+            <summary>Plus</summary>
+            <div className="tm-more-body">
+              <div className="seg" title="Où placer la voiture de la référence">
+                <span className="seg-label">Réf.</span>
+                <button className={rs.ghost === "time" ? "on" : ""} onClick={() => store.setGhost("time")} title="Où était la référence au même instant : elle se détache devant ou derrière toi">Même temps</button>
+                <button className={rs.ghost === "distance" ? "on" : ""} onClick={() => store.setGhost("distance")} title="La référence roule à ta hauteur : compare freinages et remises des gaz au même endroit">Même endroit</button>
+              </div>
+              {follow && <button className={`btn small ${carUp ? "on" : ""}`} onClick={() => setCarUp((x) => !x)} title="La carte tourne pour que la voiture pointe vers le haut">Vue pilote</button>}
+              {onSize && (
+                <div className="seg" title="Taille de la carte (Échap : quitter le plein écran)">
+                  <button className={size === "normal" ? "on" : ""} onClick={() => onSize("normal")}>Normal</button>
+                  <button className={size === "half" ? "on" : ""} onClick={() => onSize("half")}>50 %</button>
+                  <button className={size === "full" ? "on" : ""} onClick={() => onSize("full")}>Relecture plein écran</button>
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
+      )}
       <div
         ref={host}
         className="trackmap-canvas"
         style={{ height }}
+        tabIndex={0}
+        role="application"
+        aria-label="Carte du circuit : flèches gauche et droite pour passer d'un virage à l'autre, plus et moins pour zoomer"
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight") (e.preventDefault(), step(1));
+          else if (e.key === "ArrowLeft") (e.preventDefault(), step(-1));
+          else if (e.key === "+" || e.key === "=") zoomBy(0.7);
+          else if (e.key === "-") zoomBy(1.4);
+          else if (e.key === "0") (setFollow(false), setView(null));
+        }}
         onPointerDown={(e) => { if (!(tilt && follow)) onDown(e); }}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -642,31 +755,11 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
         >
           <g transform={g}>
             {overlay && showSurf && <OverlayLayer ov={overlay} studio={studio} flip={flipY} />}
-            <StaticLayers c={cmp} geo={geo} mode={mode} hasEdges={!!overlay?.edges && showSurf} />
-            {(() => {
-              const dx = geo.X[3]! - geo.X[0]!, dy = geo.Y[3]! - geo.Y[0]!;
-              const l = Math.hypot(dx, dy) || 1;
-              const s = 9 * mPerPx;
-              return <line x1={geo.X[0]! - (dy / l) * s} y1={geo.Y[0]! + (dx / l) * s} x2={geo.X[0]! + (dy / l) * s} y2={geo.Y[0]! - (dx / l) * s} stroke="var(--text)" strokeWidth={3} vectorEffect="non-scaling-stroke" />;
-            })()}
-            {labels.map((k) => {
-              const off = 22 * mPerPx;
-              const x = k.x + k.nx * off, y = k.y + k.ny * off;
-              const sel = selected === k.id;
-              const r = (sel ? 12 : 10) * mPerPx;
-              return (
-                <g key={k.id} style={{ cursor: "pointer" }} onPointerDown={(e) => e.stopPropagation()} onClick={() => { onSelectCorner(k.id); zoomTo(k.x, k.y, 380); }}>
-                  <title>{k.name}</title>
-                  <circle cx={x} cy={y} r={r} fill={sel ? "var(--text)" : "var(--surface-1)"} stroke="var(--text)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-                  <g transform={upright(x, y)}>
-                    <text x={x} y={y + 4 * mPerPx} textAnchor="middle" fontSize={(k.num.length > 2 ? 7.5 : 11) * mPerPx} fontWeight={800} fill={sel ? "var(--surface-1)" : "var(--text)"} fontFamily="Saira Variable, sans-serif">{k.num}</text>
-                    {showNames && (
-                      <text x={x + 15 * mPerPx} y={y + 4 * mPerPx} fontSize={12 * mPerPx} fontWeight={700} fontStyle="italic" fill="var(--text)" stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Saira Variable, sans-serif">{k.name}</text>
-                    )}
-                  </g>
-                </g>
-              );
-            })}
+            <StaticLayers c={cmp} geo={geo} mode={mode} hasEdges={!!overlay?.edges && showSurf} ribbonM={ribbonM} />
+            <path d={ticks.d} stroke="var(--text-2)" strokeWidth={1} fill="none" vectorEffect="non-scaling-stroke" opacity={0.45} />
+            <line {...startMark.line} stroke="var(--text)" strokeWidth={4} vectorEffect="non-scaling-stroke" />
+            <line {...startMark.line} stroke="var(--bg-sunken)" strokeWidth={4} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+            <path d={startMark.arrow} fill="var(--text-2)" />
             {marks && (() => {
               // Tirets en travers de la piste : rouge = début du freinage, vert = remise des gaz ;
               // trait plein = toi, contour bleu = référence. Lettre F / G quand on est assez près.
@@ -692,8 +785,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
                       </>
                     )}
                     {showText && (
-                      <g transform={upright(tx, ty)}>
-                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={11 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "var(--text)"} stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="Saira Variable, sans-serif">
+                      <g transform={`rotate(${(-rot).toFixed(2)} ${tx} ${ty})`}>
+                        <text x={tx} y={ty + 4 * mPerPx} textAnchor="middle" fontSize={12 * mPerPx} fontWeight={900} fill={m.who === "ref" ? REF_LINE : "var(--text)"} stroke="var(--bg-sunken)" strokeWidth={3 * mPerPx} paintOrder="stroke" fontFamily="var(--font-ui)">
                           {m.kind === "brake" ? "F" : "G"}
                         </text>
                       </g>
@@ -724,9 +817,29 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
             })()}
           </g>
         </svg>
+        <svg className="trackmap-labels" width={px} height={height} aria-hidden={false}>
+          {ticks.texts.map((t) => (
+            <text key={t.t} x={t.x} y={t.y + 4} textAnchor="middle" fontSize={12} fill="var(--text-2)" stroke="var(--bg-sunken)" strokeWidth={3} paintOrder="stroke">{t.t}</text>
+          ))}
+          {placed.map((l) => {
+            const k = byId.get(l.id)!;
+            const [sx, sy] = toScreen(k.x, k.y);
+            const sel = selected === l.id;
+            const r = l.h / 2;
+            const nameLeft = l.named && l.x + r < l.cx - 1;
+            return (
+              <g key={l.id} data-label-group className="tm-label" role="button" tabIndex={-1} aria-label={`Virage ${k.num}, ${k.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => selectCorner(l.id)}>
+                <title>{`${k.name} : ${k.loss >= 0 ? "+" : "−"}${Math.abs(k.loss).toFixed(2)} s sur la référence`}</title>
+                <line x1={sx} y1={sy} x2={l.cx} y2={l.cy} stroke="var(--text-2)" strokeWidth={1} />
+                {l.named && <rect x={l.x} y={l.y} width={l.w} height={l.h} rx={r} fill="var(--overlay)" stroke={sel ? "var(--text)" : "var(--line-strong)"} strokeWidth={1} />}
+                <circle cx={l.cx} cy={l.cy} r={r - 1} fill={sel ? "var(--text)" : "var(--surface-2)"} stroke="var(--text)" strokeWidth={1.5} />
+                <text x={l.cx} y={l.cy + 5} textAnchor="middle" fontSize={14} fontWeight={800} fill={sel ? "var(--bg-sunken)" : "var(--text)"}>{k.num}</text>
+                {l.named && <text x={nameLeft ? l.cx - r - 6 : l.cx + r + 6} y={l.cy + 5} textAnchor={nameLeft ? "end" : "start"} fontSize={14} fontWeight={600} fill="var(--text)">{k.name}</text>}
+              </g>
+            );
+          })}
+        </svg>
         {zoomed && car && <Overview geo={geo} x={car.x} y={car.y} />}
-        {!studio && <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} compact={px < 560} />}
-        {!studio && px >= 560 && <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>}
         {studio && (
           <div className="studio-maptools" onPointerDown={(e) => e.stopPropagation()}>
             <button className={tilt && follow ? "on" : ""} onClick={() => { setFollow(true); setCarUp(true); setTilt((x) => !x); }} title="Caméra inclinée derrière la voiture">3D</button>
@@ -757,15 +870,31 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           <button onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(1.4)} aria-label="Dézoomer">−</button>
         </div>
       </div>
-      {!studio && <div className="trackmap-legend">
-        <span><i style={{ background: REF_LINE }} />Référence ({cmp.reference.driver ?? `tour ${cmp.reference.number}`}) · voiture grise transparente</span>
-        <span><i style={{ background: CMP_LINE }} />Tour {cmp.compared.number}</span>
-        {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
-        {mode === "delta" && <span><i style={{ background: "var(--gain)" }} />gain <i style={{ background: "var(--loss)", marginLeft: 6 }} />perte</span>}
-        {mode === "inputs" && <span><i style={{ background: "var(--pedal-brake)" }} />frein <i style={{ background: "var(--pedal-partial)", marginLeft: 6 }} />gaz partiel <i style={{ background: "var(--pedal-full)", marginLeft: 6 }} />plein gaz <i style={{ background: "var(--pedal-coast)", marginLeft: 6 }} />roue libre</span>}
-        {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 6 }} />G gaz · contour bleu = réf., blanc = toi</span>}
-        {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
-      </div>}
+      {!studio && (
+        <div className="trackmap-hud-row">
+          <Hud cmp={cmp} ci={ci} ri={ri} ghostMode={rs.ghost} compact={px < 560} />
+          {px >= 560 && <div className="hud-clock mono">{lapTime(rs.t - store.start)}</div>}
+        </div>
+      )}
+      {!studio && (
+        <div className="trackmap-legend">
+          {mode === "delta" && (
+            <span className="tm-scale" title="Couleur selon le temps gagné ou perdu sur la référence, mètre après mètre">
+              <b>Gain</b>
+              <i className="tm-scale-bar" />
+              <b>Perte</b>
+              <small>couleur pleine : {String(DELTA_FULL_S_PER_100M).replace(".", ",")} s par 100 m</small>
+            </span>
+          )}
+          {mode === "inputs" && <span><i style={{ background: "var(--pedal-brake)" }} />frein <i style={{ background: "var(--pedal-partial)", marginLeft: 8 }} />gaz partiel <i style={{ background: "var(--pedal-full)", marginLeft: 8 }} />plein gaz <i style={{ background: "var(--pedal-coast)", marginLeft: 8 }} />roue libre</span>}
+          {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
+          <span><i style={{ background: REF_LINE }} />Référence : {cmp.reference.driver ?? `tour ${cmp.reference.number}`} ({lapTime(cmp.reference.lap_time_s)}), voiture en pointillé</span>
+          <span><i style={{ background: CMP_LINE }} />Toi : tour {cmp.compared.number} ({lapTime(cmp.compared.lap_time_s)})</span>
+          {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
+          {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 8 }} />G gaz</span>}
+          <span>Traits : tous les 100 m ; flèche : sens de la piste</span>
+        </div>
+      )}
     </div>
   );
 }
