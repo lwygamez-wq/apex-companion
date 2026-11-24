@@ -368,3 +368,72 @@ Captures : `docs/audit/carte-0.58/`.
 ### À valider par Alex en piste
 
 - La justesse des écarts de freinage sur un vrai tour : prends un repère de piste (panneau) et compare avec « F x m trop tôt ».
+
+## 13. Référence dans la carte, iPhone, plan d'attaque, consigne radio par phase (0.59)
+
+### Choix de la référence dans la carte
+
+- **Menu « Référence » dans les outils de la carte** :
+  - ton meilleur tour propre (tour n) ;
+  - la référence de la bibliothèque (0.48) ou ta référence personnelle, avec son libellé ;
+  - le tour idéal, proposé mais désactivé avec sa raison : c'est un assemblage de secteurs, sans trace à dessiner.
+- **Référence de catégorie** : masquée tant que la sonde `rival_probe` n'a pas rendu un verdict OK sur une vraie course.
+- **La légende dit toujours laquelle est affichée** (« Référence affichée : … »).
+
+### Plan d'attaque (`analysis/attack.rs`, `components/AttackCard.tsx`)
+
+- **3 virages au plus**, triés par le temps que ton meilleur passage propre gagne sur ta médiane de la séance (analyse de régularité, 5 tours propres au moins).
+- **Repère tiré du meilleur passage**, jamais d'une valeur inventée :
+  1. le point de freinage (canal frein, pic ≥ 20 %) s'il diffère d'au moins 5 m de ton habitude ;
+  2. sinon la vitesse mini à la corde (écart ≥ 2 km/h) ;
+  3. sinon la remise des gaz (8 m plus tôt au moins).
+
+  Un virage sans écart mesuré n'entre pas dans le plan.
+- **Repère de piste** : aucun panneau 100 / 50 m dans les données. La distance est mesurée depuis la ligne, et donnée aussi par rapport à ton habitude (« freine à 760 m de la ligne, 6 m plus tard que d'habitude »).
+- **Où le plan apparaît** :
+  - dans le Briefing (carte « Plan d'attaque ») ;
+  - sur la carte : trait orange en pointillé « Cible F » ou « Cible G », visible au zoom et sur le virage choisi.
+- **Exemple sur la séance de Monza du corpus** : Ascari, garde 143 km/h à la corde (+9) ; Rettifilo, freine à 760 m (+6 m) ; Roggia, freine à 1 980 m (+8 m).
+- **Tests** : 2 tests unitaires (ordre et type des repères, rien sans écart mesuré). Les chiffres de régularité ajoutés aux instantanés de `real_corpus` sont les seuls changements.
+
+### Consigne radio par phase (`live_coach.rs`)
+
+- **Un chiffre mesuré dans chaque consigne** :
+  - freinage : « freine 15 m plus tard », « freine 10 m plus tôt, tu sors 4 km/h trop lent » ;
+  - entrée : « tourne 10 m plus tôt » ;
+  - milieu : « garde 4 km/h de plus à la corde » ;
+  - sortie : « gaz 10 m plus tôt », « sors avec 4 km/h de plus ».
+
+  Sans cause isolée, aucune consigne de pilotage n'est inventée : « Pas de cause isolée, garde tes repères. »
+- **Point de freinage de la radio** : il vient désormais de la même mesure que la carte (comparaison de freinage 0.58, point non ambigu).
+- **Une consigne à la fois, une fois par tour au plus.** Les mêmes mots avec les mêmes chiffres ne sont jamais répétés au tour suivant : seul le chrono est dit, et un chiffre qui change relance la consigne.
+- **Jamais en course** : règle `race_voice` existante, son test est inchangé.
+- **Tests** :
+  - `every_cue_cites_a_measured_number` ;
+  - non-répétition vérifiée sur la séance synthétique rejouée (`replayed_session_talks_once_per_lap`) ;
+  - `real_corpus` refuse une consigne répétée sans changement sur les séances iRacing rejouées.
+
+  Seul écart au corpus : « Commence à tourner plus tôt » devient « Tourne 20 mètres plus tôt » (Spielberg).
+
+### App iPhone
+
+- **Même composant de carte, en mode simple** : écart de temps continu, virages prioritaires cerclés, étiquettes anti-collision. Il apparaît en tête de l'onglet Conseils et dans Relecture.
+- **Fiche virage en plein écran** : toucher un virage l'ouvre, avec les boutons précédent / suivant et fermer.
+- **Exports antérieurs à la 0.58** : pas de comparaison de freinage, c'est dit dans la fiche.
+- **Débordements corrigés** (vérifiés sur un vrai export Monza dans un iPhone 13 émulé, aucun débordement horizontal) :
+  - les pastilles des lignes de tour dépassaient de 6 px depuis Saira (0.55) ;
+  - les chiffres clés dépassaient en 3 colonnes.
+
+### Mesures
+
+- **Chevauchements** : 0 aux 3 tailles (Résumé, Données, 50 %, plein écran).
+- **Image médiane au zoom** : 16,7 ms. Le 90e centile monte à 43 ms en plein écran 2560.
+- **Zoom sur un virage** : le cadre englobe désormais le premier point de freinage (ou la cible du plan) jusqu'à la sortie.
+
+Captures : `docs/audit/carte-0.59/` (plan d'attaque du Briefing, carte avec la référence et la cible, iPhone : séance, tour, fiche).
+
+### À valider par Alex en piste
+
+- **La justesse des repères du plan** : freine au point annoncé et dis si c'était trop tard ou trop tôt.
+- **La radio en essais** : une seule consigne par tour, jamais répétée à l'identique.
+- **La lisibilité de la carte** sur son écran et sur son iPhone.

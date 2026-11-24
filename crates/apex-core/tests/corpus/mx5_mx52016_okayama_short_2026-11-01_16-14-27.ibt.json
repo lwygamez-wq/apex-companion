@@ -2,6 +2,32 @@
   "ai_context": "Simulateur : iRacing · Circuit : Okayama International Circuit (Short) · Voiture : Mazda MX-5 Cup · Séance : course · Série : Fixed\nLongueur du circuit : 1929 m\nTours : 14 au total, 7 propres. Meilleur tour propre : 1:01.545 (tour 7). Tour théorique (meilleurs segments) : 1:01.185.\nRégularité : écart-type 0.37 s sur 7 tours propres, moyenne 1:02.069.\n\nTOURS (numéro, temps, état) :\n- T0 — stand, 0.12 L\n- T1 1:20.561 sortie de piste, incident, stand, drapeau jaune, 0.52 L\n- T2 1:04.380 sortie de piste, incident, 0.45 L\n- T3 1:02.104 propre, 0.45 L\n- T4 1:02.522 drapeau jaune, 0.43 L\n- T5 1:02.677 propre, 0.45 L\n- T6 1:01.960 propre, 0.46 L\n- T7 1:01.545 propre, 0.46 L\n- T8 1:02.019 drapeau jaune, 0.47 L\n- T9 1:02.357 propre, 0.47 L\n- T10 1:01.773 propre, 0.47 L\n- T11 1:02.120 drapeau jaune, 0.46 L\n- T12 1:02.063 propre, 0.46 L\n- T13 — incomplet, 0.00 L\n\nCOMPARAISON : ton tour 3 (1:02.104) contre la référence ton tour 7 (1:01.545). Écart final +0.559 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- V1 : +0.26 s · freinage plus tôt (-17 m) · vitesse mini 96 vs 99 km/h, gaz -14 m · sortie 131 vs 129 km/h\n- V2 : +0.16 s · freinage plus tôt (-14 m) · vitesse mini 79 vs 78 km/h, gaz -24 m · sortie 121 vs 121 km/h\n- V3 : +0.15 s · freinage plus tôt (-9 m) · vitesse mini 75 vs 74 km/h, gaz -5 m · sortie 92 vs 95 km/h\n- V4 : +0.12 s · freinage au même endroit · vitesse mini 64 vs 67 km/h, gaz +15 m · sortie 125 vs 122 km/h\n- V5 : +0.01 s · freinage plus tôt (-8 m) · vitesse mini 95 vs 94 km/h, gaz -16 m · sortie 131 vs 129 km/h\nConseils calculés par Apex (priorité décroissante) :\n- V1 : freinage trop précoce (gain estimé 0.13 à 0.26 s) : Tu freines environ 17 m plus tôt que la référence. Perte mesurée : 0.26 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 12 m plus loin (réf. : 114 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 99 km/h au minimum.\n- V2 : freinage trop précoce (gain estimé 0.08 à 0.16 s) : Tu freines environ 14 m plus tôt que la référence. Perte mesurée : 0.16 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 10 m plus loin (réf. : 418 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 78 km/h au minimum.\n- V3 : freinage trop précoce (gain estimé 0.07 à 0.15 s) : Tu freines environ 9 m plus tôt que la référence. Perte mesurée : 0.15 s par rapport à la référence. Confiance : moyenne. → Décale ton point de freinage d'environ 6 m plus loin (réf. : 867 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 74 km/h au minimum.\n- V4 : vitesse minimale insuffisante (gain estimé 0.06 à 0.12 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 3 km/h (64 km/h contre 67 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.12 s par rapport à la référence. Confiance : moyenne. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 67 km/h vers 1079 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à V2 : 0.25 s entre ton passage moyen et ton meilleur, sans sortie.\n- V2 : 0/11 sorties, à prendre 0.25 s en refaisant ton meilleur passage · Aucune sortie sur 11 passages, et 0.25 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- V3 : 1/11 sorties, à prendre 0.13 s en refaisant ton meilleur passage, une sortie coûte 2.1 s · 1 sortie(s) sur 11, 0.13 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V1 : 0/11 sorties, à prendre 0.18 s en refaisant ton meilleur passage · 0 sortie(s) sur 11, 0.18 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V4 : 0/11 sorties, à prendre 0.15 s en refaisant ton meilleur passage · 0 sortie(s) sur 11, 0.15 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V5 : 0/11 sorties, à prendre 0.10 s en refaisant ton meilleur passage · 0 sortie(s) sur 11, 0.10 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 0,77 s. Le plus gros : V1 (0,22 s).\n- V1 : −0.22 s possibles (meilleur passage au tour 7). Point de freinage qui varie de ±8 m : prends un repère fixe.\n- V2 : −0.20 s possibles (meilleur passage au tour 10). Sur tes meilleurs passages, tu remets les gaz 46 m plus tard et tu freines 15 m plus tard.\n- V3 : −0.13 s possibles (meilleur passage au tour 10). Pas de cause nette : trafic, ou petites variations de trajectoire.\n- V4 : −0.12 s possibles (meilleur passage au tour 7). Sur tes meilleurs passages, tu remets les gaz 23 m plus tard et tu portes 3 km/h de plus au point le plus lent.\n- V5 : −0.11 s possibles (meilleur passage au tour 3). Sur tes meilleurs passages, tu sors 6 km/h plus vite.\n\nSORTIES DE PISTE :\n- V1 (à 347 m) aux tours [1]\n- V2 (à 479 m) aux tours [1]\n- V3 (à 963 m) aux tours [2]\n\nCOURSE : P6 → P7 sur 12 pilotes, 3x\nGrille Some(6), arrivée Some(7), 12 pilotes, 3 incidents.\n- Départ : 2 places perdues au premier tour : P6 sur la grille, P8 après un tour. Le premier tour se joue au freinage du virage 1 et dans le peloton : vise la sortie propre plutôt que l'attaque.\n- Rythme très régulier : ±0.34 s sur 7 tours propres : La régularité est acquise ; la marge est maintenant dans la vitesse pure (comparaison avec une référence plus rapide).\n",
   "analysis_reference": 7,
   "analysis_reference_time": null,
+  "attack": [
+    [
+      "V1",
+      "min_speed",
+      99.021,
+      2.314,
+      7,
+      "V1 : garde 99 km/h à la corde, 2 de plus que d'habitude (ton meilleur passage, tour 7) : 0,22 s à gagner."
+    ],
+    [
+      "V4",
+      "min_speed",
+      67.498,
+      3.674,
+      7,
+      "V4 : garde 67 km/h à la corde, 4 de plus que d'habitude (ton meilleur passage, tour 7) : 0,12 s à gagner."
+    ],
+    [
+      "V5",
+      "throttle",
+      1476.0,
+      -14.0,
+      3,
+      "V5 : gaz à 1476 m de la ligne, 14 m plus tôt que d'habitude (ton meilleur passage, tour 3) : 0,11 s à gagner."
+    ]
+  ],
   "best": 7,
   "comparisons": [
     {
@@ -1172,20 +1198,29 @@
       {
         "advice": "Point de freinage qui varie de ±8 m : prends un repère fixe.",
         "apex_m": 259.0,
+        "best_brake_m": 114.0,
         "best_lap": 7,
+        "best_min_kmh": 99.021,
         "best_s": 11.089,
+        "best_throttle_m": 256.0,
         "brake_spread_m": 7.547,
         "differences": [],
         "gain_s": 0.217,
         "median_s": 11.306,
         "name": "V1",
-        "passes": 7
+        "passes": 7,
+        "usual_brake_m": 114.0,
+        "usual_min_kmh": 96.707,
+        "usual_throttle_m": 250.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu remets les gaz 46 m plus tard et tu freines 15 m plus tard.",
         "apex_m": 540.0,
+        "best_brake_m": 414.0,
         "best_lap": 10,
+        "best_min_kmh": 79.079,
         "best_s": 12.639,
+        "best_throttle_m": 552.0,
         "brake_spread_m": 7.458,
         "differences": [
           {
@@ -1210,25 +1245,37 @@
         "gain_s": 0.198,
         "median_s": 12.837,
         "name": "V2",
-        "passes": 7
+        "passes": 7,
+        "usual_brake_m": 414.0,
+        "usual_min_kmh": 79.022,
+        "usual_throttle_m": 530.0
       },
       {
         "advice": "Pas de cause nette : trafic, ou petites variations de trajectoire.",
         "apex_m": 953.0,
+        "best_brake_m": 862.0,
         "best_lap": 10,
+        "best_min_kmh": 75.039,
         "best_s": 9.352,
+        "best_throttle_m": 948.0,
         "brake_spread_m": 4.821,
         "differences": [],
         "gain_s": 0.13,
         "median_s": 9.482,
         "name": "V3",
-        "passes": 7
+        "passes": 7,
+        "usual_brake_m": 864.0,
+        "usual_min_kmh": 74.622,
+        "usual_throttle_m": 946.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu remets les gaz 23 m plus tard et tu portes 3 km/h de plus au point le plus lent.",
         "apex_m": 1078.0,
+        "best_brake_m": 1032.0,
         "best_lap": 7,
+        "best_min_kmh": 67.498,
         "best_s": 10.577,
+        "best_throttle_m": 1080.0,
         "brake_spread_m": 3.546,
         "differences": [
           {
@@ -1253,13 +1300,19 @@
         "gain_s": 0.121,
         "median_s": 10.698,
         "name": "V4",
-        "passes": 7
+        "passes": 7,
+        "usual_brake_m": 1030.0,
+        "usual_min_kmh": 63.824,
+        "usual_throttle_m": 1068.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu sors 6 km/h plus vite.",
         "apex_m": 1493.0,
+        "best_brake_m": 1404.0,
         "best_lap": 3,
+        "best_min_kmh": 94.909,
         "best_s": 17.466,
+        "best_throttle_m": 1476.0,
         "brake_spread_m": 5.146,
         "differences": [
           {
@@ -1272,7 +1325,10 @@
         "gain_s": 0.105,
         "median_s": 17.571,
         "name": "V5",
-        "passes": 7
+        "passes": 7,
+        "usual_brake_m": 1408.0,
+        "usual_min_kmh": 94.486,
+        "usual_throttle_m": 1490.0
       }
     ],
     "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 0,77 s. Le plus gros : V1 (0,22 s).",

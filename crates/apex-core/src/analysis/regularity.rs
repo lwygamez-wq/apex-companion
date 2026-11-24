@@ -38,6 +38,14 @@ pub struct CornerRegularity {
     pub differences: Vec<PassDifference>,
     /// Phrase de conseil.
     pub advice: String,
+    /// Meilleur passage (tour `best_lap`) et habitude (médiane de tous les passages), pour le plan
+    /// d'attaque : point de freinage (canal frein, pic ≥ 20 %), vitesse mini, remise des gaz (m, km/h).
+    pub best_brake_m: Option<f32>,
+    pub usual_brake_m: Option<f32>,
+    pub best_min_kmh: f32,
+    pub usual_min_kmh: f32,
+    pub best_throttle_m: Option<f32>,
+    pub usual_throttle_m: Option<f32>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -182,7 +190,26 @@ pub fn regularity(laps: &[(i32, &Resampled)], windows: &[Window]) -> Option<Regu
                 _ => "Pas de cause nette : trafic, ou petites variations de trajectoire.".into(),
             },
         };
+        // Habitude : médiane sur tous les passages (au moins la moitié doit avoir la mesure).
+        let usual = |f: &dyn Fn(&CornerMetrics) -> Option<f32>| {
+            let mut v: Vec<f32> = passes.iter().filter_map(|p| f(&p.2)).collect();
+            if v.len() * 2 < n {
+                return None;
+            }
+            median(&mut v)
+        };
+        let braked = |m: &CornerMetrics| m.brake_on_m.filter(|_| m.brake_peak >= 0.2);
+        let bp = &passes[0].2;
+        let (best_brake_m, usual_brake_m) = (braked(bp), usual(&braked));
+        let (best_min_kmh, usual_min_kmh) = (bp.min_speed_kmh, usual(&|m| Some(m.min_speed_kmh)).unwrap_or(bp.min_speed_kmh));
+        let (best_throttle_m, usual_throttle_m) = (bp.throttle_on_m, usual(&|m| m.throttle_on_m));
         corners.push(CornerRegularity {
+            best_brake_m,
+            usual_brake_m,
+            best_min_kmh,
+            usual_min_kmh,
+            best_throttle_m,
+            usual_throttle_m,
             name: w.0.clone(),
             apex_m: w.2,
             passes: n,

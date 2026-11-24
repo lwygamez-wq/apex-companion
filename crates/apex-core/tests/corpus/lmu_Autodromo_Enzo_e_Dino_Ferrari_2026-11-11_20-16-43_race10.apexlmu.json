@@ -2,6 +2,32 @@
   "ai_context": "Simulateur : Le Mans Ultimate · Circuit : Autodromo Enzo e Dino Ferrari · Voiture : Peugeot 9x8 · Séance : course · Série : Open\nLongueur du circuit : 4901 m\nTours : 57 au total, 46 propres. Meilleur tour propre : 1:33.689 (tour 43). Tour théorique (meilleurs segments) : 1:32.664.\nRégularité : écart-type 1.02 s sur 45 tours propres, moyenne 1:35.331.\n\nTOURS (numéro, temps, état) :\n- T0 — incomplet, 0.59 L\n- T0 1:45.826 propre, 2.47 L\n- T1 1:37.808 incident, 2.57 L\n- T2 1:51.285 incident, 2.69 L\n- T3 1:43.081 sortie de piste, incident, 2.59 L\n- T4 1:34.816 propre, 2.59 L\n- T5 1:35.242 propre, 2.54 L\n- T6 1:34.567 propre, 2.45 L\n- T7 1:36.537 propre, 2.51 L\n- T8 1:37.356 sortie de piste, 2.48 L\n- T9 1:35.483 propre, 2.52 L\n- T10 1:38.719 propre, 2.49 L\n- T11 1:35.677 propre, 2.49 L\n- T12 1:36.307 propre, 2.49 L\n- T13 1:37.333 propre, 2.41 L\n- T14 1:34.547 propre, 2.43 L\n- T15 1:53.757 sortie de piste, incident, 2.51 L\n- T16 1:35.987 propre, 2.51 L\n- T17 1:35.359 propre, 2.44 L\n- T18 1:35.320 propre, 2.45 L\n- T19 1:34.268 propre, 2.44 L\n- T20 1:34.848 propre, 2.48 L\n- T21 1:35.170 propre, 2.42 L\n- T22 1:34.575 propre, 2.56 L\n- T23 1:35.908 propre, 2.49 L\n- T24 1:34.126 propre, 2.43 L\n- T25 1:35.076 propre, 2.41 L\n- T26 1:36.765 propre, 2.46 L\n- T27 1:35.196 propre, 2.38 L\n- T28 1:34.343 propre, 2.43 L\n- T29 1:34.960 propre, 2.46 L\n- T30 1:35.293 propre, 2.45 L\n- T31 2:26.119 sortie de piste, incident, stand\n- T32 2:19.753 stand, 2.50 L\n- T33 1:49.644 stand, 2.58 L\n- T34 1:34.590 propre, 2.44 L\n- T35 1:34.332 propre, 2.50 L\n- T36 1:35.235 propre, 2.52 L\n- T37 1:34.558 propre, 2.48 L\n- T38 1:36.311 propre, 2.46 L\n- T39 1:35.530 propre, 2.48 L\n- T40 1:34.875 propre, 2.48 L\n- T41 1:35.277 propre, 2.54 L\n- T42 1:37.120 propre, 2.48 L\n- T43 1:33.689 propre, 2.38 L\n- T44 1:35.085 propre, 2.46 L\n- T45 1:35.633 sortie de piste, 2.44 L\n- T46 1:34.872 propre, 2.52 L\n- T47 1:34.860 propre, 2.41 L\n- T48 1:35.705 propre, 2.47 L\n- T49 1:36.151 propre, 2.41 L\n- T50 1:33.906 propre, 2.40 L\n- T51 1:34.228 propre, 2.39 L\n- T52 1:37.518 propre, 2.40 L\n- T53 1:35.710 sortie de piste, 2.43 L\n- T54 1:34.644 propre, 2.46 L\n- T55 1:34.998 propre, 2.24 L\n\nCOMPARAISON : ton tour 43 (1:33.689) contre la référence Ta référence auto (meilleur tour propre ici, Open), 1:32.921 (1:32.921). Écart final +0.770 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Villeneuve : +0.23 s · freinage au même endroit · vitesse mini 131 vs 136 km/h, gaz +13 m · sortie 185 vs 181 km/h\n- Acque Minerali : +0.18 s · freinage plus tard (+18 m) · vitesse mini 114 vs 116 km/h, gaz +17 m · sortie 175 vs 179 km/h\n- Tamburello : +0.16 s · freinage plus tard (+9 m) · vitesse mini 122 vs 124 km/h, gaz +5 m · sortie 176 vs 180 km/h\n- Variante Alta : +0.12 s · freinage plus tard (+26 m) · vitesse mini 75 vs 81 km/h, gaz +10 m · sortie 166 vs 170 km/h\n- V8 : +0.07 s · freinage au même endroit · vitesse mini 115 vs 117 km/h, gaz +9 m · sortie 176 vs 181 km/h\n- Rivazza : +0.01 s · freinage plus tard (+9 m) · vitesse mini 104 vs 99 km/h, gaz -3 m · sortie 142 vs 138 km/h\n- Piratella : -0.09 s · freinage plus tard (+23 m) · vitesse mini 150 vs 144 km/h, gaz +12 m · sortie 193 vs 194 km/h\n- Tosa : -0.23 s · freinage au même endroit · vitesse mini 84 vs 80 km/h, gaz +21 m · sortie 156 vs 160 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Villeneuve : vitesse minimale insuffisante (gain estimé 0.12 à 0.23 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 6 km/h (131 km/h contre 136 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.23 s par rapport à la référence. Confiance : moyenne. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 136 km/h vers 1412 m).\n- Acque Minerali : freinage trop tardif, entrée surchargée (gain estimé 0.09 à 0.18 s) : Tu freines 18 m plus tard que la référence mais tu sors moins vite (175 km/h contre 179 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.18 s par rapport à la référence. Confiance : élevée. → Reviens vers le point de freinage de la référence (2660 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 179 km/h.\n- Tamburello : freinage trop tardif, entrée surchargée (gain estimé 0.08 à 0.16 s) : Tu freines 9 m plus tard que la référence mais tu sors moins vite (176 km/h contre 180 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.16 s par rapport à la référence. Confiance : moyenne. → Reviens vers le point de freinage de la référence (516 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 180 km/h.\n- Variante Alta : freinage trop tardif, entrée surchargée (gain estimé 0.06 à 0.12 s) : Tu freines 26 m plus tard que la référence mais tu sors moins vite (166 km/h contre 170 km/h) : l'entrée trop engagée coûte la vitesse de sortie. Perte mesurée : 0.12 s par rapport à la référence. Confiance : élevée. → Reviens vers le point de freinage de la référence (3222 m), relâche le frein plus tôt et privilégie une rotation propre pour ressortir à 170 km/h.\n- V8 : sortie de virage pénalisante (gain estimé 0.03 à 0.07 s) : Tu sors 4 km/h moins vite que la référence (176 km/h contre 181 km/h) sans écart net au freinage ni à la corde : la perte se fait dans la phase de réaccélération. Perte mesurée : 0.07 s par rapport à la référence. Confiance : moyenne. → Ouvre la trajectoire en sortie et vise une montée des gaz continue plutôt qu'une reprise hésitante.\n\nCARTE DE RISQUE (toutes tes séances ici) : Rester en piste, c'est acquis. Le temps est à prendre d'abord à Variante Alta : 0.50 s entre ton passage moyen et ton meilleur, sans sortie.\n- Variante Alta : 0/117 sorties, à prendre 0.50 s en refaisant ton meilleur passage · Aucune sortie sur 117 passages, et 0.50 s entre ton passage moyen et ton meilleur : c'est ici que tu peux attaquer sans risque mesuré.\n- Rivazza : 1/117 sorties, à prendre 0.28 s en refaisant ton meilleur passage, une sortie coûte 0.5 s · 1 sortie sur 117 et 0.28 s à prendre en répétant ton meilleur passage : à travailler, avec une marge.\n- Tosa : 3/117 sorties, à prendre 0.32 s en refaisant ton meilleur passage, une sortie coûte 9.0 s · 3 sortie(s) sur 117, 0.32 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Villeneuve : 5/117 sorties, à prendre 0.34 s en refaisant ton meilleur passage, une sortie coûte 3.8 s · 5 sortie(s) sur 117, 0.34 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Acque Minerali : 4/117 sorties, à prendre 0.34 s en refaisant ton meilleur passage, une sortie coûte 0.8 s · 4 sortie(s) sur 117, 0.34 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Tamburello : 2/117 sorties, à prendre 0.35 s en refaisant ton meilleur passage, une sortie coûte 0.4 s · 2 sortie(s) sur 117, 0.35 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V8 : 0/117 sorties, à prendre 0.22 s en refaisant ton meilleur passage · 0 sortie(s) sur 117, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Piratella : 1/117 sorties, à prendre 0.22 s en refaisant ton meilleur passage, une sortie coûte -0.2 s · 1 sortie(s) sur 117, 0.22 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,90 s. Le plus gros : Tosa (0,26 s).\n- Tosa : −0.26 s possibles (meilleur passage au tour 7). Sur tes meilleurs passages, tu portes 4 km/h de plus au point le plus lent.\n- Acque Minerali : −0.26 s possibles (meilleur passage au tour 24). Sur tes meilleurs passages, tu freines 28 m plus tard et tu portes 10 km/h de plus au point le plus lent.\n- Rivazza : −0.26 s possibles (meilleur passage au tour 22). Sur tes meilleurs passages, tu sors 14 km/h plus vite et tu portes 11 km/h de plus au point le plus lent.\n- Variante Alta : −0.25 s possibles (meilleur passage au tour 44). Sur tes meilleurs passages, tu sors 7 km/h plus vite et tu freines 14 m plus tard.\n- Tamburello : −0.25 s possibles (meilleur passage au tour 49). Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 8 km/h plus vite.\n- Villeneuve : −0.23 s possibles (meilleur passage au tour 28). Sur tes meilleurs passages, tu freines 42 m plus tard et tu portes 11 km/h de plus au point le plus lent.\n\nSORTIES DE PISTE :\n- Tamburello (à 737 m) aux tours [31, 53]\n- Villeneuve (à 1486 m) aux tours [15, 45]\n- Tosa (à 1723 m) aux tours [3]\n- Acque Minerali (à 2931 m) aux tours [8]\n\nCOURSE : P11 → P6 sur 42 pilotes, 0x ; point noir : Villeneuve\nGrille Some(11), arrivée Some(6), 42 pilotes, 0 incidents.\n- Villeneuve : 2 incidents, 0x : Incidents aux tours 1, 15. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n- 5 places gagnées sur la course : De P11 à P6.\n",
   "analysis_reference": null,
   "analysis_reference_time": 92.921,
+  "attack": [
+    [
+      "Tosa",
+      "min_speed",
+      88.976,
+      5.087,
+      7,
+      "Tosa : garde 89 km/h à la corde, 5 de plus que d'habitude (ton meilleur passage, tour 7) : 0,26 s à gagner."
+    ],
+    [
+      "Acque Minerali",
+      "min_speed",
+      114.272,
+      4.937,
+      24,
+      "Acque Minerali : garde 114 km/h à la corde, 5 de plus que d'habitude (ton meilleur passage, tour 24) : 0,26 s à gagner."
+    ],
+    [
+      "Rivazza",
+      "throttle",
+      4120.0,
+      -15.0,
+      22,
+      "Rivazza : gaz à 4120 m de la ligne, 15 m plus tôt que d'habitude (ton meilleur passage, tour 22) : 0,26 s à gagner."
+    ]
+  ],
   "best": 43,
   "comparisons": [
     {
@@ -2378,8 +2404,11 @@
       {
         "advice": "Sur tes meilleurs passages, tu portes 4 km/h de plus au point le plus lent.",
         "apex_m": 1696.0,
+        "best_brake_m": 1586.0,
         "best_lap": 7,
+        "best_min_kmh": 88.976,
         "best_s": 10.749,
+        "best_throttle_m": 1712.0,
         "brake_spread_m": 10.824,
         "differences": [
           {
@@ -2392,13 +2421,19 @@
         "gain_s": 0.265,
         "median_s": 11.014,
         "name": "Tosa",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 1590.0,
+        "usual_min_kmh": 83.889,
+        "usual_throttle_m": 1706.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu freines 28 m plus tard et tu portes 10 km/h de plus au point le plus lent.",
         "apex_m": 2840.0,
+        "best_brake_m": 2640.0,
         "best_lap": 24,
+        "best_min_kmh": 114.272,
         "best_s": 10.955,
+        "best_throttle_m": 2852.0,
         "brake_spread_m": 19.811,
         "differences": [
           {
@@ -2423,13 +2458,19 @@
         "gain_s": 0.258,
         "median_s": 11.213,
         "name": "Acque Minerali",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 2642.0,
+        "usual_min_kmh": 109.335,
+        "usual_throttle_m": 2852.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu sors 14 km/h plus vite et tu portes 11 km/h de plus au point le plus lent.",
         "apex_m": 4138.0,
+        "best_brake_m": 3972.0,
         "best_lap": 22,
+        "best_min_kmh": 99.439,
         "best_s": 8.388,
+        "best_throttle_m": 4120.0,
         "brake_spread_m": 28.79,
         "differences": [
           {
@@ -2460,13 +2501,19 @@
         "gain_s": 0.257,
         "median_s": 8.645,
         "name": "Rivazza",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 3974.0,
+        "usual_min_kmh": 98.269,
+        "usual_throttle_m": 4135.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu sors 7 km/h plus vite et tu freines 14 m plus tard.",
         "apex_m": 3378.0,
+        "best_brake_m": 3240.0,
         "best_lap": 44,
+        "best_min_kmh": 89.95,
         "best_s": 13.712,
+        "best_throttle_m": 3386.0,
         "brake_spread_m": 22.521,
         "differences": [
           {
@@ -2491,13 +2538,19 @@
         "gain_s": 0.252,
         "median_s": 13.964,
         "name": "Variante Alta",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 3228.0,
+        "usual_min_kmh": 83.665,
+        "usual_throttle_m": 3384.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 9 km/h de plus au point le plus lent et tu sors 8 km/h plus vite.",
         "apex_m": 692.0,
+        "best_brake_m": 540.0,
         "best_lap": 49,
+        "best_min_kmh": 120.019,
         "best_s": 16.87,
+        "best_throttle_m": 698.0,
         "brake_spread_m": 36.786,
         "differences": [
           {
@@ -2528,13 +2581,19 @@
         "gain_s": 0.251,
         "median_s": 17.121,
         "name": "Tamburello",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 521.0,
+        "usual_min_kmh": 119.487,
+        "usual_throttle_m": 702.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu freines 42 m plus tard et tu portes 11 km/h de plus au point le plus lent.",
         "apex_m": 1412.0,
+        "best_brake_m": 1250.0,
         "best_lap": 28,
+        "best_min_kmh": 126.338,
         "best_s": 9.421,
+        "best_throttle_m": 1412.0,
         "brake_spread_m": 26.269,
         "differences": [
           {
@@ -2559,13 +2618,19 @@
         "gain_s": 0.228,
         "median_s": 9.649,
         "name": "Villeneuve",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 1222.0,
+        "usual_min_kmh": 127.499,
+        "usual_throttle_m": 1408.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 11 km/h de plus au point le plus lent et tu sors 7 km/h plus vite.",
         "apex_m": 2309.0,
+        "best_brake_m": 2208.0,
         "best_lap": 43,
+        "best_min_kmh": 149.928,
         "best_s": 10.107,
+        "best_throttle_m": 2320.0,
         "brake_spread_m": 11.122,
         "differences": [
           {
@@ -2596,13 +2661,19 @@
         "gain_s": 0.204,
         "median_s": 10.311,
         "name": "Piratella",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 2197.0,
+        "usual_min_kmh": 141.048,
+        "usual_throttle_m": 2320.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 10 km/h de plus au point le plus lent et tu sors 4 km/h plus vite.",
         "apex_m": 4250.0,
+        "best_brake_m": 4198.0,
         "best_lap": 50,
+        "best_min_kmh": 110.986,
         "best_s": 12.683,
+        "best_throttle_m": 4244.0,
         "brake_spread_m": 3.98,
         "differences": [
           {
@@ -2621,7 +2692,10 @@
         "gain_s": 0.183,
         "median_s": 12.865,
         "name": "V8",
-        "passes": 46
+        "passes": 46,
+        "usual_brake_m": 4198.0,
+        "usual_min_kmh": 111.002,
+        "usual_throttle_m": 4252.0
       }
     ],
     "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,90 s. Le plus gros : Tosa (0,26 s).",

@@ -59,3 +59,13 @@ body { -webkit-tap-highlight-color: transparent; }
 .m-logo { font-family: var(--font-board); font-style: normal; font-stretch: 100%; font-weight: 800; letter-spacing: 0.04em; border-left: 0; padding-left: 0; }
 .m-title b, .m-empty h2 { font-style: normal; font-weight: 700; }
 .m-card { clip-path: none; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface-1); }
+/* Carte simplifiée et fiche virage plein écran (0.59). */
+.m-map { margin-bottom: 12px; }
+.m-sheet { position: fixed; inset: 0; z-index: 50; overflow: auto; background: var(--bg); padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 24px); }
+.m-sheet .corner-sheet { margin: 0; }
+.m-sheet .ui-card-head { flex-wrap: wrap; }
+.m-kpis .card { min-width: 0; padding: 12px; }
+.m-kpis .ui-stat-value { font-size: var(--fs-lg); }
+/* Ligne de tour : les pastilles ne poussent plus la page sur le côté (Saira plus large qu'avant 0.55). */
+.m-lap { grid-template-columns: 28px 80px 76px minmax(0, 1fr) 14px; }
+.m-lapf { min-width: 0; overflow: hidden; }

@@ -9,7 +9,7 @@ import { DebriefChat } from "../components/DebriefChat";
 import { RaceCard } from "../components/RaceCard";
 import { RaceDebriefCard } from "../components/RaceDebriefCard";
 import { ReplayPanel } from "../components/ReplayPanel";
-import { TrackMap, type MapSize } from "../components/TrackMap";
+import { TrackMap, type MapSize, type RefChoice } from "../components/TrackMap";
 import { CornerSheet } from "../components/CornerSheet";
 import { ReplayStudio } from "../components/ReplayStudio";
 import { api } from "../lib/api";
@@ -151,6 +151,22 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
   // Comparaison de la paire affichée seulement : pendant le calcul d'une nouvelle paire (changement de
   // session ou de tour), l'ancienne ne doit ni s'afficher ni servir aux boutons (programme, noms).
   const c = cmp.data && cmp.data.reference.lap_id === refId && cmp.data.compared.lap_id === cmpId && d?.laps.some((l) => l.id === cmpId) ? cmp.data : null;
+  /** Références proposées dans la carte (dit laquelle est affichée). Référence de catégorie : masquée tant
+   * que la sonde de catégorie (rival_probe) n'a pas rendu un verdict OK sur une vraie course. */
+  const refChoices: RefChoice[] = (() => {
+    if (!d) return [];
+    const out: RefChoice[] = [];
+    const best = d.laps.find((l) => l.id === d.best_lap_id);
+    if (best) out.push({ id: best.id, label: `Ton meilleur tour propre (tour ${best.number})` });
+    if (d.analysis_reference_lap_id != null && d.analysis_reference_lap_id !== d.best_lap_id && !d.laps.some((l) => l.id === d.analysis_reference_lap_id)) {
+      out.push({ id: d.analysis_reference_lap_id, label: d.reference_label ?? "Référence de la bibliothèque" });
+    }
+    if (d.personal_reference_lap_id != null && !out.some((r) => r.id === d.personal_reference_lap_id)) {
+      out.push({ id: d.personal_reference_lap_id, label: d.reference_label ?? "Ta référence personnelle" });
+    }
+    out.push({ id: null, label: "Tour idéal : indisponible (secteurs assemblés, aucune trace)" });
+    return out;
+  })();
   const overlay = useAsync(() => (d && refId != null ? api.trackOverlay(d.id, refId).catch(() => null) : Promise.resolve(null)), [d?.id, refId]);
   const store = useMemo(() => (c ? new ReplayStore(...replayBounds(c)) : null), [c]);
   useEffect(() => () => store?.dispose(), [store]);
@@ -310,7 +326,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 <>
                   <div className="summary">
                     <div className="card summary-map">
-                      <TrackMap simple overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(380, Math.round(winH * 0.52))} />
+                      <TrackMap simple refChoices={refChoices} onReference={setRefId} targets={d.attack ?? []} overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(380, Math.round(winH * 0.52))} />
                     </div>
                     <div className="summary-side">
                       <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
@@ -357,7 +373,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 <>
                   {mapSize === "half" && (
                     <div className="replay-big">
-                      <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
+                      <TrackMap refChoices={refChoices} onReference={setRefId} targets={d.attack ?? []} overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} height={Math.max(360, Math.round(winH * 0.5))} size={mapSize} onSize={setMapSize} />
                       <ReplayPanel cmp={c} store={store} />
                     </div>
                   )}
@@ -379,7 +395,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     </div>
                     {!bigMap && (
                       <div className="analysis-side">
-                        <TrackMap overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
+                        <TrackMap refChoices={refChoices} onReference={setRefId} targets={d.attack ?? []} overlay={overlay.data} cmp={c} store={store} selected={corner} onSelectCorner={(id) => setCorner(corner === id ? null : id)} size={mapSize} onSize={setMapSize} />
                         <ReplayPanel cmp={c} store={store} />
                       </div>
                     )}

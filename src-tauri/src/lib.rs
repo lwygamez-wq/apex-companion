@@ -96,6 +96,7 @@ pub fn run() {
             commands::tts_install,
             commands::tts_speak,
             commands::ptt_learn,
+            commands::attack_plan,
             commands::training_plan,
             commands::new_training_plan,
             commands::add_plan_objective,

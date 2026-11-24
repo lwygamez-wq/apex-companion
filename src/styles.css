@@ -1088,3 +1088,8 @@ tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--surface-2) 
 .corner-sheet-chart { cursor: crosshair; touch-action: none; user-select: none; }
 .corner-sheet-chart svg { display: block; font-family: var(--font-ui); }
 .trackmap-labels .tm-gap text { font-family: var(--font-ui); }
+/* Plan d'attaque (0.59) */
+.attack-list { margin: 0 0 12px; padding-left: 24px; display: flex; flex-direction: column; gap: 8px; }
+.attack-list li { display: flex; flex-direction: column; gap: 2px; }
+.attack-list b { font-size: var(--fs-md); }
+.attack-list span { color: var(--text-2); }

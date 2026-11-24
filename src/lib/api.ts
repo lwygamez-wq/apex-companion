@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  AttackItem,
   ReferenceEntry,
   SetupMemory,
   ChatMessage,
@@ -97,6 +98,7 @@ export const api = {
   ttsInstall: (voice: string) => call<void>("tts_install", { voice }),
   ttsSpeak: (voice: string, text: string) => call<ArrayBuffer>("tts_speak", { voice, text }),
   pttLearn: () => call<PttBinding | null>("ptt_learn"),
+  attackPlan: (sessionId: number) => call<AttackItem[]>("attack_plan", { sessionId }),
   trainingPlan: (sessionId: number) => call<PlanView>("training_plan", { sessionId }),
   newTrainingPlan: (sessionId: number) => call<PlanView>("new_training_plan", { sessionId }),
   addPlanObjective: (sessionId: number, goal: GoalSuggestion) => call<PlanView>("add_plan_objective", { sessionId, goal }),
