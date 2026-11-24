@@ -253,3 +253,64 @@ Captures : `docs/audit/apres-0.55/` (Briefing, Stratégie, Séances, Setups, Pro
 | `color-mix`, `:has()` et `var()` dans les SVG sous WebView2 | Pas de PC Windows ici. Ajouté dans Réglages › Avancé › Affichage, le bouton « Vérifier l'affichage » : l'app teste elle-même `color-mix`, `:has()`, la couleur calculée d'un dessin SVG en `var(--accent)`, les deux polices, et donne la version du moteur. Tout est OK sous Chromium 157. | **à valider par Alex** : une capture de ce panneau dans l'app Windows suffit |
 
 Captures : `docs/audit/apres-0.56/`.
+
+## 11. Carte du circuit (0.57)
+
+But : la carte est l'instrument principal pour répondre à « où est-ce que je perds du temps ». Alex est débutant : un coup d'œil doit lui dire quels virages comptent.
+
+### Audit avant (0.56, Monza 18 nov., tour 34 contre tour 15, 5 793 points)
+
+Script : `docs/audit/carte.cjs`. Il passe par Résumé, Données normal, 50 % et plein écran, en 1280, 1920 et 2560, avec et sans bords. Captures dans `docs/audit/carte-avant/`.
+
+| Défaut | Mesure |
+|---|---|
+| Numéros de virage faux | Numéros tirés des noms : « 1, 2, 1, 2, 5, 6 » pour Rettifilo, Roggia, Lesmo 1, Lesmo 2, Ascari, Parabolica |
+| Étiquettes qui se chevauchent | 1 paire à 1280 (Rettifilo × Ascari), en Résumé et en 50 % |
+| Noms de virage | Jamais affichés en vue circuit (seulement sous 1 200 m de large) |
+| Cartouches vitesse / pédales | Posés sur la carte, ils masquent un virage à 1280 |
+| Modes à comprendre | 3 couleurs (gain / perte, frein / gaz, vitesse) en 3 boutons, plus 9 à 12 boutons d'outils |
+| Lisibilité de l'écart | 4 niveaux de couleur, sans échelle |
+| Repères | Ni sens de la piste ni distances ; voiture dessinée en monoplace |
+| Rendu | 60 images/s au zoom molette (image médiane 16,7 ms ; 90e centile 16,8 ms, 33 ms en plein écran 2560) |
+
+### Ce qui change (0.57)
+
+- **Étiquettes** : numéro d'ordre sur le tour et nom du virage, placés en pixels écran par un algorithme anti-collision (`lib/mapLabels.ts`).
+  - L'étiquette complète est essayée à 10 angles et 4 distances, puis la pastille seule.
+  - La trajectoire est évitée si possible, mais un virage n'est jamais retiré pour elle.
+  - Ordre de placement : virage sélectionné, puis plus grosse perte.
+  - Tests Vitest : chicane serrée, 12 virages sur 120 px, zones réservées, trajectoire.
+- **Écart de temps continu (mode par défaut)** : couleur tous les 10 m selon la pente de l'écart sur ±15 m. Vert pour le gain, jaune pour la perte, 6 crans par côté. L'échelle est affichée : couleur pleine à 0,2 s gagnés ou perdus sur 100 m.
+- **Autres couleurs (pédales, vitesse)** : dans un menu déroulant « Couleur ». Les options rares (fantôme même temps / même endroit, vue pilote, tailles) passent dans « Plus ».
+- **Piste** :
+  - un ruban à la largeur réelle, en bords relevés quand ils existent, sinon 12 m constants ;
+  - un trait tous les 100 m, avec une cote tous les 500 m une fois zoomé (une cote n'est jamais écrite sur une étiquette) ;
+  - une ligne de départ en damier et une flèche de sens 120 m après la ligne ;
+  - un fond d'asphalte sobre partout.
+- **Voiture** : silhouette générique de prototype fermé, sans marque ni modèle. Feux arrière et halo rouge au freinage (vérifié en relecture au freinage de Rettifilo). Le fantôme de la référence est en contour pointillé.
+- **Cartouches vitesse et pédales** : sous la carte, plus dessus.
+- **Clavier** : la carte prend le focus (contour visible).
+  - Flèches gauche et droite : virage suivant ou précédent, avec zoom sur le virage.
+  - `+` et `−` : zoom. `0` : vue circuit.
+
+### Mesures après (même script)
+
+| Critère | 1280 | 1920 | 2560 |
+|---|---|---|---|
+| Étiquettes qui se chevauchent (Résumé, Données, 50 %, plein écran) | 0 | 0 | 0 |
+| Plus petit texte de la carte | 22 px | 22 px | 22 px |
+| Image médiane au zoom molette | 16,7 ms | 16,7 ms | 16,7 ms |
+
+Le 90e centile reste à 33 ms en plein écran 2560, comme avant.
+
+Captures : `docs/audit/carte-0.57/` (Résumé, 50 %, pédales, sans bords, plein écran, zoom sur un virage, feu de freinage).
+
+### Reste (0.58 et 0.59)
+
+- Comparaison de freinage par virage (repères F avec l'écart en mètres) et fiche virage synchronisée.
+- Les 3 virages prioritaires marqués d'office.
+- Choix de la référence dans la carte, app iPhone, plan d'attaque.
+
+### À valider par Alex
+
+- La lisibilité de la carte sur son écran, en vue circuit : noms de virage et dégradé gain / perte lisibles sans zoomer.
