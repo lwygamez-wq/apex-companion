@@ -1,5 +1,6 @@
 //! Comparaison de deux tours : delta par distance, virages, conseils, avertissements.
 
+use super::braking::{braking_sentence, compare_braking, BrakeCompare};
 use super::corners::{corner_metrics, detect_corners, CornerConfig, CornerDef, CornerMetrics};
 use super::insights::{apply_phases, corner_insight, DataQuality, Insight, Thresholds};
 use super::phases::{corner_phases, PhaseLoss};
@@ -24,6 +25,10 @@ pub struct CornerComparison {
     pub apex_offset_m: Option<f32>,
     /// Temps perdu par phase (freinage, entrée, milieu, sortie), bornes communes aux deux tours.
     pub phases: Vec<PhaseLoss>,
+    /// Points de freinage (canal frein mesuré), vitesse mini et remise des gaz des deux tours.
+    pub braking: BrakeCompare,
+    /// Phrase d'ingénieur chiffrée tirée de `braking` (fiche virage).
+    pub braking_sentence: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -217,7 +222,9 @@ pub fn compare_laps_named(rf: &LapInput, cmp: &LapInput, step_m: f32, names: &[C
             _ => None,
         };
         floor_m = d.exit_m;
-        corners.push(CornerComparison { time_delta_s: mc.time_s - mr.time_s, apex_offset_m, phases, corner: d, reference: mr, compared: mc });
+        let braking = compare_braking(&r, &c, &d, &mr, &mc);
+        let braking_sentence = braking_sentence(&braking);
+        corners.push(CornerComparison { time_delta_s: mc.time_s - mr.time_s, apex_offset_m, phases, braking, braking_sentence, corner: d, reference: mr, compared: mc });
     }
     insights.sort_by(|a, b| {
         a.priority.cmp(&b.priority).then(

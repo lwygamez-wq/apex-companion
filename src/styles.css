@@ -1078,3 +1078,13 @@ tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--surface-2) 
 .tm-scale b { font-weight: 650; color: var(--text); }
 .trackmap-legend .tm-scale-bar { width: 120px; height: 8px; border-radius: var(--r-ctl); background: linear-gradient(to right, var(--gain), var(--surface-3), var(--loss)); margin: 0; }
 .tm-scale small { color: var(--text-2); }
+
+/* Fiche virage (0.58) */
+.corner-sheet { margin: 16px 0; }
+.corner-sheet .ui-card-head h2 { display: flex; align-items: center; gap: 8px; }
+.corner-sheet-say { font-size: var(--fs-lg); font-weight: 650; margin: 0 0 8px; }
+.corner-sheet-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.corner-sheet-facts span { padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--r-ctl); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.corner-sheet-chart { cursor: crosshair; touch-action: none; user-select: none; }
+.corner-sheet-chart svg { display: block; font-family: var(--font-ui); }
+.trackmap-labels .tm-gap text { font-family: var(--font-ui); }

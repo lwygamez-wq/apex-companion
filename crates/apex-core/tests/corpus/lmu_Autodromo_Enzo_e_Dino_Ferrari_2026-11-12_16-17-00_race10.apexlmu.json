@@ -9,6 +9,12 @@
       "corners": [
         {
           "apex_m": 705.0,
+          "braking": [
+            5.0,
+            1.389,
+            -10.0,
+            null
+          ],
           "dt": -0.115,
           "min_cmp": 125.27,
           "min_ref": 123.882,
@@ -37,10 +43,17 @@
               ],
               -0.197
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m plus tard, 1 km/h de plus à la corde, gaz 10 m plus tôt."
         },
         {
           "apex_m": 1415.0,
+          "braking": [
+            null,
+            -0.811,
+            -5.0,
+            "ton tour : deux appuis de frein, point ambigu"
+          ],
           "dt": 0.098,
           "min_cmp": 131.685,
           "min_ref": 132.496,
@@ -69,10 +82,17 @@
               ],
               -0.081
             ]
-          ]
+          ],
+          "sentence": "Gaz 5 m plus tôt (freinage non comparé : ton tour : deux appuis de frein, point ambigu)."
         },
         {
           "apex_m": 1705.0,
+          "braking": [
+            5.0,
+            4.307,
+            10.0,
+            null
+          ],
           "dt": -0.152,
           "min_cmp": 92.539,
           "min_ref": 88.232,
@@ -101,10 +121,17 @@
               ],
               -0.15
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m plus tard, 4 km/h de plus à la corde, gaz 10 m plus tard."
         },
         {
           "apex_m": 2335.0,
+          "braking": [
+            25.0,
+            -6.9,
+            0.0,
+            null
+          ],
           "dt": 0.021,
           "min_cmp": 143.577,
           "min_ref": 150.476,
@@ -133,10 +160,17 @@
               ],
               0.06
             ]
-          ]
+          ],
+          "sentence": "Tu freines 25 m plus tard, 7 km/h de moins à la corde."
         },
         {
           "apex_m": 2855.0,
+          "braking": [
+            null,
+            -2.87,
+            -5.0,
+            "référence : deux appuis de frein, point ambigu"
+          ],
           "dt": 0.02,
           "min_cmp": 110.922,
           "min_ref": 113.792,
@@ -173,10 +207,17 @@
               ],
               0.013
             ]
-          ]
+          ],
+          "sentence": "3 km/h de moins à la corde, gaz 5 m plus tôt (freinage non comparé : référence : deux appuis de frein, point ambigu)."
         },
         {
           "apex_m": 3385.0,
+          "braking": [
+            -5.0,
+            -1.224,
+            -5.0,
+            null
+          ],
           "dt": 0.085,
           "min_cmp": 86.506,
           "min_ref": 87.73,
@@ -213,10 +254,17 @@
               ],
               -0.011
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 1 km/h de moins à la corde, gaz 5 m plus tôt."
         },
         {
           "apex_m": 4140.0,
+          "braking": [
+            20.0,
+            7.925,
+            0.0,
+            null
+          ],
           "dt": -0.085,
           "min_cmp": 106.765,
           "min_ref": 98.84,
@@ -245,10 +293,17 @@
               ],
               -0.096
             ]
-          ]
+          ],
+          "sentence": "Tu freines 20 m plus tard, 8 km/h de plus à la corde."
         },
         {
           "apex_m": 4270.0,
+          "braking": [
+            null,
+            5.906,
+            -10.0,
+            "pas de freinage"
+          ],
           "dt": 0.004,
           "min_cmp": 123.138,
           "min_ref": 117.233,
@@ -269,7 +324,8 @@
               ],
               0.067
             ]
-          ]
+          ],
+          "sentence": "6 km/h de plus à la corde, gaz 10 m plus tôt (freinage non comparé : pas de freinage)."
         }
       ],
       "delta_end_s": 0.108,
@@ -395,6 +451,12 @@
       "corners": [
         {
           "apex_m": 705.0,
+          "braking": [
+            -5.0,
+            -95.482,
+            175.0,
+            null
+          ],
           "dt": 19.983,
           "min_cmp": 28.4,
           "min_ref": 123.882,
@@ -423,10 +485,17 @@
               ],
               19.876
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 95 km/h de moins à la corde, gaz 175 m plus tard."
         },
         {
           "apex_m": 1415.0,
+          "braking": [
+            null,
+            -3.549,
+            0.0,
+            "ton tour : deux appuis de frein, point ambigu"
+          ],
           "dt": 0.678,
           "min_cmp": 128.948,
           "min_ref": 132.496,
@@ -455,10 +524,17 @@
               ],
               -0.008
             ]
-          ]
+          ],
+          "sentence": "4 km/h de moins à la corde (freinage non comparé : ton tour : deux appuis de frein, point ambigu)."
         },
         {
           "apex_m": 1705.0,
+          "braking": [
+            -20.0,
+            -5.33,
+            20.0,
+            null
+          ],
           "dt": 0.313,
           "min_cmp": 82.902,
           "min_ref": 88.232,
@@ -487,10 +563,17 @@
               ],
               0.012
             ]
-          ]
+          ],
+          "sentence": "Tu freines 20 m trop tôt, 5 km/h de moins à la corde, gaz 20 m plus tard."
         },
         {
           "apex_m": 2335.0,
+          "braking": [
+            5.0,
+            -5.526,
+            -30.0,
+            null
+          ],
           "dt": 0.195,
           "min_cmp": 144.951,
           "min_ref": 150.476,
@@ -519,10 +602,17 @@
               ],
               -0.005
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m plus tard, 6 km/h de moins à la corde, gaz 30 m plus tôt."
         },
         {
           "apex_m": 2855.0,
+          "braking": [
+            null,
+            -18.048,
+            70.0,
+            "deux appuis de frein, point ambigu"
+          ],
           "dt": 0.835,
           "min_cmp": 95.744,
           "min_ref": 113.792,
@@ -559,10 +649,17 @@
               ],
               1.067
             ]
-          ]
+          ],
+          "sentence": "18 km/h de moins à la corde, gaz 70 m plus tard (freinage non comparé : deux appuis de frein, point ambigu)."
         },
         {
           "apex_m": 3385.0,
+          "braking": [
+            -10.0,
+            -4.455,
+            0.0,
+            null
+          ],
           "dt": 0.37,
           "min_cmp": 83.275,
           "min_ref": 87.73,
@@ -599,10 +696,17 @@
               ],
               0.012
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m trop tôt, 4 km/h de moins à la corde."
         },
         {
           "apex_m": 4140.0,
+          "braking": [
+            10.0,
+            -3.517,
+            -10.0,
+            null
+          ],
           "dt": -0.016,
           "min_cmp": 95.323,
           "min_ref": 98.84,
@@ -631,10 +735,17 @@
               ],
               -0.045
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m plus tard, 4 km/h de moins à la corde, gaz 10 m plus tôt."
         },
         {
           "apex_m": 4270.0,
+          "braking": [
+            null,
+            4.592,
+            -15.0,
+            "référence : pas de freinage"
+          ],
           "dt": -0.007,
           "min_cmp": 121.824,
           "min_ref": 117.233,
@@ -655,7 +766,8 @@
               ],
               -0.005
             ]
-          ]
+          ],
+          "sentence": "5 km/h de plus à la corde, gaz 15 m plus tôt (freinage non comparé : référence : pas de freinage)."
         }
       ],
       "delta_end_s": 25.776,

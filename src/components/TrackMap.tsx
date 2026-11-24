@@ -3,6 +3,7 @@ import { at, positionsAt, useReplay, type ReplayStore } from "../lib/replay";
 import { lapTime } from "../lib/format";
 import { mix } from "../lib/palette";
 import { overlaps, placeLabels, type Box } from "../lib/mapLabels";
+import { brakeGapText, lossText, priorityCorners } from "../lib/braking";
 import type { Comparison, TrackOverlay } from "../lib/types";
 
 /**
@@ -49,30 +50,52 @@ function Car({ x, y, heading, scale, body, ghost, braking }: { x: number; y: num
   );
 }
 
-/** Repères de freinage (F) et de remise des gaz (G) d'un tour : tiret en travers de sa trajectoire. */
+/**
+ * Repères de freinage (F) et de remise des gaz (G) d'un tour : tiret en travers de sa trajectoire.
+ * F vient de la comparaison de freinage d'apex-core (canal frein mesuré, jamais une décélération) :
+ * absent quand le point manque ou est ambigu.
+ */
 interface Mark { x: number; y: number; nx: number; ny: number; kind: "brake" | "gas"; who: "ref" | "cmp"; corner: string; at: number }
+
+function pointAt(xs: number[], ys: number[], m: number, step: number) {
+  const n = xs.length;
+  const i = Math.max(0, Math.min(n - 1, Math.round(m / step)));
+  const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4);
+  const dx = xs[b]! - xs[a]!, dy = ys[b]! - ys[a]!;
+  const l = Math.hypot(dx, dy) || 1;
+  return { x: xs[i]!, y: ys[i]!, nx: -dy / l, ny: dx / l };
+}
 
 function inputMarks(c: Comparison, geo: Geo): Mark[] {
   const out: Mark[] = [];
-  const put = (xs: number[], ys: number[], m: number | null, kind: Mark["kind"], who: Mark["who"], corner: string) => {
-    if (m == null) return;
-    const n = xs.length;
-    const i = Math.max(0, Math.min(n - 1, Math.round(m / c.step_m)));
-    const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4);
-    const dx = xs[b]! - xs[a]!, dy = ys[b]! - ys[a]!;
-    const l = Math.hypot(dx, dy) || 1;
-    out.push({ x: xs[i]!, y: ys[i]!, nx: -dy / l, ny: dx / l, kind, who, corner, at: m });
-  };
   const CX = geo.CX && geo.CY ? geo.CX : geo.X;
   const CY = geo.CX && geo.CY ? geo.CY : geo.Y;
+  const put = (who: Mark["who"], kind: Mark["kind"], m: number | null | undefined, corner: string) => {
+    if (m == null) return;
+    out.push({ ...pointAt(who === "ref" ? geo.X : CX, who === "ref" ? geo.Y : CY, m, c.step_m), kind, who, corner, at: m });
+  };
   for (const k of c.corners) {
-    const r = k.reference, p = k.compared;
-    put(geo.X, geo.Y, r.brake_peak >= 0.2 ? r.brake_on_m : null, "brake", "ref", k.corner.name);
-    put(CX, CY, p.brake_peak >= 0.2 ? p.brake_on_m : null, "brake", "cmp", k.corner.name);
-    put(geo.X, geo.Y, r.throttle_on_m, "gas", "ref", k.corner.name);
-    put(CX, CY, p.throttle_on_m, "gas", "cmp", k.corner.name);
+    put("ref", "brake", k.braking?.reference?.start_m, k.corner.name);
+    put("cmp", "brake", k.braking?.compared?.start_m, k.corner.name);
+    put("ref", "gas", k.reference.throttle_on_m, k.corner.name);
+    put("cmp", "gas", k.compared.throttle_on_m, k.corner.name);
   }
   return out;
+}
+
+/** Zones de freinage mesurées (début → relâchement) de chaque tour, en un tracé par tour. */
+function brakeZonePaths(c: Comparison, geo: Geo): { ref: string; cmp: string } {
+  const CX = geo.CX && geo.CY ? geo.CX : geo.X;
+  const CY = geo.CX && geo.CY ? geo.CY : geo.Y;
+  const seg = (xs: number[], ys: number[], z: { start_m: number; end_m: number } | null | undefined) => {
+    if (!z) return "";
+    const i0 = Math.max(0, Math.round(z.start_m / c.step_m)), i1 = Math.min(xs.length - 1, Math.round(z.end_m / c.step_m));
+    return i1 > i0 ? linePath(xs.slice(i0, i1 + 1), ys.slice(i0, i1 + 1), 1) : "";
+  };
+  return {
+    ref: c.corners.map((k) => seg(geo.X, geo.Y, k.braking?.reference)).join(""),
+    cmp: c.corners.map((k) => seg(CX, CY, k.braking?.compared)).join(""),
+  };
 }
 
 /** Jauges type télé : vitesse, rapport, gaz et frein des deux voitures. */
@@ -456,6 +479,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   const [marks, setMarks] = useState(true);
   const [showSurf, setShowSurf] = useState(true);
   const inputs = useMemo(() => (geo ? inputMarks(cmp, geo) : []), [cmp, geo]);
+  const zones = useMemo(() => (geo ? brakeZonePaths(cmp, geo) : { ref: "", cmp: "" }), [cmp, geo]);
+  const priority = useMemo(() => priorityCorners(cmp), [cmp]);
   /** Orientation en mode suivi : la voiture pointe toujours vers le haut. */
   const [carUp, setCarUp] = useState(true);
   /** Échelle du suivi rapproché (mètres par pixel), indépendante de la taille de la carte. */
@@ -482,6 +507,21 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
     ro.observe(el);
     return () => ro.disconnect();
   }, [hasMap]);
+
+  // Un virage choisi ailleurs (liste des virages, fiche) : la carte zoome dessus.
+  const lastSel = useRef<number | null>(null);
+  useEffect(() => {
+    if (selected == null || selected === lastSel.current) {
+      lastSel.current = selected;
+      return;
+    }
+    lastSel.current = selected;
+    const k = labels.find((x) => x.id === selected);
+    if (k) {
+      setFollow(false);
+      setView({ cx: k.x, cy: k.y, w: 380 });
+    }
+  }, [selected, labels]);
 
   const rs = useReplay(store);
   const { ci, ri } = positionsAt(cmp, rs.t, rs.ghost);
@@ -622,11 +662,34 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
     labels.map((k) => {
       const [sx, sy] = toScreen(k.x, k.y);
       const n = [k.nx * cosR - k.ny * sinR, k.nx * sinR + k.ny * cosR];
-      return { id: k.id, x: sx, y: sy, nx: n[0]!, ny: n[1]!, small: { w: 26, h: 26 }, big: { w: 26 + 8 + textW(k.name), h: 26 }, priority: (selected === k.id ? 100 : 0) + Math.max(0, k.loss) };
+      const prio = priority.findIndex((p) => p.corner.id === k.id);
+      const extra = prio >= 0 ? 8 + textW(lossText(k.loss)) : 0;
+      return { id: k.id, x: sx, y: sy, nx: n[0]!, ny: n[1]!, small: { w: 26 + extra, h: 26 }, big: { w: 26 + 8 + textW(k.name) + extra, h: 26 }, priority: (selected === k.id ? 100 : 0) + (prio >= 0 ? 50 - prio : 0) + Math.max(0, k.loss) };
     }).filter((k) => k.x > -40 && k.y > -40 && k.x < px + 40 && k.y < height + 40),
     px, height, obstacles, 3, trackBoxes(),
   );
   const byId = new Map(labels.map((k) => [k.id, k]));
+
+  // Écart de point de freinage, écrit près de TON repère F : virage choisi toujours, virages
+  // prioritaires dès qu'on est assez près. Jamais sans les deux points mesurés.
+  const gapChips = (() => {
+    if (!marks || (tilt && follow)) return [];
+    const CXs = geo.CX && geo.CY ? geo.CX : geo.X, CYs = geo.CX && geo.CY ? geo.CY : geo.Y;
+    const want = cmp.corners.filter((k) => k.corner.id === selected || (v.w < 1600 && priority.some((p) => p.corner.id === k.corner.id)));
+    const items = want.flatMap((k) => {
+      const t = brakeGapText(k.braking);
+      const z = k.braking.compared;
+      if (!t || !z) return [];
+      const p = pointAt(CXs, CYs, z.start_m, cmp.step_m);
+      const [sx, sy] = toScreen(p.x, p.y);
+      const n = [p.nx * cosR - p.ny * sinR, p.nx * sinR + p.ny * cosR];
+      const text = `F ${t}`;
+      const w = textW(text) + 12;
+      return [{ id: k.corner.id, text, item: { id: k.corner.id, x: sx, y: sy, nx: -n[0]!, ny: -n[1]!, small: { w, h: 24 }, big: { w, h: 24 }, priority: k.corner.id === selected ? 10 : 1 } }];
+    });
+    const out = placeLabels(items.map((i) => i.item), px, height, [...obstacles, ...placed], 3, trackBoxes());
+    return out.map((o) => ({ ...o, text: items.find((i) => i.id === o.id)!.text, ax: items.find((i) => i.id === o.id)!.item.x, ay: items.find((i) => i.id === o.id)!.item.y }));
+  })();
 
   // Repères de distance tous les 100 m (traits discrets), cote tous les 500 m quand on est assez près.
   const ticks = (() => {
@@ -760,6 +823,13 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
             <line {...startMark.line} stroke="var(--text)" strokeWidth={4} vectorEffect="non-scaling-stroke" />
             <line {...startMark.line} stroke="var(--bg-sunken)" strokeWidth={4} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
             <path d={startMark.arrow} fill="var(--text-2)" />
+            {marks && (
+              <g style={{ pointerEvents: "none" }}>
+                {/* Zones de freinage mesurées : rouge, la tienne pleine, celle de la référence plus fine. */}
+                <path d={zones.ref} stroke="var(--pedal-brake)" strokeWidth={3} opacity={0.55} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />
+                <path d={zones.cmp} stroke="var(--pedal-brake)" strokeWidth={5} opacity={0.8} strokeLinecap="round" fill="none" vectorEffect="non-scaling-stroke" />
+              </g>
+            )}
             {marks && (() => {
               // Tirets en travers de la piste : rouge = début du freinage, vert = remise des gaz ;
               // trait plein = toi, contour bleu = référence. Lettre F / G quand on est assez près.
@@ -821,20 +891,31 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           {ticks.texts.map((t) => (
             <text key={t.t} x={t.x} y={t.y + 4} textAnchor="middle" fontSize={12} fill="var(--text-2)" stroke="var(--bg-sunken)" strokeWidth={3} paintOrder="stroke">{t.t}</text>
           ))}
+          {gapChips.map((c) => (
+            <g key={`gap-${c.id}`} data-label-group className="tm-gap">
+              <line x1={c.ax} y1={c.ay} x2={c.x + c.w / 2} y2={c.y + c.h / 2} stroke="var(--pedal-brake)" strokeWidth={1} />
+              <rect x={c.x} y={c.y} width={c.w} height={c.h} rx={4} fill="var(--overlay)" stroke="var(--pedal-brake)" strokeWidth={1} />
+              <text x={c.x + 6} y={c.y + 17} fontSize={14} fontWeight={700} fill="var(--text)">{c.text}</text>
+            </g>
+          ))}
           {placed.map((l) => {
             const k = byId.get(l.id)!;
             const [sx, sy] = toScreen(k.x, k.y);
             const sel = selected === l.id;
             const r = l.h / 2;
-            const nameLeft = l.named && l.x + r < l.cx - 1;
+            const nameLeft = (l.named || l.w > l.h + 1) && l.x + r < l.cx - 1;
+            const isPrio = priority.some((p) => p.corner.id === l.id);
             return (
-              <g key={l.id} data-label-group className="tm-label" role="button" tabIndex={-1} aria-label={`Virage ${k.num}, ${k.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => selectCorner(l.id)}>
+              <g key={l.id} data-label-group className="tm-label" role="button" tabIndex={-1} aria-label={`Virage ${k.num}, ${k.name}${isPrio ? `, priorité : ${lossText(k.loss)}` : ""}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => selectCorner(l.id)}>
                 <title>{`${k.name} : ${k.loss >= 0 ? "+" : "−"}${Math.abs(k.loss).toFixed(2)} s sur la référence`}</title>
                 <line x1={sx} y1={sy} x2={l.cx} y2={l.cy} stroke="var(--text-2)" strokeWidth={1} />
-                {l.named && <rect x={l.x} y={l.y} width={l.w} height={l.h} rx={r} fill="var(--overlay)" stroke={sel ? "var(--text)" : "var(--line-strong)"} strokeWidth={1} />}
-                <circle cx={l.cx} cy={l.cy} r={r - 1} fill={sel ? "var(--text)" : "var(--surface-2)"} stroke="var(--text)" strokeWidth={1.5} />
+                {(l.named || isPrio) && <rect x={l.x} y={l.y} width={l.w} height={l.h} rx={r} fill="var(--overlay)" stroke={sel ? "var(--text)" : isPrio ? "var(--accent)" : "var(--line-strong)"} strokeWidth={isPrio ? 1.5 : 1} />}
+                <circle cx={l.cx} cy={l.cy} r={r - 1} fill={sel ? "var(--text)" : "var(--surface-2)"} stroke={isPrio ? "var(--accent)" : "var(--text)"} strokeWidth={isPrio ? 2.5 : 1.5} />
                 <text x={l.cx} y={l.cy + 5} textAnchor="middle" fontSize={14} fontWeight={800} fill={sel ? "var(--bg-sunken)" : "var(--text)"}>{k.num}</text>
-                {l.named && <text x={nameLeft ? l.cx - r - 6 : l.cx + r + 6} y={l.cy + 5} textAnchor={nameLeft ? "end" : "start"} fontSize={14} fontWeight={600} fill="var(--text)">{k.name}</text>}
+                <text x={nameLeft ? l.cx - r - 6 : l.cx + r + 6} y={l.cy + 5} textAnchor={nameLeft ? "end" : "start"} fontSize={14} fontWeight={600} fill="var(--text)">
+                  {l.named && k.name}
+                  {isPrio && <tspan fill="var(--loss)" fontWeight={800}>{l.named ? "  " : ""}{lossText(k.loss)}</tspan>}
+                </text>
               </g>
             );
           })}
@@ -891,7 +972,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           <span><i style={{ background: REF_LINE }} />Référence : {cmp.reference.driver ?? `tour ${cmp.reference.number}`} ({lapTime(cmp.reference.lap_time_s)}), voiture en pointillé</span>
           <span><i style={{ background: CMP_LINE }} />Toi : tour {cmp.compared.number} ({lapTime(cmp.compared.lap_time_s)})</span>
           {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
-          {marks && <span><i style={{ background: BRAKE }} />F freinage <i style={{ background: GAS, marginLeft: 8 }} />G gaz</span>}
+          {priority.length > 0 && <span><i style={{ background: "var(--accent)" }} />cerclé orange : les {priority.length} virage{priority.length > 1 ? "s" : ""} où tu perds le plus (plus de 0,05 s)</span>}
+          {marks && <span><i style={{ background: BRAKE }} />F début du freinage (pédale à 10 %), zone rouge : freinage <i style={{ background: GAS, marginLeft: 8 }} />G gaz</span>}
           <span>Traits : tous les 100 m ; flèche : sens de la piste</span>
         </div>
       )}
