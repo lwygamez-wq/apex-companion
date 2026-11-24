@@ -314,3 +314,57 @@ Captures : `docs/audit/carte-0.57/` (Résumé, 50 %, pédales, sans bords, plein
 ### À valider par Alex
 
 - La lisibilité de la carte sur son écran, en vue circuit : noms de virage et dégradé gain / perte lisibles sans zoomer.
+
+## 12. Comparaison de freinage et fiche virage (0.58)
+
+### Calcul (apex-core, `analysis/braking.rs`)
+
+- **Point de freinage** : premier point où la pédale atteint 10 % (`BRAKE_ON`, même seuil que `corner_metrics`), entre le début de la fenêtre du virage et la vitesse mini. Il vient du **canal frein mesuré**, jamais d'une décélération.
+- **Zone de freinage** : du point de freinage au relâchement (pédale repassée sous 10 %).
+- **Écarts** :
+  - point de freinage (> 0 : tu freines plus tard) ;
+  - vitesse mini à la corde ;
+  - remise des gaz (20 % tenus sur 10 m, comme avant).
+- **Seuils d'égalité** : sous 5 m, « au même endroit » ; sous 1 km/h, rien n'est écrit.
+- **Rien n'est comparé dans trois cas**, et la raison est donnée (`missing`) :
+  - un tour sans canal frein (pédale jamais au-dessus de 5 % sur tout le tour) ;
+  - un virage sans freinage (pic sous 20 %) ;
+  - un point ambigu : deux appuis de plus de 5 m séparés de plus de 10 m (une touche de frein puis le vrai freinage). Un freinage modulé, où la pédale repasse un instant sous 10 %, compte pour un seul appui.
+- **Phrase d'ingénieur chiffrée** (`braking_sentence`), par exemple « Tu freines 18 m trop tôt, 4 km/h de moins à la corde, gaz 12 m plus tard. »
+- **Tests** : 6 tests unitaires sur fixtures (écarts exacts, moins de 5 m, canal absent, touche de frein, freinage modulé, virage sans frein).
+- **`real_corpus`** : instantanés mis à jour exprès. Seuls les champs `braking` et `sentence` sont ajoutés, aucun autre chiffre ne bouge. Trois règles sont vérifiées :
+  - aucun écart de freinage sans les deux points mesurés ;
+  - toujours une raison quand le freinage n'est pas comparé ;
+  - la phrase cite un chiffre.
+
+  Sur les 166 virages comparés du corpus : 134 ont un écart mesuré, 19 un point ambigu, 13 pas de freinage, 0 un canal absent.
+
+### Carte
+
+- **Repères F** : ils viennent désormais de cette comparaison. Il n'y a plus de F tiré d'un simple pic de pédale ; une zone sans point mesuré n'a pas de F.
+- **Zones de freinage** : rouges, la tienne pleine, celle de la référence plus fine.
+- **Écart écrit près de ton F** (« F 27 m trop tôt »), pour le virage choisi et, une fois zoomé, pour les virages prioritaires. Il est placé par le même algorithme anti-collision.
+- **Virages prioritaires** : les 3 qui coûtent le plus (au-delà de 0,05 s) sont cerclés d'orange d'office, avec leur perte écrite (« +0,35 s »). La carte seule les désigne. Sur le tour de l'aperçu, seuls 2 virages dépassent 0,05 s.
+- **Sélection** : choisir un virage dans la liste zoome la carte dessus.
+
+### Fiche virage (`components/CornerSheet.tsx`)
+
+- **Ouverture** : elle s'ouvre sous la carte quand un virage est choisi.
+- **Contenu** :
+  - la phrase chiffrée ;
+  - les écarts avec leur unité ;
+  - vitesse, frein et gaz des deux tours selon la distance ;
+  - les phases (freinage, entrée, milieu, sortie) en bandes, avec leur perte ;
+  - les points de freinage mesurés en traits verticaux.
+- **Curseur partagé avec la carte** : survoler ou glisser place la voiture à cet endroit, et la relecture fait avancer le curseur. Les boutons précédent et suivant changent de virage.
+
+### Mesures
+
+- **Chevauchements** : 0 aux 3 tailles (Résumé, Données, 50 %, plein écran), étiquettes d'écart comprises.
+- **Image médiane au zoom** : 16,7 ms. Le 90e centile monte à 42 ms en plein écran 2560 (33 ms avant).
+
+Captures : `docs/audit/carte-0.58/`.
+
+### À valider par Alex en piste
+
+- La justesse des écarts de freinage sur un vrai tour : prends un repère de piste (panneau) et compare avec « F x m trop tôt ».

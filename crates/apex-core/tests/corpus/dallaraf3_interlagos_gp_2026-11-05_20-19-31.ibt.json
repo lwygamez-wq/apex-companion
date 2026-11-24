@@ -9,6 +9,12 @@
       "corners": [
         {
           "apex_m": 350.0,
+          "braking": [
+            -10.0,
+            -5.029,
+            15.0,
+            null
+          ],
           "dt": 0.022,
           "min_cmp": 99.04,
           "min_ref": 104.069,
@@ -37,10 +43,17 @@
               ],
               -0.169
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m trop tôt, 5 km/h de moins à la corde, gaz 15 m plus tard."
         },
         {
           "apex_m": 1360.0,
+          "braking": [
+            -5.0,
+            -5.343,
+            0.0,
+            null
+          ],
           "dt": 0.204,
           "min_cmp": 124.012,
           "min_ref": 129.355,
@@ -69,10 +82,17 @@
               ],
               0.138
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 5 km/h de moins à la corde."
         },
         {
           "apex_m": 2045.0,
+          "braking": [
+            -10.0,
+            0.49,
+            70.0,
+            null
+          ],
           "dt": 0.13,
           "min_cmp": 164.481,
           "min_ref": 163.991,
@@ -101,10 +121,17 @@
               ],
               0.041
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m trop tôt, gaz 70 m plus tard."
         },
         {
           "apex_m": 2275.0,
+          "braking": [
+            -5.0,
+            -1.946,
+            5.0,
+            null
+          ],
           "dt": 0.266,
           "min_cmp": 71.307,
           "min_ref": 73.253,
@@ -141,10 +168,17 @@
               ],
               -0.044
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 2 km/h de moins à la corde, gaz 5 m plus tard."
         },
         {
           "apex_m": 2410.0,
+          "braking": [
+            null,
+            -3.366,
+            -5.0,
+            "pas de freinage"
+          ],
           "dt": 0.15,
           "min_cmp": 95.004,
           "min_ref": 98.37,
@@ -173,10 +207,17 @@
               ],
               0.005
             ]
-          ]
+          ],
+          "sentence": "3 km/h de moins à la corde, gaz 5 m plus tôt (freinage non comparé : pas de freinage)."
         },
         {
           "apex_m": 2695.0,
+          "braking": [
+            10.0,
+            -4.218,
+            -5.0,
+            null
+          ],
           "dt": 0.11,
           "min_cmp": 75.565,
           "min_ref": 79.783,
@@ -205,10 +246,17 @@
               ],
               0.163
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m plus tard, 4 km/h de moins à la corde, gaz 5 m plus tôt."
         },
         {
           "apex_m": 3190.0,
+          "braking": [
+            -5.0,
+            -7.855,
+            -5.0,
+            null
+          ],
           "dt": 0.355,
           "min_cmp": 97.605,
           "min_ref": 105.46,
@@ -245,7 +293,8 @@
               ],
               0.101
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 8 km/h de moins à la corde, gaz 5 m plus tôt."
         }
       ],
       "delta_end_s": 1.254,
@@ -595,6 +644,12 @@
       "corners": [
         {
           "apex_m": 350.0,
+          "braking": [
+            -10.0,
+            -5.029,
+            15.0,
+            null
+          ],
           "dt": 0.022,
           "min_cmp": 99.04,
           "min_ref": 104.069,
@@ -623,10 +678,17 @@
               ],
               -0.169
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m trop tôt, 5 km/h de moins à la corde, gaz 15 m plus tard."
         },
         {
           "apex_m": 1360.0,
+          "braking": [
+            -5.0,
+            -5.343,
+            0.0,
+            null
+          ],
           "dt": 0.204,
           "min_cmp": 124.012,
           "min_ref": 129.355,
@@ -655,10 +717,17 @@
               ],
               0.138
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 5 km/h de moins à la corde."
         },
         {
           "apex_m": 2045.0,
+          "braking": [
+            -10.0,
+            0.49,
+            70.0,
+            null
+          ],
           "dt": 0.13,
           "min_cmp": 164.481,
           "min_ref": 163.991,
@@ -687,10 +756,17 @@
               ],
               0.041
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m trop tôt, gaz 70 m plus tard."
         },
         {
           "apex_m": 2275.0,
+          "braking": [
+            -5.0,
+            -1.946,
+            5.0,
+            null
+          ],
           "dt": 0.266,
           "min_cmp": 71.307,
           "min_ref": 73.253,
@@ -727,10 +803,17 @@
               ],
               -0.044
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 2 km/h de moins à la corde, gaz 5 m plus tard."
         },
         {
           "apex_m": 2410.0,
+          "braking": [
+            null,
+            -3.366,
+            -5.0,
+            "pas de freinage"
+          ],
           "dt": 0.15,
           "min_cmp": 95.004,
           "min_ref": 98.37,
@@ -759,10 +842,17 @@
               ],
               0.005
             ]
-          ]
+          ],
+          "sentence": "3 km/h de moins à la corde, gaz 5 m plus tôt (freinage non comparé : pas de freinage)."
         },
         {
           "apex_m": 2695.0,
+          "braking": [
+            10.0,
+            -4.218,
+            -5.0,
+            null
+          ],
           "dt": 0.11,
           "min_cmp": 75.565,
           "min_ref": 79.783,
@@ -791,10 +881,17 @@
               ],
               0.163
             ]
-          ]
+          ],
+          "sentence": "Tu freines 10 m plus tard, 4 km/h de moins à la corde, gaz 5 m plus tôt."
         },
         {
           "apex_m": 3190.0,
+          "braking": [
+            -5.0,
+            -7.855,
+            -5.0,
+            null
+          ],
           "dt": 0.355,
           "min_cmp": 97.605,
           "min_ref": 105.46,
@@ -831,7 +928,8 @@
               ],
               0.101
             ]
-          ]
+          ],
+          "sentence": "Tu freines 5 m trop tôt, 8 km/h de moins à la corde, gaz 5 m plus tôt."
         }
       ],
       "delta_end_s": 1.254,

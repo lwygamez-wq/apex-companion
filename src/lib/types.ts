@@ -420,6 +420,29 @@ export interface CornerComparison {
   apex_offset_m: number | null;
   /** Temps perdu par phase (bornes communes aux deux tours) ; la somme vaut `time_delta_s`. */
   phases: PhaseLoss[];
+  /** Points de freinage mesurés au canal frein, vitesse mini et remise des gaz (analysis/braking.rs). */
+  braking: BrakeCompare;
+  /** Phrase d'ingénieur chiffrée tirée de `braking`. */
+  braking_sentence: string;
+}
+
+export interface BrakeZone {
+  start_m: number;
+  end_m: number;
+  peak: number;
+}
+
+export interface BrakeCompare {
+  reference: BrakeZone | null;
+  compared: BrakeZone | null;
+  /** > 0 : tu freines plus tard que la référence (m). */
+  brake_gap_m: number | null;
+  /** > 0 : tu passes plus vite à la corde (km/h). */
+  min_speed_gap_kmh: number;
+  /** > 0 : tu remets les gaz plus tard (m). */
+  throttle_gap_m: number | null;
+  /** Pourquoi le freinage n'est pas comparé. */
+  missing: string | null;
 }
 
 export type CornerPhase = "freinage" | "entree" | "milieu" | "sortie";

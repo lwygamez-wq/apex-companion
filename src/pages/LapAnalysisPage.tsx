@@ -10,6 +10,7 @@ import { RaceCard } from "../components/RaceCard";
 import { RaceDebriefCard } from "../components/RaceDebriefCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TrackMap, type MapSize } from "../components/TrackMap";
+import { CornerSheet } from "../components/CornerSheet";
 import { ReplayStudio } from "../components/ReplayStudio";
 import { api } from "../lib/api";
 import { dateTime, LAP_KIND_FR, lapTime, SESSION_KIND_FR } from "../lib/format";
@@ -330,6 +331,12 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                     </div>
                   </div>
 
+                  {(() => {
+                    const i = c.corners.findIndex((k) => k.corner.id === corner);
+                    if (i < 0) return null;
+                    const go = (d: number) => setCorner(c.corners[(i + d + c.corners.length) % c.corners.length]!.corner.id);
+                    return <CornerSheet cmp={c} corner={c.corners[i]!} store={store} onClose={() => setCorner(null)} onPrev={() => go(-1)} onNext={() => go(1)} />;
+                  })()}
                   <CornerList corners={c.corners} selected={corner} onSelect={(id) => setCorner(id)} onRename={(apex, name) => void saveName(apex, name)} />
                   {(d.risk.length > 0 || d.off_tracks.length > 0) && (
                     <div className="grid cols-2" style={{ marginTop: 14, alignItems: "start" }}>

@@ -111,6 +111,17 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
                 }
                 last_end = p.range_m[1];
             }
+            // Freinage : aucun écart sans point mesuré des deux côtés ; une raison quand il manque ; la phrase cite un chiffre.
+            let b = &k.braking;
+            if b.brake_gap_m.is_some() != (b.reference.is_some() && b.compared.is_some()) {
+                rule.push(format!("{} tour {} {} : écart de freinage sans les deux points mesurés", file.display(), cmp.meta.number, k.corner.name));
+            }
+            if b.brake_gap_m.is_none() && b.missing.is_none() {
+                rule.push(format!("{} tour {} {} : freinage non comparé sans raison", file.display(), cmp.meta.number, k.corner.name));
+            }
+            if !k.braking_sentence.starts_with("Aucun écart") && !k.braking_sentence.starts_with("Freinage non comparé") && !has_digit(&k.braking_sentence) {
+                rule.push(format!("{} tour {} {} : phrase de freinage sans chiffre « {} »", file.display(), cmp.meta.number, k.corner.name, k.braking_sentence));
+            }
             let sum: f32 = k.phases.iter().map(|p| p.delta_s).sum();
             if !k.phases.is_empty() && (sum - k.time_delta_s).abs() > 0.005 {
                 rule.push(format!("{} tour {} {} : phases {sum:.3} s ≠ virage {:.3} s", file.display(), cmp.meta.number, k.corner.name, k.time_delta_s));
@@ -121,7 +132,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
             "compared": cmp.meta.number,
             "delta_end_s": c.delta_s.last(),
             "warnings": c.warnings,
-            "corners": c.corners.iter().map(|k| json!({ "apex_m": k.corner.apex_m, "dt": k.time_delta_s, "min_ref": k.reference.min_speed_kmh, "min_cmp": k.compared.min_speed_kmh, "phases": k.phases.iter().map(|p| json!([p.phase, p.range_m, p.delta_s])).collect::<Vec<_>>() })).collect::<Vec<_>>(),
+            "corners": c.corners.iter().map(|k| json!({ "apex_m": k.corner.apex_m, "dt": k.time_delta_s, "min_ref": k.reference.min_speed_kmh, "min_cmp": k.compared.min_speed_kmh, "phases": k.phases.iter().map(|p| json!([p.phase, p.range_m, p.delta_s])).collect::<Vec<_>>(), "braking": json!([k.braking.brake_gap_m, k.braking.min_speed_gap_kmh, k.braking.throttle_gap_m, k.braking.missing]), "sentence": k.braking_sentence })).collect::<Vec<_>>(),
             "insights": c.insights.iter().map(|i| json!({ "id": i.id, "title": i.title, "priority": i.priority, "gain": i.est_gain_s, "segment": i.segment, "recommendation": i.recommendation, "evidence": i.evidence.iter().map(|e| [&e.label, &e.reference, &e.compared, &e.delta]).collect::<Vec<_>>(), "confidence": i.confidence })).collect::<Vec<_>>(),
         }));
     }
