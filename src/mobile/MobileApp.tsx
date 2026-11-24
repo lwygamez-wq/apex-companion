@@ -5,6 +5,7 @@ import { RiskCard } from "../components/RiskCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { TrackMap } from "../components/TrackMap";
+import { CornerSheet } from "../components/CornerSheet";
 import { Alert, Button, Stat } from "../components/ui";
 import { dateTime, delta, lapTime } from "../lib/format";
 import { ReplayStore, replayBounds } from "../lib/replay";
@@ -243,6 +244,9 @@ type Tab = "conseils" | "relecture" | "courbes" | "virages";
 function LapScreen({ s, lapId }: { s: MobileSession; lapId: number }) {
   const c = s.comparisons.find((x) => x.compared.lap_id === lapId) as Comparison;
   const [tab, setTab] = useState<Tab>("conseils");
+  const [corner, setCorner] = useState<number | null>(null);
+  const ci = c.corners.findIndex((k) => k.corner.id === corner);
+  const mapH = Math.round(Math.min(window.innerHeight * 0.45, 420));
   const store = useMemo(() => new ReplayStore(...replayBounds(c)), [c]);
   useEffect(() => () => store.dispose(), [store]);
   const total = c.delta_s[c.delta_s.length - 1] ?? 0;
@@ -260,14 +264,22 @@ function LapScreen({ s, lapId }: { s: MobileSession; lapId: number }) {
       {c.warnings.map((w) => <Alert key={w} tone="warn">{w}</Alert>)}
       {tab === "conseils" && (
         <div>
+          <div className="m-map">
+            <TrackMap simple cmp={c} store={store} selected={corner} onSelectCorner={setCorner} height={mapH} />
+          </div>
           {c.insights.length === 0 && <div className="card muted">Aucun écart significatif détecté sur ce tour.</div>}
           {c.insights.slice(0, 5).map((i) => <InsightCard key={i.id} insight={i} />)}
         </div>
       )}
       {tab === "relecture" && (
         <div className="m-replay">
-          <TrackMap cmp={c} store={store} selected={null} onSelectCorner={() => undefined} height={Math.round(Math.min(window.innerHeight * 0.45, 420))} />
+          <TrackMap simple cmp={c} store={store} selected={corner} onSelectCorner={setCorner} height={mapH} />
           <ReplayPanel cmp={c} store={store} />
+        </div>
+      )}
+      {ci >= 0 && (
+        <div className="m-sheet" role="dialog" aria-modal="true" aria-label={`Fiche du virage ${c.corners[ci]!.corner.name}`}>
+          <CornerSheet cmp={c} corner={c.corners[ci]!} store={store} onClose={() => setCorner(null)} onPrev={() => setCorner(c.corners[(ci - 1 + c.corners.length) % c.corners.length]!.corner.id)} onNext={() => setCorner(c.corners[(ci + 1) % c.corners.length]!.corner.id)} />
         </div>
       )}
       {tab === "courbes" && (

@@ -1,5 +1,6 @@
 //! Moteur d'analyse (Rust pur, sans I/O) : testable isolément.
 
+pub mod attack;
 pub mod braking;
 pub mod compare;
 pub mod corners;

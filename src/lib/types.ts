@@ -307,6 +307,7 @@ export interface SessionDetail {
   race: RaceReport | null;
   debrief: RaceDebrief | null;
   regularity: RegularityReport | null;
+  attack: AttackItem[];
 }
 
 export type IncidentKind = "loss_of_control" | "off_track" | "world_contact" | "world_collision" | "car_contact" | "car_collision" | "other";
@@ -827,6 +828,25 @@ export interface CornerRegularity {
   brake_spread_m: number | null;
   differences: PassDifference[];
   advice: string;
+  best_brake_m: number | null;
+  usual_brake_m: number | null;
+  best_min_kmh: number;
+  usual_min_kmh: number;
+  best_throttle_m: number | null;
+  usual_throttle_m: number | null;
+}
+
+/** Plan d'attaque (analysis/attack.rs) : repère tiré de ton meilleur passage propre. */
+export interface AttackItem {
+  corner: string;
+  apex_m: number;
+  kind: "brake" | "min_speed" | "throttle";
+  /** Distance depuis la ligne (m) pour freinage et gaz ; km/h pour la vitesse mini. */
+  target: number;
+  vs_usual: number;
+  best_lap: number;
+  gain_s: number;
+  text: string;
 }
 
 export interface RegularityReport {

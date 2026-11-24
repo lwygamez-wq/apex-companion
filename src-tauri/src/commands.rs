@@ -88,6 +88,11 @@ pub fn set_coach_muted(state: State<'_, AppState>, muted: bool) {
 }
 
 #[tauri::command]
+pub async fn attack_plan(state: State<'_, AppState>, session_id: i64) -> R<Vec<apex_core::analysis::attack::AttackItem>> {
+    blocking(state.svc.clone(), move |s| s.attack_plan(session_id)).await
+}
+
+#[tauri::command]
 pub async fn training_plan(state: State<'_, AppState>, session_id: i64) -> R<apex_core::service::PlanView> {
     blocking(state.svc.clone(), move |s| s.training_plan(session_id)).await
 }

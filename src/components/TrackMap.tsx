@@ -4,7 +4,7 @@ import { lapTime } from "../lib/format";
 import { mix } from "../lib/palette";
 import { overlaps, placeLabels, type Box } from "../lib/mapLabels";
 import { brakeGapText, lossText, priorityCorners } from "../lib/braking";
-import type { Comparison, TrackOverlay } from "../lib/types";
+import type { AttackItem, Comparison, TrackOverlay } from "../lib/types";
 
 /**
  * Carte du circuit interactive : trajectoires réelles (GPS) de la référence et du tour analysé,
@@ -452,7 +452,15 @@ const Overview = memo(function Overview({ geo, x, y }: { geo: Geo; x: number; y:
   );
 });
 
-export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false, overlay = null, simple = false }: {
+/** Référence proposée dans la carte : id du tour (null = indisponible, avec la raison dans le libellé). */
+export interface RefChoice { id: number | null; label: string }
+
+export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, size = "normal", onSize, studio = false, overlay = null, simple = false, refChoices, onReference, targets = [] }: {
+  /** Références proposées (meilleur tour propre, bibliothèque, tour idéal…) et changement de référence. */
+  refChoices?: RefChoice[];
+  onReference?: (lapId: number) => void;
+  /** Plan d'attaque : repère cible (freinage ou gaz, distance depuis la ligne) des virages prioritaires. */
+  targets?: AttackItem[];
   /** Vue résumé : outils repliés derrière un bouton, la carte gain / perte seule. */
   simple?: boolean;
   /** Relevé de la piste (vibreurs, bords) d'après tes tours. */
@@ -481,6 +489,11 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   const inputs = useMemo(() => (geo ? inputMarks(cmp, geo) : []), [cmp, geo]);
   const zones = useMemo(() => (geo ? brakeZonePaths(cmp, geo) : { ref: "", cmp: "" }), [cmp, geo]);
   const priority = useMemo(() => priorityCorners(cmp), [cmp]);
+  /** Cibles du plan d'attaque (freinage ou gaz : une distance sur la trajectoire de référence). */
+  const targetMarks = useMemo(
+    () => (geo ? targets.filter((t) => t.kind !== "min_speed" && t.target > 0 && t.target < cmp.length_m).map((t) => ({ ...pointAt(geo.X, geo.Y, t.target, cmp.step_m), corner: t.corner, text: t.kind === "brake" ? "Cible F" : "Cible G" })) : []),
+    [geo, targets, cmp],
+  );
   /** Orientation en mode suivi : la voiture pointe toujours vers le haut. */
   const [carUp, setCarUp] = useState(true);
   /** Échelle du suivi rapproché (mètres par pixel), indépendante de la taille de la carte. */
@@ -508,6 +521,23 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
     return () => ro.disconnect();
   }, [hasMap]);
 
+  /** Cadre d'un virage : du premier point de freinage (ou de la cible du plan) jusqu'à la sortie. */
+  const frameCorner = (id: number): View | null => {
+    const k = cmp.corners.find((x) => x.corner.id === id);
+    if (!geo || !k) return null;
+    const t = targets.find((x) => Math.abs(x.apex_m - k.corner.apex_m) < 80 && x.kind !== "min_speed");
+    const from = Math.min(k.braking?.reference?.start_m ?? k.corner.apex_m, k.braking?.compared?.start_m ?? k.corner.apex_m, t?.target ?? k.corner.apex_m, k.corner.apex_m - 60);
+    const to = Math.min(cmp.length_m, k.corner.apex_m + 120);
+    const i0 = Math.max(0, Math.floor(from / cmp.step_m)), i1 = Math.min(geo.X.length - 1, Math.ceil(to / cmp.step_m));
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = i0; i <= i1; i++) {
+      x0 = Math.min(x0, geo.X[i]!); x1 = Math.max(x1, geo.X[i]!);
+      y0 = Math.min(y0, geo.Y[i]!); y1 = Math.max(y1, geo.Y[i]!);
+    }
+    const w = Math.max(300, (x1 - x0) * 1.5, (y1 - y0) * 1.5 * (px / height));
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w };
+  };
+
   // Un virage choisi ailleurs (liste des virages, fiche) : la carte zoome dessus.
   const lastSel = useRef<number | null>(null);
   useEffect(() => {
@@ -516,11 +546,12 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
       return;
     }
     lastSel.current = selected;
-    const k = labels.find((x) => x.id === selected);
-    if (k) {
+    const f = frameCorner(selected);
+    if (f) {
       setFollow(false);
-      setView({ cx: k.x, cy: k.y, w: 380 });
+      setView(f);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, labels]);
 
   const rs = useReplay(store);
@@ -675,7 +706,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   const gapChips = (() => {
     if (!marks || (tilt && follow)) return [];
     const CXs = geo.CX && geo.CY ? geo.CX : geo.X, CYs = geo.CX && geo.CY ? geo.CY : geo.Y;
-    const want = cmp.corners.filter((k) => k.corner.id === selected || (v.w < 1600 && priority.some((p) => p.corner.id === k.corner.id)));
+    // Exports mobiles d'avant la 0.58 : pas de comparaison de freinage, donc pas d'écart écrit.
+    const want = cmp.corners.filter((k) => k.braking && (k.corner.id === selected || (v.w < 1600 && priority.some((p) => p.corner.id === k.corner.id))));
     const items = want.flatMap((k) => {
       const t = brakeGapText(k.braking);
       const z = k.braking.compared;
@@ -687,6 +719,16 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
       const w = textW(text) + 12;
       return [{ id: k.corner.id, text, item: { id: k.corner.id, x: sx, y: sy, nx: -n[0]!, ny: -n[1]!, small: { w, h: 24 }, big: { w, h: 24 }, priority: k.corner.id === selected ? 10 : 1 } }];
     });
+    if (v.w < 1600 || selected != null) {
+      for (const t of targetMarks) {
+        const [sx, sy] = toScreen(t.x, t.y);
+        if (sx < 0 || sy < 0 || sx > px || sy > height) continue;
+        const n = [t.nx * cosR - t.ny * sinR, t.nx * sinR + t.ny * cosR];
+        const id = 10000 + items.length;
+        const w = textW(t.text) + 12;
+        items.push({ id, text: t.text, item: { id, x: sx, y: sy, nx: n[0]!, ny: n[1]!, small: { w, h: 24 }, big: { w, h: 24 }, priority: 0 } });
+      }
+    }
     const out = placeLabels(items.map((i) => i.item), px, height, [...obstacles, ...placed], 3, trackBoxes());
     return out.map((o) => ({ ...o, text: items.find((i) => i.id === o.id)!.text, ax: items.find((i) => i.id === o.id)!.item.x, ay: items.find((i) => i.id === o.id)!.item.y }));
   })();
@@ -734,9 +776,9 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
   })();
 
   const selectCorner = (id: number) => {
-    const k = byId.get(id);
     onSelectCorner(id);
-    if (k) zoomTo(k.x, k.y, 380);
+    const f = frameCorner(id);
+    if (f) zoomTo(f.cx, f.cy, f.w);
   };
   /** Virage suivant / précédent au clavier (flèches gauche / droite sur la carte). */
   const step = (dir: 1 | -1) => {
@@ -755,6 +797,17 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
       )}
       {!studio && tools && (
         <div className="trackmap-tools">
+          {refChoices && refChoices.length > 0 && onReference && (
+            <label className="tm-mode">
+              Référence
+              <select value={refChoices.some((r) => r.id === cmp.reference.lap_id) ? cmp.reference.lap_id : ""} onChange={(e) => e.target.value && onReference(Number(e.target.value))} aria-label="Référence de la carte">
+                {!refChoices.some((r) => r.id === cmp.reference.lap_id) && <option value="">Tour {cmp.reference.number} (choisi au-dessus)</option>}
+                {refChoices.map((r) => (
+                  <option key={r.label} value={r.id ?? ""} disabled={r.id == null}>{r.label}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="tm-mode">
             Couleur
             <select value={mode} onChange={(e) => setMode(e.target.value as ColorMode)} aria-label="Couleur du tracé">
@@ -823,6 +876,12 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
             <line {...startMark.line} stroke="var(--text)" strokeWidth={4} vectorEffect="non-scaling-stroke" />
             <line {...startMark.line} stroke="var(--bg-sunken)" strokeWidth={4} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
             <path d={startMark.arrow} fill="var(--text-2)" />
+            {targetMarks.map((t) => (
+              <g key={`cible-${t.corner}`} style={{ pointerEvents: "none" }}>
+                <line x1={t.x - t.nx * 12 * mPerPx} y1={t.y - t.ny * 12 * mPerPx} x2={t.x + t.nx * 12 * mPerPx} y2={t.y + t.ny * 12 * mPerPx} stroke="var(--bg-sunken)" strokeWidth={7} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                <line x1={t.x - t.nx * 12 * mPerPx} y1={t.y - t.ny * 12 * mPerPx} x2={t.x + t.nx * 12 * mPerPx} y2={t.y + t.ny * 12 * mPerPx} stroke="var(--accent)" strokeWidth={4} strokeDasharray="3 2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </g>
+            ))}
             {marks && (
               <g style={{ pointerEvents: "none" }}>
                 {/* Zones de freinage mesurées : rouge, la tienne pleine, celle de la référence plus fine. */}
@@ -893,8 +952,8 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           ))}
           {gapChips.map((c) => (
             <g key={`gap-${c.id}`} data-label-group className="tm-gap">
-              <line x1={c.ax} y1={c.ay} x2={c.x + c.w / 2} y2={c.y + c.h / 2} stroke="var(--pedal-brake)" strokeWidth={1} />
-              <rect x={c.x} y={c.y} width={c.w} height={c.h} rx={4} fill="var(--overlay)" stroke="var(--pedal-brake)" strokeWidth={1} />
+              <line x1={c.ax} y1={c.ay} x2={c.x + c.w / 2} y2={c.y + c.h / 2} stroke={c.id >= 10000 ? "var(--accent)" : "var(--pedal-brake)"} strokeWidth={1} />
+              <rect x={c.x} y={c.y} width={c.w} height={c.h} rx={4} fill="var(--overlay)" stroke={c.id >= 10000 ? "var(--accent)" : "var(--pedal-brake)"} strokeWidth={1} />
               <text x={c.x + 6} y={c.y + 17} fontSize={14} fontWeight={700} fill="var(--text)">{c.text}</text>
             </g>
           ))}
@@ -969,7 +1028,12 @@ export function TrackMap({ cmp, store, selected, onSelectCorner, height = 420, s
           )}
           {mode === "inputs" && <span><i style={{ background: "var(--pedal-brake)" }} />frein <i style={{ background: "var(--pedal-partial)", marginLeft: 8 }} />gaz partiel <i style={{ background: "var(--pedal-full)", marginLeft: 8 }} />plein gaz <i style={{ background: "var(--pedal-coast)", marginLeft: 8 }} />roue libre</span>}
           {mode === "speed" && <span>{SPEED_COLORS.map((col, i) => <i key={col} style={{ background: col, marginLeft: i ? 2 : 0 }} />)} lent → rapide</span>}
-          <span><i style={{ background: REF_LINE }} />Référence : {cmp.reference.driver ?? `tour ${cmp.reference.number}`} ({lapTime(cmp.reference.lap_time_s)}), voiture en pointillé</span>
+          <span><i style={{ background: REF_LINE }} />Référence affichée : {(() => {
+            const l = refChoices?.find((r) => r.id === cmp.reference.lap_id)?.label ?? cmp.reference.driver ?? `tour ${cmp.reference.number}`;
+            const t = lapTime(cmp.reference.lap_time_s);
+            return l.includes(t) ? l : `${l} (${t})`;
+          })()}, voiture en pointillé</span>
+          {targets.length > 0 && <span><i style={{ background: "var(--accent)" }} />cible : repère de ton meilleur passage (plan d'attaque)</span>}
           <span><i style={{ background: CMP_LINE }} />Toi : tour {cmp.compared.number} ({lapTime(cmp.compared.lap_time_s)})</span>
           {(cmp.cmp_off_track_m?.length > 0 || cmp.ref_off_track_m?.length > 0) && <span><i style={{ background: OFF_COLOR }} />hors piste</span>}
           {priority.length > 0 && <span><i style={{ background: "var(--accent)" }} />cerclé orange : les {priority.length} virage{priority.length > 1 ? "s" : ""} où tu perds le plus (plus de 0,05 s)</span>}

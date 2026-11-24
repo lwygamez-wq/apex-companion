@@ -526,6 +526,8 @@ pub struct SessionDetail {
     pub debrief: Option<crate::analysis::debrief::RaceDebrief>,
     /// Régularité par virage sur tes tours propres de la session (5 au moins).
     pub regularity: Option<crate::analysis::regularity::RegularityReport>,
+    /// Plan d'attaque de la prochaine séance : 3 virages au plus, repères tirés de ton meilleur passage.
+    pub attack: Vec<crate::analysis::attack::AttackItem>,
 }
 
 /// Essai setup guidé : proposition (ou raison de ne pas en faire) et verdict mesuré.
@@ -2127,6 +2129,7 @@ impl AppService {
             profile,
             race,
             debrief,
+            attack: regularity.as_ref().map(crate::analysis::attack::attack_plan).unwrap_or_default(),
             regularity,
             reference_label,
             risk,
@@ -3156,6 +3159,11 @@ if per.is_some() {
 
     /// Programme d'entraînement de ce circuit et de cette voiture (créé à partir de la dernière séance
     /// s'il n'y en a pas), avec l'évaluation de chaque objectif sur la séance roulée après sa création.
+    /// Plan d'attaque de la séance (Briefing) : voir `analysis::attack`.
+    pub fn attack_plan(&self, session_id: i64) -> Result<Vec<crate::analysis::attack::AttackItem>> {
+        Ok(self.session_detail(session_id)?.attack)
+    }
+
     pub fn training_plan(&self, session_id: i64) -> Result<PlanView> {
         let meta = self.db().session_meta(session_id)?;
         let key = track_key(&meta);

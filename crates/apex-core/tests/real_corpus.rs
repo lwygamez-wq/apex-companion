@@ -137,6 +137,15 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         }));
     }
 
+    // Plan d'attaque : 3 virages au plus, chaque repère chiffré, tiré d'un tour de la séance.
+    if d.attack.len() > 3 {
+        rule.push(format!("{} plan d'attaque : {} virages (3 au plus)", file.display(), d.attack.len()));
+    }
+    for a in &d.attack {
+        if !has_digit(&a.text) || !d.laps.iter().any(|l| l.meta.number == a.best_lap) {
+            rule.push(format!("{} plan d'attaque « {} » : sans chiffre ou tour inconnu", file.display(), a.text));
+        }
+    }
     for a in d.debrief.iter().flat_map(|x| &x.actions) {
         if !has_digit(&a.detail) {
             rule.push(format!("{} débrief « {} » : aucun chiffre", file.display(), a.title));
@@ -274,6 +283,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         let meta = LiveCoach::new(&yaml, None, vec![], None).0.session().clone();
         let (mut coach, hello) = LiveCoach::new(&yaml, svc.live_reference(&meta).unwrap(), vec![], None);
         radio.push(json!([0, "hello", hello.text]));
+        let mut last_cue: Option<String> = None;
         for r in rows {
             if let Some(msg) = coach.push(r) {
                 if msg.kind == CoachMessageKind::Beep {
@@ -281,6 +291,14 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
                 }
                 if msg.kind == CoachMessageKind::Focus && msg.focus.is_some() && !has_digit(&msg.text) {
                     rule.push(format!("{} radio tour {} : « {} » sans chiffre", file.display(), msg.lap, msg.text));
+                }
+                // Une même consigne (mêmes mots, mêmes chiffres) n'est jamais répétée sans changement.
+                let cue = msg.text.split("perdus. ").nth(1).map(str::to_string);
+                if msg.kind == CoachMessageKind::Focus && cue.is_some() && cue == last_cue {
+                    rule.push(format!("{} radio tour {} : consigne répétée sans changement « {} »", file.display(), msg.lap, msg.text));
+                }
+                if msg.kind == CoachMessageKind::Focus {
+                    last_cue = cue;
                 }
                 radio.push(json!([msg.lap, msg.kind, msg.text]));
             }
@@ -303,6 +321,7 @@ fn snapshot(svc: &AppService, id: i64, file: &Path, rule: &mut Vec<String>) -> V
         "risk_headline": d.risk_headline,
         "risk": d.risk,
         "regularity": d.regularity,
+        "attack": d.attack.iter().map(|a| json!([a.corner, a.kind, a.target, a.vs_usual, a.best_lap, a.text])).collect::<Vec<_>>(),
         // Pas d'iRating dans l'instantané (dépôt public).
         "race": d.race.as_ref().map(|r| json!({ "field": r.field_size, "start": r.start_position, "finish": r.finish_position, "incidents": r.incident_total, "pace": r.pace, "headline": r.headline, "insights": r.insights })),
         // Débrief de course : pertes mesurées, priorités (chiffres et textes).

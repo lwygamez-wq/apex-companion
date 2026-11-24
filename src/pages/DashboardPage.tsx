@@ -10,6 +10,7 @@ import { useAsync } from "../lib/hooks";
 import type { StatusPayload } from "../lib/types";
 import { ReadyCard } from "../components/ReadyCard";
 import { Alert, Button, EmptyState, LoadError, Skeleton, Stat } from "../components/ui";
+import { AttackCard } from "../components/AttackCard";
 
 function Sparkline({ points }: { points: [number, number][] }) {
   if (points.length < 2) return <div className="muted">Au moins 2 sessions sur ce combo sont nécessaires.</div>;
@@ -77,6 +78,7 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
               </section>
             );
           })()}
+          <AttackCard sessionId={s.id} onMap={() => navigate({ page: "analysis", sessionId: s.id })} />
           <div className="briefing-top">
             <PlanCard sessionId={s.id} />
             <ReadyCard status={status} onSetup={() => navigate({ page: "live" })} />

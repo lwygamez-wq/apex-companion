@@ -31,7 +31,8 @@ export function CornerSheet({ cmp, corner, store, onClose, onPrev, onNext }: {
   const rs = useReplay(store);
 
   const k = corner;
-  const b = k.braking;
+  // Exports mobiles d'avant la 0.58 : pas de comparaison de freinage.
+  const b = k.braking ?? { reference: null, compared: null, brake_gap_m: null, min_speed_gap_kmh: k.compared.min_speed_kmh - k.reference.min_speed_kmh, throttle_gap_m: null, missing: "export d'une version plus ancienne" };
   const step = cmp.step_m;
   // Fenêtre : 30 m avant le premier freinage (ou la première phase), jusqu'à la sortie du virage.
   const firstM = Math.min(k.phases[0]?.range_m[0] ?? k.corner.entry_m, b.reference?.start_m ?? Infinity, b.compared?.start_m ?? Infinity, k.corner.entry_m);
@@ -40,7 +41,7 @@ export function CornerSheet({ cmp, corner, store, onClose, onPrev, onNext }: {
   const i0 = Math.max(0, Math.floor(m0 / step));
   const i1 = Math.min(cmp.ref_trace.speed_kmh.length - 1, Math.ceil(m1 / step));
 
-  const PAD_L = 48, PAD_R = 12, TOP = 22;
+  const PAD_L = 64, PAD_R = 12, TOP = 22;
   const rows = [
     { key: "speed", label: "Vitesse", unit: "km/h", h: 120, get: (t: Comparison["ref_trace"]) => t.speed_kmh },
     { key: "brake", label: "Frein", unit: "%", h: 56, get: (t: Comparison["ref_trace"]) => t.brake.map((v) => v * 100) },
@@ -93,7 +94,7 @@ export function CornerSheet({ cmp, corner, store, onClose, onPrev, onNext }: {
           <Button onClick={onClose}>Fermer</Button>
         </div>
       </header>
-      <p className="corner-sheet-say">{k.braking_sentence}</p>
+      <p className="corner-sheet-say">{k.braking_sentence ?? "Freinage non comparé (export d'une version plus ancienne d'Apex)."}</p>
       {facts.length > 0 && (
         <div className="corner-sheet-facts">
           {facts.map((f) => <span key={f}>{f}</span>)}

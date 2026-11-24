@@ -2,6 +2,32 @@
   "ai_context": "Simulateur : iRacing · Circuit : Road Atlanta (Full Course) · Voiture : Super Formula SF23 - Honda · Séance : course · Série : Open\nLongueur du circuit : 4057 m\nTours : 17 au total, 8 propres. Meilleur tour propre : 1:04.536 (tour 12). Tour théorique (meilleurs segments) : 1:04.301.\nRégularité : écart-type 0.69 s sur 8 tours propres, moyenne 1:05.542.\n\nTOURS (numéro, temps, état) :\n- T1 — stand, 1.66 L\n- T2 1:06.409 drapeau jaune, 1.66 L\n- T3 1:06.175 propre, 1.69 L\n- T4 1:07.970 sortie de piste, incident, 1.67 L\n- T5 1:05.864 propre, 1.73 L\n- T6 1:06.271 propre, 1.67 L\n- T7 1:07.734 sortie de piste, incident, 1.71 L\n- T8 1:14.046 sortie de piste, incident, stand, 1.53 L\n- T9 1:33.512 sortie de piste, incident, stand, 1.75 L\n- T10 1:04.812 propre, 1.73 L\n- T11 1:05.373 propre, 1.69 L\n- T12 1:04.536 propre, 1.73 L\n- T13 1:04.540 sortie de piste, incident, 1.69 L\n- T14 1:05.055 propre, 1.68 L\n- T15 1:47.249 sortie de piste, incident, 1.72 L\n- T16 1:06.253 propre, 1.67 L\n- T17 — sortie de piste, incident, 0.30 L\n\nCOMPARAISON : ton tour 5 (1:05.864) contre la référence ton tour 12 (1:04.536). Écart final +1.328 s.\nPar virage (temps perdu + / gagné −, puis toi vs référence) :\n- Virage 10a : +0.35 s · freinage plus tard (+6 m) · vitesse mini 117 vs 129 km/h, gaz -5 m · sortie 208 vs 212 km/h\n- Virage 7 : +0.27 s · freinage plus tôt (-68 m) · vitesse mini 87 vs 102 km/h, gaz +18 m · sortie 200 vs 202 km/h\n- Virage 12 : +0.09 s · freinage (la référence n'en a pas) · vitesse mini 235 vs 247 km/h, gaz -22 m · sortie 248 vs 252 km/h\n- Virage 1 : +0.09 s · freinage plus tard (+5 m) · vitesse mini 158 vs 163 km/h, gaz +30 m · sortie 208 vs 218 km/h\n- Virage 6 : +0.08 s · freinage au même endroit · vitesse mini 178 vs 189 km/h, gaz +14 m · sortie 191 vs 204 km/h\n- V3 : +0.02 s · freinage au même endroit · vitesse mini 182 vs 180 km/h, gaz -15 m · sortie 218 vs 222 km/h\nConseils calculés par Apex (priorité décroissante) :\n- Virage 1 : sécuriser avant d'attaquer (gain estimé 1.62 à 3.23 s) : Tu sors 4 fois sur 13 (31 %). Une sortie coûte 10.5 s ici, pour 0.22 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s. → Prochaine session à Virage 1 : freine 5 m plus tôt que d'habitude et vise 90 % de passages sans sortie. Tu rattraperas le temps ensuite, quand le virage sera fiable.\n- Virage 10a : vitesse minimale insuffisante (gain estimé 0.18 à 0.35 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 12 km/h (117 km/h contre 129 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.35 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 129 km/h vers 3495 m).\n- Virage 7 : freinage trop précoce (gain estimé 0.13 à 0.27 s) : Tu freines environ 68 m plus tôt que la référence et ta vitesse minimale est inférieure de 15 km/h. Perte mesurée : 0.27 s par rapport à la référence. Confiance : élevée. → Décale ton point de freinage d'environ 48 m plus loin (réf. : 2033 m), en gardant la même attaque de pédale, puis relâche progressivement jusqu'à la corde pour viser 102 km/h au minimum.\n- Virage 12 : freinage inutile (gain estimé 0.04 à 0.09 s) : Sur la référence, tu passes ce virage sans freiner (simple levé de pied) à 247 km/h. Ici, tu freines vers 392 m et tombes à 235 km/h : 12 km/h de moins à la corde. Perte mesurée : 0.09 s par rapport à la référence. Confiance : élevée. → Essaie de ne pas toucher au frein : lève le pied un peu plus tôt, garde de la vitesse et vise 247 km/h à la corde comme sur ton meilleur tour.\n- Virage 6 : vitesse minimale insuffisante (gain estimé 0.04 à 0.08 s) : Ton point de freinage est proche de la référence mais ta vitesse minimale est inférieure de 10 km/h (178 km/h contre 189 km/h) : tu freines trop fort ou trop longtemps dans la phase de relâche. Perte mesurée : 0.08 s par rapport à la référence. Confiance : élevée. → Relâche le frein plus progressivement pour porter davantage de vitesse jusqu'à la corde (réf. : 189 km/h vers 1964 m).\n\nCARTE DE RISQUE (toutes tes séances ici) : Priorité : rester en piste. 1 virage(s) à sécuriser, Virage 1 en tête (4 sorties sur 13). Tes sorties te coûtent en moyenne 3.23 s par tour, avant même de parler de rythme.\n- Virage 1 : 4/13 sorties, à prendre 0.22 s en refaisant ton meilleur passage, une sortie coûte 10.5 s · Tu sors 4 fois sur 13 (31 %). Une sortie coûte 10.5 s ici, pour 0.22 s de gain possible au mieux. Sécurise ce virage avant d'y chercher du temps : garde ta vitesse d'entrée propre, quitte à perdre 0,2 s.\n- Virage 7 : 0/13 sorties, à prendre 0.25 s en refaisant ton meilleur passage · 0 sortie(s) sur 13, 0.25 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Virage 10a : 0/13 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 13, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- V3 : 0/13 sorties, à prendre 0.21 s en refaisant ton meilleur passage · 0 sortie(s) sur 13, 0.21 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Virage 6 : 0/13 sorties, à prendre 0.16 s en refaisant ton meilleur passage · 0 sortie(s) sur 13, 0.16 s entre moyenne et meilleur passage : rien de prioritaire ici.\n- Virage 12 : 1/13 sorties, à prendre 0.07 s en refaisant ton meilleur passage, une sortie coûte 0.4 s · 1 sortie(s) sur 13, 0.07 s entre moyenne et meilleur passage : rien de prioritaire ici.\n\nBONS ET MAUVAIS PASSAGES (cette séance) : En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,14 s. Le plus gros : Virage 1 (0,30 s).\n- Virage 1 : −0.30 s possibles (meilleur passage au tour 12). Sur tes meilleurs passages, tu sors 23 km/h plus vite et tu portes 14 km/h de plus au point le plus lent.\n- Virage 10a : −0.29 s possibles (meilleur passage au tour 12). Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.\n- V3 : −0.22 s possibles (meilleur passage au tour 14). Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu freines 15 m plus tard.\n- Virage 7 : −0.20 s possibles (meilleur passage au tour 14). Sur tes meilleurs passages, tu portes 12 km/h de plus au point le plus lent et tu remets les gaz 12 m plus tôt.\n- Virage 6 : −0.08 s possibles (meilleur passage au tour 10). Sur tes meilleurs passages, tu portes 27 km/h de plus au point le plus lent et tu sors 17 km/h plus vite.\n- Virage 12 : −0.06 s possibles (meilleur passage au tour 12). Sur tes meilleurs passages, tu portes 18 km/h de plus au point le plus lent et tu sors 9 km/h plus vite.\n\nSORTIES DE PISTE :\n- Virage 1 (à 871 m) aux tours [4, 7, 8, 9, 13, 15, 17]\n- Virage 12 (à 533 m) aux tours [15]\n\nCOURSE : P8 → P7 sur 13 pilotes, 8x ; point noir : Virage 1\nGrille Some(8), arrivée Some(7), 13 pilotes, 8 incidents.\n- Virage 1 : 7 incidents, 7x : Incidents aux tours 4, 7, 8, 9, 13, 15, 17. Même erreur, même endroit : en course, freine un repère plus tôt et garde de la marge en sortie ici ; le temps perdu en restant en piste est bien plus faible que celui d'une sortie.\n- Fin de course : 3x : À partir du tour 14. La concentration baisse en fin de course : c'est là qu'on perd ce qu'on a gagné. Sur les derniers tours, protège ta position et roule à 98 %.\n",
   "analysis_reference": 12,
   "analysis_reference_time": null,
+  "attack": [
+    [
+      "Virage 1",
+      "min_speed",
+      162.695,
+      7.912,
+      12,
+      "Virage 1 : garde 163 km/h à la corde, 8 de plus que d'habitude (ton meilleur passage, tour 12) : 0,30 s à gagner."
+    ],
+    [
+      "V3",
+      "brake",
+      1310.0,
+      5.0,
+      14,
+      "V3 : freine à 1310 m de la ligne, 5 m plus tard que d'habitude (ton meilleur passage, tour 14) : 0,22 s à gagner."
+    ],
+    [
+      "Virage 7",
+      "min_speed",
+      99.86,
+      7.562,
+      14,
+      "Virage 7 : garde 100 km/h à la corde, 8 de plus que d'habitude (ton meilleur passage, tour 14) : 0,20 s à gagner."
+    ]
+  ],
   "best": 12,
   "comparisons": [
     {
@@ -1064,8 +1090,11 @@
       {
         "advice": "Sur tes meilleurs passages, tu sors 23 km/h plus vite et tu portes 14 km/h de plus au point le plus lent.",
         "apex_m": 832.0,
+        "best_brake_m": 724.0,
         "best_lap": 12,
+        "best_min_kmh": 162.695,
         "best_s": 8.03,
+        "best_throttle_m": 826.0,
         "brake_spread_m": 6.141,
         "differences": [
           {
@@ -1096,13 +1125,19 @@
         "gain_s": 0.296,
         "median_s": 8.327,
         "name": "Virage 1",
-        "passes": 8
+        "passes": 8,
+        "usual_brake_m": 725.0,
+        "usual_min_kmh": 154.783,
+        "usual_throttle_m": 863.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu sors 6 km/h plus vite.",
         "apex_m": 3496.0,
+        "best_brake_m": 3360.0,
         "best_lap": 12,
+        "best_min_kmh": 129.233,
         "best_s": 19.164,
+        "best_throttle_m": 3496.0,
         "brake_spread_m": 2.828,
         "differences": [
           {
@@ -1121,13 +1156,19 @@
         "gain_s": 0.285,
         "median_s": 19.449,
         "name": "Virage 10a",
-        "passes": 8
+        "passes": 8,
+        "usual_brake_m": 3360.0,
+        "usual_min_kmh": 128.387,
+        "usual_throttle_m": 3497.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 7 km/h de plus au point le plus lent et tu freines 15 m plus tard.",
         "apex_m": 1428.0,
+        "best_brake_m": 1310.0,
         "best_lap": 14,
+        "best_min_kmh": 186.205,
         "best_s": 8.95,
+        "best_throttle_m": 1426.0,
         "brake_spread_m": 11.6,
         "differences": [
           {
@@ -1152,13 +1193,19 @@
         "gain_s": 0.215,
         "median_s": 9.166,
         "name": "V3",
-        "passes": 8
+        "passes": 8,
+        "usual_brake_m": 1305.0,
+        "usual_min_kmh": 180.912,
+        "usual_throttle_m": 1413.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 12 km/h de plus au point le plus lent et tu remets les gaz 12 m plus tôt.",
         "apex_m": 2125.0,
+        "best_brake_m": 2046.0,
         "best_lap": 14,
+        "best_min_kmh": 99.86,
         "best_s": 13.87,
+        "best_throttle_m": 2130.0,
         "brake_spread_m": 3.207,
         "differences": [
           {
@@ -1177,13 +1224,19 @@
         "gain_s": 0.201,
         "median_s": 14.07,
         "name": "Virage 7",
-        "passes": 8
+        "passes": 8,
+        "usual_brake_m": 2046.0,
+        "usual_min_kmh": 92.298,
+        "usual_throttle_m": 2135.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 27 km/h de plus au point le plus lent et tu sors 17 km/h plus vite.",
         "apex_m": 1965.0,
+        "best_brake_m": 1864.0,
         "best_lap": 10,
+        "best_min_kmh": 191.583,
         "best_s": 5.385,
+        "best_throttle_m": 2030.0,
         "brake_spread_m": 4.781,
         "differences": [
           {
@@ -1214,13 +1267,19 @@
         "gain_s": 0.085,
         "median_s": 5.47,
         "name": "Virage 6",
-        "passes": 8
+        "passes": 8,
+        "usual_brake_m": 1858.0,
+        "usual_min_kmh": 184.588,
+        "usual_throttle_m": 1985.0
       },
       {
         "advice": "Sur tes meilleurs passages, tu portes 18 km/h de plus au point le plus lent et tu sors 9 km/h plus vite.",
         "apex_m": 484.0,
+        "best_brake_m": null,
         "best_lap": 12,
+        "best_min_kmh": 246.874,
         "best_s": 8.868,
+        "best_throttle_m": 476.0,
         "brake_spread_m": null,
         "differences": [
           {
@@ -1245,7 +1304,10 @@
         "gain_s": 0.062,
         "median_s": 8.93,
         "name": "Virage 12",
-        "passes": 8
+        "passes": 8,
+        "usual_brake_m": null,
+        "usual_min_kmh": 240.442,
+        "usual_throttle_m": 490.0
       }
     ],
     "headline": "En refaisant tes meilleurs passages à chaque tour, ton tour médian gagnerait 1,14 s. Le plus gros : Virage 1 (0,30 s).",

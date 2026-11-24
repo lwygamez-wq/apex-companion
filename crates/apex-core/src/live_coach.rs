@@ -92,14 +92,23 @@ struct LapAnalysis {
 /// Consigne retenue pour un virage, à partir des écarts moyens.
 #[derive(Debug, Clone, PartialEq)]
 enum Cue {
+    /// Mètres à gagner au freinage (phase freinage).
     BrakeLater(f32),
-    BrakeEarlier,
-    NoBrake,
-    TurnEarlier,
-    TurnLater,
+    /// Mètres de freinage en trop tard, km/h perdus en sortie.
+    BrakeEarlier(f32, f32),
+    /// km/h perdus à la corde en freinant là où la référence ne freine pas.
+    NoBrake(f32),
+    /// Mètres de retard à l'inscription (phase entrée).
+    TurnEarlier(f32),
+    /// Mètres d'avance à l'inscription.
+    TurnLater(f32),
+    /// km/h à garder à la corde (phase milieu).
     CarrySpeed(f32),
-    ThrottleEarlier,
-    BetterExit,
+    /// Mètres de retard à la remise des gaz (phase sortie).
+    ThrottleEarlier(f32),
+    /// km/h perdus en sortie.
+    BetterExit(f32),
+    /// Perte sans cause isolée : aucune consigne de pilotage inventée.
     Line,
 }
 
@@ -108,28 +117,28 @@ impl Cue {
     fn short(&self) -> &'static str {
         match self {
             Cue::BrakeLater(_) => "freine plus tard",
-            Cue::BrakeEarlier => "freine plus tôt",
-            Cue::NoBrake => "sans freiner",
-            Cue::TurnEarlier => "tourne plus tôt",
-            Cue::TurnLater => "tourne plus tard",
+            Cue::BrakeEarlier(..) => "freine plus tôt",
+            Cue::NoBrake(_) => "sans freiner",
+            Cue::TurnEarlier(_) => "tourne plus tôt",
+            Cue::TurnLater(_) => "tourne plus tard",
             Cue::CarrySpeed(_) => "relâche le frein plus tôt",
-            Cue::ThrottleEarlier => "gaz plus tôt",
-            Cue::BetterExit => "soigne la sortie",
-            Cue::Line => "vise la corde",
+            Cue::ThrottleEarlier(_) => "gaz plus tôt",
+            Cue::BetterExit(_) => "soigne la sortie",
+            Cue::Line => "garde tes repères",
         }
     }
 
     fn say(&self) -> String {
         match self {
             Cue::BrakeLater(m) => format!("Freine {} mètres plus tard.", round_to(*m, 5.0)),
-            Cue::BrakeEarlier => "Freine un peu plus tôt, tu sors trop lentement.".into(),
-            Cue::NoBrake => "Ne freine pas, lève juste le pied.".into(),
-            Cue::TurnEarlier => "Commence à tourner plus tôt.".into(),
-            Cue::TurnLater => "Tourne plus tard, attends la corde.".into(),
+            Cue::BrakeEarlier(m, k) => format!("Freine {} mètres plus tôt, tu sors {} kilomètres heure trop lent.", round_to(*m, 5.0), k.round() as i32),
+            Cue::NoBrake(k) => format!("Ne freine pas, lève juste le pied : {} kilomètres heure de plus à la corde.", k.round() as i32),
+            Cue::TurnEarlier(m) => format!("Tourne {} mètres plus tôt.", round_to(*m, 5.0)),
+            Cue::TurnLater(m) => format!("Tourne {} mètres plus tard, attends la corde.", round_to(*m, 5.0)),
             Cue::CarrySpeed(k) => format!("Relâche le frein plus tôt, garde {} kilomètres heure de plus à la corde.", k.round() as i32),
-            Cue::ThrottleEarlier => "Accélère plus tôt.".into(),
-            Cue::BetterExit => "Ouvre la sortie et accélère plus franchement.".into(),
-            Cue::Line => "Vise la corde de la référence.".into(),
+            Cue::ThrottleEarlier(m) => format!("Gaz {} mètres plus tôt.", round_to(*m, 5.0)),
+            Cue::BetterExit(k) => format!("Sors avec {} kilomètres heure de plus.", k.round() as i32),
+            Cue::Line => "Pas de cause isolée, garde tes repères.".into(),
         }
     }
 }
@@ -194,10 +203,8 @@ fn analyse(c: &Comparison) -> LapAnalysis {
                 name: k.corner.name.clone(),
                 apex_m: k.corner.apex_m,
                 loss_s: k.time_delta_s,
-                brake_early_m: match (rf.brake_on_m, cm.brake_on_m) {
-                    (Some(a), Some(b)) if rb && cb && (a - b).abs() <= 60.0 => Some(a - b),
-                    _ => None,
-                },
+                // Même mesure que la carte et la fiche virage (analysis/braking.rs : canal frein, point non ambigu).
+                brake_early_m: k.braking.brake_gap_m.filter(|g| rb && cb && g.abs() <= 60.0).map(|g| -g),
                 needless_brake: !rb && cb,
                 turn_in_late_m: ti,
                 vmin_deficit_kmh: rf.min_speed_kmh - cm.min_speed_kmh,
@@ -232,21 +239,21 @@ fn cue_for(stats: &[&CornerStat]) -> Cue {
     if let Some(b) = brake.filter(|b| *b >= 8.0) {
         Cue::BrakeLater(b * 0.7)
     } else if needless && vmin >= 3.0 {
-        Cue::NoBrake
-    } else if brake.is_some_and(|b| b <= -8.0) && (vmin >= 3.0 || exit >= 3.0) {
-        Cue::BrakeEarlier
+        Cue::NoBrake(vmin)
+    } else if let Some(b) = brake.filter(|b| *b <= -8.0 && (vmin >= 3.0 || exit >= 3.0)) {
+        Cue::BrakeEarlier(-b * 0.7, exit.max(vmin))
     } else if let Some(t) = turn.filter(|t| t.abs() >= 8.0) {
         if t > 0.0 {
-            Cue::TurnEarlier
+            Cue::TurnEarlier(t)
         } else {
-            Cue::TurnLater
+            Cue::TurnLater(-t)
         }
     } else if vmin >= 3.0 {
         Cue::CarrySpeed(vmin)
-    } else if throttle.is_some_and(|t| t >= 10.0) {
-        Cue::ThrottleEarlier
+    } else if let Some(t) = throttle.filter(|t| *t >= 10.0) {
+        Cue::ThrottleEarlier(t)
     } else if exit >= 3.0 {
-        Cue::BetterExit
+        Cue::BetterExit(exit)
     } else {
         Cue::Line
     }
@@ -1025,14 +1032,16 @@ impl LiveCoach {
                 let sector = ((s0.apex_m / length.max(1.0)) * 3.0).floor().clamp(0.0, 2.0) as i32 + 1;
                 let losing: Vec<&CornerStat> = stats.iter().copied().filter(|s| s.loss_s >= LOSS_MIN_S).collect();
                 let cue = cue_for(if losing.is_empty() { &stats } else { &losing });
-                // Même focus, même consigne qu'au tour précédent : version courte, comme à la radio.
-                let same = prev_focus == Some(s0.id) && self.last_cue.as_deref() == Some(cue.short());
+                // Même focus, même consigne, mêmes chiffres qu'au tour précédent : on ne la répète pas
+                // (le pilote l'a déjà) ; seul le chrono du tour est dit. Un chiffre qui change la relance.
+                let same = prev_focus == Some(s0.id) && self.last_cue.as_deref() == Some(cue.say().as_str());
                 let text = if same {
-                    format!("{head} {solved}Toujours {name} : {}", cue.say().to_lowercase())
+                    let t = format!("{head} {solved}");
+                    if t.trim().is_empty() { format!("Même écart à {name}, garde ta consigne.") } else { t }
                 } else {
                     format!("{head} {solved}{lead} {name}, secteur {sector} : {} perdus. {}", say_time(mean as f64), cue.say())
                 };
-                self.last_cue = Some(cue.short().to_string());
+                self.last_cue = Some(cue.say());
                 self.last_advice = Some(format!("Focus {name}, secteur {sector} : {} perdus. {}", say_time(mean as f64), cue.say()));
                 self.last_focus = Some((s0.id, name.clone(), mean));
                 // Annonce juste avant le virage, sauf s'il suit de près la ligne (le message du tour suffit).
@@ -1148,17 +1157,27 @@ mod tests {
         let b = stat(0.2, Some(1.0), 6.0);
         assert_eq!(cue_for(&[&b]), Cue::CarrySpeed(6.0));
         let mut c = stat(0.2, Some(-12.0), 5.0);
-        assert_eq!(cue_for(&[&c]), Cue::BrakeEarlier);
+        assert_eq!(cue_for(&[&c]), Cue::BrakeEarlier(12.0 * 0.7, 5.0));
         c.brake_early_m = Some(0.0);
         c.vmin_deficit_kmh = 0.0;
         c.turn_in_late_m = Some(11.0);
-        assert_eq!(cue_for(&[&c]), Cue::TurnEarlier);
+        assert_eq!(cue_for(&[&c]), Cue::TurnEarlier(11.0));
         c.turn_in_late_m = None;
         c.throttle_late_m = Some(15.0);
-        assert_eq!(cue_for(&[&c]), Cue::ThrottleEarlier);
+        assert_eq!(cue_for(&[&c]), Cue::ThrottleEarlier(15.0));
         c.throttle_late_m = None;
         assert_eq!(cue_for(&[&c]), Cue::Line, "aucune cause mesurée : pas de consigne inventée");
         assert_eq!(Cue::BrakeLater(9.8).say(), "Freine 10 mètres plus tard.");
+    }
+
+    /// Chaque consigne de pilotage cite un chiffre mesuré ; « pas de cause isolée » n'en invente pas.
+    #[test]
+    fn every_cue_cites_a_measured_number() {
+        for c in [Cue::BrakeLater(14.0), Cue::BrakeEarlier(10.0, 4.0), Cue::NoBrake(5.0), Cue::TurnEarlier(10.0), Cue::TurnLater(10.0), Cue::CarrySpeed(4.0), Cue::ThrottleEarlier(12.0), Cue::BetterExit(4.0)] {
+            assert!(c.say().chars().any(|ch| ch.is_ascii_digit()), "{}", c.say());
+        }
+        assert_eq!(Cue::ThrottleEarlier(12.0).say(), "Gaz 10 mètres plus tôt.");
+        assert_eq!(Cue::Line.say(), "Pas de cause isolée, garde tes repères.");
     }
 
     /// Rejoue un fichier comme une session en direct : un message par tour terminé, sans référence au départ.
@@ -1172,6 +1191,13 @@ mod tests {
         let msgs: Vec<CoachMessage> = rows.into_iter().filter_map(|r| coach.push(r)).collect();
         assert_eq!(msgs.len(), file.laps.iter().filter(|l| l.meta.lap_time_s.is_some()).count());
         assert!(msgs.iter().all(|m| !m.text.is_empty()));
+        // Une même consigne (mêmes mots, mêmes chiffres) n'est jamais dite deux tours de suite.
+        let cue = |m: &CoachMessage| m.text.split("perdus. ").nth(1).map(str::to_string);
+        for w in msgs.windows(2) {
+            if let (Some(a), Some(b)) = (cue(&w[0]), cue(&w[1])) {
+                assert_ne!(a, b, "consigne répétée sans changement aux tours {} et {}", w[0].lap, w[1].lap);
+            }
+        }
     }
 
     #[test]
