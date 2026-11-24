@@ -8,6 +8,7 @@ import { LiveFuelCard } from "../components/LiveFuelCard";
 import { LiveGlance } from "../components/LiveGlance";
 import type { StatusPayload } from "../lib/types";
 import { coachVoice, coachVolume, setCoachVoice, setCoachVolume, speak, voiceAvailable, voiceName } from "../lib/voice";
+import { Alert } from "../components/ui";
 
 const SAMPLE = "Radio check. Plus 3 dixièmes. Sur les 3 derniers tours, focus virage 16, secteur 3 : 3 dixièmes perdus. Freine 10 mètres plus tard.";
 
@@ -189,7 +190,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
                 portal.azure.com → ressource « Speech », niveau <b>Free F0</b>, région France Central → « Clés et point de terminaison » : copie la Clé 1. Seul le texte des messages radio est envoyé à Azure.
               </div>
               <div className="row" style={{ gap: 8 }}>
-                <input type="password" placeholder="Clé 1" value={azKey} onChange={(e) => setAzKey(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
+                <input type="password" aria-label="Clé Azure" placeholder="Clé 1" value={azKey} onChange={(e) => setAzKey(e.target.value)} style={{ flex: 1, minWidth: 200 }} />
                 <select value={azRegion} onChange={(e) => setAzRegion(e.target.value)} aria-label="Région Azure">
                   {["francecentral", "westeurope", "northeurope", "swedencentral", "uksouth", "switzerlandnorth", "eastus", "westus2"].map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
@@ -197,7 +198,7 @@ export function LiveCoachPage({ status }: { status: StatusPayload | null }) {
               </div>
             </details>
             {busy && <div className="muted mt-8">{busy}</div>}
-            {!voiceAvailable() && sel === "windows" && <div className="warning">Synthèse vocale Windows indisponible sur ce poste.</div>}
+            {!voiceAvailable() && sel === "windows" && <Alert tone="warn">Synthèse vocale Windows indisponible sur ce poste.</Alert>}
             {sel === "windows" && winVoice && <div className="muted t-sm mt-8">{winVoice}</div>}
           </div>
           <RadioControlCard status={status} />

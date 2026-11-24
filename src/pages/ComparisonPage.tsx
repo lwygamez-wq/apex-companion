@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { dateTime, delta, lapTime } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import type { SessionSummary } from "../lib/types";
+import { Alert } from "../components/ui";
 
 /** Progression sur un même combo simulateur / circuit / voiture, session par session. */
 export function ComparisonPage({ navigate }: { navigate: (r: Route) => void }) {
@@ -29,10 +30,10 @@ export function ComparisonPage({ navigate }: { navigate: (r: Route) => void }) {
           {combos.map(([k, v]) => <option key={k} value={k}>{k} ({v.length} session(s))</option>)}
         </select>
       </div>
-      <div className="warning">
+      <Alert tone="info">
         Progression entre sessions d'un même combo. La comparaison segment par segment entre deux tours (y compris d'une autre session via la référence personnelle) se fait dans « Analyse de tour ».
         La comparaison multi-relais et inter-voitures arrive en phase 3.
-      </div>
+      </Alert>
       <div className="card" style={{ padding: 0 }}>
         <table>
           <thead><tr><th>Date</th><th className="num">Meilleur</th><th className="num">vs 1re session</th><th className="num">Moyenne propre</th><th className="num">σ</th><th className="num">Tours propres</th><th>Météo</th></tr></thead>

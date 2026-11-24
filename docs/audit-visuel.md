@@ -215,10 +215,10 @@ Captures : `docs/audit/apres-0.53/`.
 | Aucune couleur écrite en dur hors jetons | 0 dans le CSS desktop et mobile et dans tous les composants | **vérifié** (test) |
 | États hover, focus, désactivé, vide, chargement, erreur | présents sur les composants de base ; chargement, erreur et vide sur Briefing, Stratégie, Séances, Références, Setups, Analyse, Progression | **vérifié** sur captures |
 | Cibles ≥ 32 px | 0 cible plus petite sur les 8 pages, de 1280 à 2560, dans les 4 états | **vérifié** (mesure Playwright) |
-| Navigation clavier avec focus visible | anneau orange `:focus-visible` sur tous les contrôles ; lignes de séance activables à Entrée | vérifié sur le code, **pas testé de bout en bout au clavier** |
+| Navigation clavier avec focus visible | anneau orange `:focus-visible` sur tous les contrôles ; lignes de séance activables à Entrée | vérifié sur le code ; **testé de bout en bout en 0.56** (§10) |
 | Aucun défilement horizontal, 1280 → 2560 | aucun mesuré | **vérifié** |
 | Au volant : texte principal ≥ 48 px, ≤ 3 informations, sans défilement | 48 px, 3 tuiles, bandeau entier à 1280×720 | **vérifié** sur captures ; **à valider en jeu** sur l'écran réel d'Alex, à distance de volant |
-| Un seul style de tableau, une seule carte de statistique, une seule alerte | composants `Stat` et `Alert` uniques ; anciennes classes (`.ss-kpi`, `.lf-main`, `.warning`) encore utilisées à quelques endroits | **partiel** |
+| Un seul style de tableau, une seule carte de statistique, une seule alerte | composants `Stat` et `Alert` uniques ; anciennes classes retirées en 0.56 (§10) | **vérifié** en 0.56 |
 | Tests existants verts, aucun calcul modifié | Vitest 63/63, aucun fichier Rust de logique touché | **vérifié** |
 
 ### Reste à faire (listé)
@@ -243,3 +243,13 @@ Ce qui change, et pourquoi c'est propre au sujet :
 - **Inchangé** : les garde-fous de `design.test.ts` (contraste, 6 tailles, grille de 4, 3 rayons, aucune couleur en dur), aucun calcul modifié.
 
 Captures : `docs/audit/apres-0.55/` (Briefing, Stratégie, Séances, Setups, Progression, Au volant en piste, iPhone).
+
+## 10. Lot 0.56 : fin de refonte (§8)
+
+| Point resté ouvert en 0.54 | Fait en 0.56 | Statut |
+|---|---|---|
+| Un seul chiffre clé, une seule alerte | `.ss-kpi` (Briefing, Analyse), `.lf-main` (Au volant), `.kpi` / `.kpi-sub` (Progression, app iPhone), `.race-kpi` (bilan de course iRacing) remplacés par `Stat` ; `.warning` / `.error` (11 endroits, desktop et iPhone) remplacés par `Alert`. Règles CSS supprimées. Il ne reste aucune de ces classes dans les composants. | **vérifié** (recherche dans le code, captures) |
+| Navigation au clavier, page par page | Script `docs/audit/clavier.cjs` (Playwright). Sur chaque page : Tab jusqu'à l'entrée du menu, Entrée, puis Tab sur toute la page. Résultat sur les 8 pages : menu atteint et page ouverte au clavier, focus visible sur chaque contrôle (de 12 à 45 contrôles par page). Corrigés : focus invisible sur les lignes de Séances (`outline: none`) et 15 champs sans nom lisible par un lecteur d'écran (Réglages, Au volant, case « tour de formation »). Les 3 champs Azure non atteints sont dans un volet replié : on l'ouvre avec Entrée sur « Clé Azure ». | **vérifié** (Chromium) |
+| `color-mix`, `:has()` et `var()` dans les SVG sous WebView2 | Pas de PC Windows ici. Ajouté dans Réglages › Avancé › Affichage, le bouton « Vérifier l'affichage » : l'app teste elle-même `color-mix`, `:has()`, la couleur calculée d'un dessin SVG en `var(--accent)`, les deux polices, et donne la version du moteur. Tout est OK sous Chromium 157. | **à valider par Alex** : une capture de ce panneau dans l'app Windows suffit |
+
+Captures : `docs/audit/apres-0.56/`.

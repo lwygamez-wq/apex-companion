@@ -9,7 +9,7 @@ import { PHASE_SPOKEN } from "../lib/compareView";
 import { useAsync } from "../lib/hooks";
 import type { StatusPayload } from "../lib/types";
 import { ReadyCard } from "../components/ReadyCard";
-import { Alert, Button, EmptyState, LoadError, Skeleton } from "../components/ui";
+import { Alert, Button, EmptyState, LoadError, Skeleton, Stat } from "../components/ui";
 
 function Sparkline({ points }: { points: [number, number][] }) {
   if (points.length < 2) return <div className="muted">Au moins 2 sessions sur ce combo sont nécessaires.</div>;
@@ -89,10 +89,10 @@ export function DashboardPage({ navigate, status }: { navigate: (r: Route) => vo
               <span className="muted">{s.car} · {SESSION_KIND_FR[s.kind]} · {dateTime(s.started_at_unix)}</span>
               <span className="link-like">Analyser →</span>
             </div>
-            <div className="ss-kpi"><span>Meilleur tour propre</span><b className="mono best">{lapTime(s.best_lap_s)}</b></div>
-            <div className="ss-kpi" title="Tes meilleurs secteurs de la séance mis bout à bout"><span>Tour idéal</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
-            <div className="ss-kpi" title="De combien tes tours propres varient d'un tour à l'autre (plus petit = plus régulier)"><span>Régularité</span><b className="mono">{s.stddev_clean_s != null ? `± ${s.stddev_clean_s.toFixed(2)} s` : "—"}</b></div>
-            <div className="ss-kpi"><span>Tours propres</span><b className="mono">{s.clean_lap_count}/{s.lap_count}</b></div>
+            <Stat label="Meilleur tour propre" value={lapTime(s.best_lap_s)} tone="best" />
+            <Stat label="Tour idéal" value={lapTime(d.theoretical_best_s)} tone="best" title="Tes meilleurs secteurs de la séance mis bout à bout" />
+            <Stat label="Régularité" value={s.stddev_clean_s != null ? `± ${s.stddev_clean_s.toFixed(2)} s` : "—"} title="De combien tes tours propres varient d'un tour à l'autre (plus petit = plus régulier)" />
+            <Stat label="Tours propres" value={`${s.clean_lap_count}/${s.lap_count}`} />
           </div>
           <NoCleanLaps clean={s.clean_lap_count} timed={s.lap_count} />
 

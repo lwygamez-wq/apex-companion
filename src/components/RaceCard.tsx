@@ -1,5 +1,6 @@
 import { delta, lapTime } from "../lib/format";
 import type { LapRow, RaceReport } from "../lib/types";
+import { Stat } from "./ui";
 
 const KIND_CLS: Record<RaceReport["insights"][number]["kind"], string> = { danger: "bad", warning: "warn", good: "good", info: "" };
 
@@ -51,26 +52,10 @@ export function RaceCard({ r, laps, onLap }: { r: RaceReport; laps: LapRow[]; on
       </div>
       <div className="risk-headline">{r.headline}</div>
       <div className="grid cols-4" style={{ marginBottom: 10 }}>
-        <div className="race-kpi">
-          <span className="muted">Grille → arrivée</span>
-          <b>{r.start_position ? `P${r.start_position}` : "—"} → {r.finish_position ? `P${r.finish_position}` : "—"}</b>
-          {gained != null && <span className={gained > 0 ? "good-txt" : gained < 0 ? "pos" : "muted"}>{gained > 0 ? `+${gained} places` : gained < 0 ? `${gained} places` : "position gardée"}</span>}
-        </div>
-        <div className="race-kpi">
-          <span className="muted">Incidents</span>
-          <b>{r.incident_total}x</b>
-          <span className="muted">{r.incidents.filter((i) => i.points > 0).length} comptés</span>
-        </div>
-        <div className="race-kpi">
-          <span className="muted">Qualification</span>
-          <b>{r.my_qualify_s != null && r.pole_s != null ? `${delta(r.my_qualify_s - r.pole_s)} s` : "—"}</b>
-          <span className="muted">{r.race_lap_as_qualify ? `ton rythme course = P${r.race_lap_as_qualify}` : "de la pole"}</span>
-        </div>
-        <div className="race-kpi">
-          <span className="muted">Rythme course</span>
-          <b>{r.pace ? lapTime(r.pace.median_s) : "—"}</b>
-          <span className="muted">{r.pace ? `médian · meilleur ${lapTime(r.pace.best_s)} · ±${r.pace.spread_s.toFixed(2)} s` : "pas assez de tours propres"}</span>
-        </div>
+        <Stat label="Grille → arrivée" value={`${r.start_position ? `P${r.start_position}` : "—"} → ${r.finish_position ? `P${r.finish_position}` : "—"}`} delta={gained != null ? { text: gained > 0 ? `+${gained} places` : gained < 0 ? `${gained} places` : "position gardée", tone: gained > 0 ? "gain" : gained < 0 ? "loss" : "neutral" } : undefined} />
+        <Stat label="Incidents" value={`${r.incident_total}x`} hint={`${r.incidents.filter((i) => i.points > 0).length} comptés`} />
+        <Stat label="Qualification" value={r.my_qualify_s != null && r.pole_s != null ? `${delta(r.my_qualify_s - r.pole_s)} s` : "—"} hint={r.race_lap_as_qualify ? `ton rythme course = P${r.race_lap_as_qualify}` : "de la pole"} />
+        <Stat label="Rythme course" value={r.pace ? lapTime(r.pace.median_s) : "—"} hint={r.pace ? `médian, meilleur ${lapTime(r.pace.best_s)}, ±${r.pace.spread_s.toFixed(2)} s` : "pas assez de tours propres"} />
       </div>
       <PositionChart r={r} />
       {r.insights.length > 0 && (

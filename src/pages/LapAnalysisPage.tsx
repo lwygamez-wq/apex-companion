@@ -1,4 +1,4 @@
-import { EmptyState, LoadError, Skeleton } from "../components/ui";
+import { Alert, EmptyState, LoadError, Skeleton, Stat } from "../components/ui";
 import { useEffect, useMemo, useState } from "react";
 import type { Route } from "../App";
 import { InsightCard } from "../components/InsightCard";
@@ -215,15 +215,15 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                 </span>
               )}
             </div>
-            <div className="ss-kpi"><span>{d.best_lap_id != null || d.fastest_lap_id == null ? "Meilleur tour" : "Plus rapide (invalide)"}</span><b className="mono best">{lapTime(best)}</b></div>
-            <div className="ss-kpi" title="Tes meilleurs secteurs de la séance mis bout à bout"><span>Tour idéal</span><b className="mono best">{lapTime(d.theoretical_best_s)}</b></div>
-            <div className="ss-kpi" title="De combien tes tours propres varient d'un tour à l'autre (plus petit = plus régulier)"><span>Régularité</span><b className="mono">{d.consistency ? `± ${d.consistency.stddev_s.toFixed(2)} s` : "—"}</b></div>
-            <div className="ss-kpi"><span>Tours propres</span><b className="mono">{d.laps.filter((l) => l.clean).length}/{timed.length}</b></div>
+            <Stat label={d.best_lap_id != null || d.fastest_lap_id == null ? "Meilleur tour" : "Plus rapide (invalide)"} value={lapTime(best)} tone="best" />
+            <Stat label="Tour idéal" value={lapTime(d.theoretical_best_s)} tone="best" title="Tes meilleurs secteurs de la séance mis bout à bout" />
+            <Stat label="Régularité" value={d.consistency ? `± ${d.consistency.stddev_s.toFixed(2)} s` : "—"} title="De combien tes tours propres varient d'un tour à l'autre (plus petit = plus régulier)" />
+            <Stat label="Tours propres" value={`${d.laps.filter((l) => l.clean).length}/${timed.length}`} />
           </div>
           <NoCleanLaps clean={d.laps.filter((l) => l.clean).length} timed={timed.length} />
 
           {d.untyped_references.length > 0 && (
-            <div className="warning untyped">
+            <Alert tone="warn" title="Références sans série">
               <div>
                 Ta session est en <b>{d.meta.setup === "fixed" ? "setup imposé" : "setup libre"}</b>. Indique la série de ces références (elles ne sont pas utilisées en attendant) :
               </div>
@@ -234,7 +234,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
                   <button className="btn small" onClick={() => void api.setSessionSetup(u.session_id, "open").then(() => (detail.reload(), overlay.reload()))}>Setup libre</button>
                 </div>
               ))}
-            </div>
+            </Alert>
           )}
 
           {timed.length < 2 && !(d.personal_reference_lap_id != null && timed.length === 1) ? (
@@ -283,7 +283,7 @@ export function LapAnalysisPage({ route, navigate }: { route: Extract<Route, { p
               </div>
 
               {cmp.error && <LoadError error={cmp.error} onRetry={cmp.reload} />}
-              {refId === cmpId && <div className="warning">Choisis deux tours différents.</div>}
+              {refId === cmpId && <Alert tone="warn">Choisis deux tours différents.</Alert>}
               {c && c.warnings.length > 0 && (
                 <details className="notes">
                   <summary>⚠ {c.warnings[0]}{c.warnings.length > 1 ? ` (+${c.warnings.length - 1})` : ""}</summary>

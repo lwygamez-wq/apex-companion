@@ -5,6 +5,7 @@ import { RiskCard } from "../components/RiskCard";
 import { ReplayPanel } from "../components/ReplayPanel";
 import { TelemetryCharts } from "../components/TelemetryCharts";
 import { TrackMap } from "../components/TrackMap";
+import { Alert, Button, Stat } from "../components/ui";
 import { dateTime, delta, lapTime } from "../lib/format";
 import { ReplayStore, replayBounds } from "../lib/replay";
 import type { Comparison, LapRow } from "../lib/types";
@@ -109,7 +110,7 @@ export function MobileApp() {
         <input ref={fileInput} type="file" multiple hidden onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} />
       </header>
       <main className="m-main">
-        {err && <div className="error" onClick={() => setErr(null)}>{err}</div>}
+        {err && <Alert tone="danger" title="Ouverture impossible" action={<Button variant="quiet" onClick={() => setErr(null)}>OK</Button>}>{err}</Alert>}
         {busy && <div className="m-busy">{busy}</div>}
         {screen.s === "list" && list && (
           <SessionList
@@ -151,7 +152,7 @@ function SessionList({ list, onOpen, onDelete, onPick }: { list: StoredSummary[]
             <span className="muted">{dateTime(s.started_at_unix)} · {s.lap_count} tours</span>
           </div>
           <div className="m-card-side">
-            <span className="kpi best m-kpi">{lapTime(s.best_lap_s)}</span>
+            <b className="m-kpi tone-best">{lapTime(s.best_lap_s)}</b>
             <button
               className="m-del"
               onClick={(e) => {
@@ -189,12 +190,12 @@ function SessionScreen({ s, onLap }: { s: MobileSession; onLap: (id: number) => 
     <>
       <div className="m-kpis">
         {best || !s.fastest_lap_id ? (
-          <div className="card"><h2>Meilleur</h2><div className="kpi best m-kpi">{lapTime(best?.lap_time_s)}</div></div>
+          <div className="card"><Stat label="Meilleur" value={lapTime(best?.lap_time_s)} tone="best" /></div>
         ) : (
-          <div className="card"><h2>Plus rapide</h2><div className="kpi m-kpi">{lapTime(s.laps.find((l) => l.id === s.fastest_lap_id)?.lap_time_s)}</div><div className="kpi-sub">invalide</div></div>
+          <div className="card"><Stat label="Plus rapide" value={lapTime(s.laps.find((l) => l.id === s.fastest_lap_id)?.lap_time_s)} hint="invalide" /></div>
         )}
-        <div className="card"><h2>Tour idéal</h2><div className="kpi best m-kpi">{lapTime(s.theoretical_best_s)}</div></div>
-        <div className="card"><h2>Régularité</h2><div className="kpi m-kpi">{s.consistency ? `σ ${s.consistency.stddev_s.toFixed(2)}` : "—"}</div></div>
+        <div className="card"><Stat label="Tour idéal" value={lapTime(s.theoretical_best_s)} tone="best" /></div>
+        <div className="card"><Stat label="Régularité" value={s.consistency ? `± ${s.consistency.stddev_s.toFixed(2)} s` : "—"} /></div>
       </div>
       <RiskCard risk={s.risk} headline={s.risk_headline} compact />
       <OffTrackCard zones={s.off_tracks} />
@@ -256,7 +257,7 @@ function LapScreen({ s, lapId }: { s: MobileSession; lapId: number }) {
           <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t[0]!.toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
-      {c.warnings.map((w) => <div key={w} className="warning">⚠ {w}</div>)}
+      {c.warnings.map((w) => <Alert key={w} tone="warn">{w}</Alert>)}
       {tab === "conseils" && (
         <div>
           {c.insights.length === 0 && <div className="card muted">Aucun écart significatif détecté sur ce tour.</div>}
